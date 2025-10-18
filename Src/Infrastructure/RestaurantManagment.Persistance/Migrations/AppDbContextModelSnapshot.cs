@@ -22,6 +22,83 @@ namespace RestaurantManagment.Persistance.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("JobPosting", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("EmploymentType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Position")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("PostedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Requirements")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RestaurantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<decimal?>("Salary")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("RestaurantId");
+
+                    b.ToTable("JobPostings");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -218,15 +295,14 @@ namespace RestaurantManagment.Persistance.Migrations
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Phone")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<string>("ProfileImageUrl")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -261,6 +337,78 @@ namespace RestaurantManagment.Persistance.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("RestaurantManagment.Domain.Models.JobApplication", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ApplicantId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("ApplicationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CoverLetter")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("JobPostingId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ResumeUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReviewedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicantId");
+
+                    b.HasIndex("JobPostingId");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("JobApplications");
                 });
 
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Menu", b =>
@@ -524,6 +672,98 @@ namespace RestaurantManagment.Persistance.Migrations
                     b.ToTable("OrderItems");
                 });
 
+            modelBuilder.Entity("RestaurantManagment.Domain.Models.OwnershipApplication", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AdditionalNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("ApplicationDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BusinessAddress")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BusinessDescription")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("BusinessEmail")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("BusinessName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("BusinessPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationDate");
+
+                    b.HasIndex("ReviewedBy");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OwnershipApplications");
+                });
+
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Reservation", b =>
                 {
                     b.Property<string>("Id")
@@ -649,6 +889,10 @@ namespace RestaurantManagment.Persistance.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<decimal>("Rate")
+                        .HasPrecision(3, 2)
+                        .HasColumnType("decimal(3,2)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -719,6 +963,17 @@ namespace RestaurantManagment.Persistance.Migrations
                     b.ToTable("Tables");
                 });
 
+            modelBuilder.Entity("JobPosting", b =>
+                {
+                    b.HasOne("RestaurantManagment.Domain.Models.Restaurant", "Restaurant")
+                        .WithMany("JobPostings")
+                        .HasForeignKey("RestaurantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Restaurant");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -778,6 +1033,25 @@ namespace RestaurantManagment.Persistance.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("EmployerRestaurant");
+                });
+
+            modelBuilder.Entity("RestaurantManagment.Domain.Models.JobApplication", b =>
+                {
+                    b.HasOne("RestaurantManagment.Domain.Models.AppUser", "Applicant")
+                        .WithMany("JobApplications")
+                        .HasForeignKey("ApplicantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("JobPosting", "JobPosting")
+                        .WithMany("Applications")
+                        .HasForeignKey("JobPostingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Applicant");
+
+                    b.Navigation("JobPosting");
                 });
 
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Menu", b =>
@@ -853,6 +1127,24 @@ namespace RestaurantManagment.Persistance.Migrations
                     b.Navigation("Order");
                 });
 
+            modelBuilder.Entity("RestaurantManagment.Domain.Models.OwnershipApplication", b =>
+                {
+                    b.HasOne("RestaurantManagment.Domain.Models.AppUser", "Reviewer")
+                        .WithMany("ReviewedApplications")
+                        .HasForeignKey("ReviewedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("RestaurantManagment.Domain.Models.AppUser", "User")
+                        .WithMany("OwnershipApplications")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Reviewer");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Reservation", b =>
                 {
                     b.HasOne("RestaurantManagment.Domain.Models.AppUser", "Customer")
@@ -901,15 +1193,26 @@ namespace RestaurantManagment.Persistance.Migrations
                     b.Navigation("Restaurant");
                 });
 
+            modelBuilder.Entity("JobPosting", b =>
+                {
+                    b.Navigation("Applications");
+                });
+
             modelBuilder.Entity("RestaurantManagment.Domain.Models.AppUser", b =>
                 {
                     b.Navigation("DeliveryOrders");
+
+                    b.Navigation("JobApplications");
 
                     b.Navigation("Orders");
 
                     b.Navigation("OwnedRestaurants");
 
+                    b.Navigation("OwnershipApplications");
+
                     b.Navigation("Reservations");
+
+                    b.Navigation("ReviewedApplications");
                 });
 
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Menu", b =>
@@ -930,6 +1233,8 @@ namespace RestaurantManagment.Persistance.Migrations
             modelBuilder.Entity("RestaurantManagment.Domain.Models.Restaurant", b =>
                 {
                     b.Navigation("Employees");
+
+                    b.Navigation("JobPostings");
 
                     b.Navigation("Menus");
 

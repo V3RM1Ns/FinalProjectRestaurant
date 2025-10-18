@@ -20,6 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
+    public DbSet<JobPosting> JobPostings { get; set; }
+    public DbSet<JobApplication> JobApplications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,6 +29,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
         // Apply all configurations from assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+        
+        // Configure decimal precision
+        modelBuilder.Entity<Restaurant>()
+            .Property(r => r.Rate)
+            .HasPrecision(3, 2);
+            
+        modelBuilder.Entity<JobPosting>()
+            .Property(j => j.Salary)
+            .HasPrecision(18, 2);
     }
 
     public override int SaveChanges()
@@ -50,7 +61,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                 {
                     case EntityState.Added:
                         baseEntity.CreatedAt = DateTime.UtcNow;
-                        baseEntity.UpdatedAt = DateTime.UtcNow;
+                        baseEntity.UpdatedAt = null;
                         break;
                     case EntityState.Modified:
                         baseEntity.UpdatedAt = DateTime.UtcNow;

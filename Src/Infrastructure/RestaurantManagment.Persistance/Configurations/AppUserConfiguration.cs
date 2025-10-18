@@ -15,9 +15,6 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(u => u.Address)
             .HasMaxLength(500);
 
-        builder.Property(u => u.ProfileImageUrl)
-            .HasMaxLength(200);
-
         // Indexes
         builder.HasIndex(u => u.FullName);
         builder.HasIndex(u => u.Email);

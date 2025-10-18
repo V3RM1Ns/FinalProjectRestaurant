@@ -14,14 +14,16 @@
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Controllers\" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="AutoMapper" Version="12.0.1" />
+        <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.2.1" />
     </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../../Infrastructure/RestaurantManagment.Persistance/RestaurantManagment.Persistance.csproj" />
+    <ProjectReference Include="../../Infrastructure/RestaurantManagment.Infrastructure/RestaurantManagment.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

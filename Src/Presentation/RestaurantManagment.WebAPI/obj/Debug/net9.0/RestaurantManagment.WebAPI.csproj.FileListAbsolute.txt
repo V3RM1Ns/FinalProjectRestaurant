@@ -568,3 +568,10 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.genruntimeconfig.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\ref\RestaurantManagment.WebAPI.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.pdb
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.sourcelink.json
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll

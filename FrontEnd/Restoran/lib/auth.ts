@@ -1,92 +1,57 @@
 import { type AppUser, type AuthResponse, UserRole } from "@/types"
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+
 export class AuthService {
   private static TOKEN_KEY = "auth_token"
   private static USER_KEY = "auth_user"
 
-  private static MOCK_USERS = [
-    {
-      email: "admin@gmail.com",
-      password: "admin123",
-      user: {
-        id: "admin-1",
-        fullName: "Admin User",
-        email: "admin@gmail.com",
-        phoneNumber: "+90 555 000 0001",
-        roles: [UserRole.Admin],
-        isActive: true,
-      },
-    },
-    {
-      email: "owner@gmail.com",
-      password: "owner123",
-      user: {
-        id: "owner-1",
-        fullName: "Restaurant Owner",
-        email: "owner@gmail.com",
-        phoneNumber: "+90 555 000 0002",
-        roles: [UserRole.Owner],
-        isActive: true,
-        restaurantId: "1",
-      },
-    },
-    {
-      email: "employee@gmail.com",
-      password: "employee123",
-      user: {
-        id: "employee-1",
-        fullName: "Restaurant Employee",
-        email: "employee@gmail.com",
-        phoneNumber: "+90 555 000 0003",
-        roles: [UserRole.Employee],
-        isActive: true,
-        restaurantId: "1",
-      },
-    },
-    {
-      email: "customer@gmail.com",
-      password: "customer123",
-      user: {
-        id: "customer-1",
-        fullName: "Customer User",
-        email: "customer@gmail.com",
-        phoneNumber: "+90 555 000 0004",
-        roles: [UserRole.Customer],
-        isActive: true,
-      },
-    },
-    {
-      email: "delivery@gmail.com",
-      password: "delivery123",
-      user: {
-        id: "delivery-1",
-        fullName: "Delivery Person",
-        email: "delivery@gmail.com",
-        phoneNumber: "+90 555 000 0005",
-        roles: [UserRole.Delivery],
-        isActive: true,
-      },
-    },
-  ]
-
   static async login(email: string, password: string): Promise<AuthResponse> {
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    try {
+      const response = await fetch(`${API_BASE_URL}/Account/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ Email: email, Password: password }),
+      })
 
-    const mockUser = this.MOCK_USERS.find((u) => u.email === email && u.password === password)
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Login error response:", errorText)
 
-    if (!mockUser) {
-      throw new Error("Login failed")
+        try {
+          const error = JSON.parse(errorText)
+          throw new Error(error.message || error.Message || "Login failed")
+        } catch (e) {
+          throw new Error("Login failed")
+        }
+      }
+
+      const data = await response.json()
+
+      // Backend'den gelen response yapısı: { message, token, user: { id, userName, email, firstName, lastName, roles } }
+      const user: AppUser = {
+        id: data.user.id,
+        fullName: data.user.userName || data.user.email,
+        email: data.user.email,
+        phoneNumber: data.user.phoneNumber || "",
+        roles: data.user.roles?.map((role: string) => role as UserRole) || [UserRole.Customer],
+        isActive: true,
+      }
+
+      const authResponse: AuthResponse = {
+        token: data.token,
+        user,
+      }
+
+      this.setToken(authResponse.token)
+      this.setUser(authResponse.user)
+      return authResponse
+    } catch (error) {
+      console.error("Login error:", error)
+      throw error
     }
-
-    const token = `mock-jwt-token-${mockUser.user.id}`
-    const authResponse: AuthResponse = {
-      token,
-      user: mockUser.user,
-    }
-
-    this.setToken(authResponse.token)
-    this.setUser(authResponse.user)
-    return authResponse
   }
 
   static async register(
@@ -94,42 +59,67 @@ export class AuthService {
     email: string,
     password: string,
     phoneNumber?: string,
+    address?: string,
   ): Promise<AuthResponse> {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800))
+    try {
+      const requestBody = {
+        FullName: fullName,
+        Email: email,
+        Password: password,
+        ConfirmPassword: password,
+        Phone: phoneNumber || "",
+        Address: address || "",
+      }
 
-    // Check if user already exists
-    const existingUser = this.MOCK_USERS.find((u) => u.email === email)
-    if (existingUser) {
-      throw new Error("User already exists")
+      console.log("Register request:", requestBody)
+
+      const response = await fetch(`${API_BASE_URL}/Account/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log("Register response status:", response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Register error response:", errorText)
+
+        try {
+          const error = JSON.parse(errorText)
+          throw new Error(error.message || error.title || "Registration failed")
+        } catch (e) {
+          throw new Error(errorText || "Registration failed")
+        }
+      }
+
+      const data = await response.json()
+      console.log("Register success response:", data)
+
+      // Backend'den gelen response yapısı: { message, token, user: { id, userName, email, firstName, lastName } }
+      const user: AppUser = {
+        id: data.user.id,
+        fullName: data.user.userName || fullName,
+        email: data.user.email,
+        phoneNumber: phoneNumber || "",
+        roles: [UserRole.Customer], // Yeni kullanıcı default olarak Customer
+        isActive: true,
+      }
+
+      const authResponse: AuthResponse = {
+        token: data.token,
+        user,
+      }
+
+      this.setToken(authResponse.token)
+      this.setUser(authResponse.user)
+      return authResponse
+    } catch (error) {
+      console.error("Registration error:", error)
+      throw error
     }
-
-    // Create new user with Customer role by default
-    const newUser: AppUser = {
-      id: `user-${Date.now()}`,
-      fullName,
-      email,
-      phoneNumber: phoneNumber || "",
-      roles: [UserRole.Customer],
-      isActive: true,
-    }
-
-    const token = `mock-jwt-token-${newUser.id}`
-    const authResponse: AuthResponse = {
-      token,
-      user: newUser,
-    }
-
-    // Add to mock users list (in-memory only)
-    this.MOCK_USERS.push({
-      email,
-      password,
-      user: newUser,
-    })
-
-    this.setToken(authResponse.token)
-    this.setUser(authResponse.user)
-    return authResponse
   }
 
   static logout(): void {

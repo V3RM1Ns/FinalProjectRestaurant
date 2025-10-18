@@ -29,3 +29,4 @@ C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Application
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Application\obj\Debug\net9.0\refint\RestaurantManagment.Application.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Application\obj\Debug\net9.0\RestaurantManagment.Application.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Application\obj\Debug\net9.0\ref\RestaurantManagment.Application.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Application\obj\Debug\net9.0\RestaurantManagment.Application.sourcelink.json

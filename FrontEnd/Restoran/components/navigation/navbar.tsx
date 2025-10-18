@@ -38,6 +38,9 @@ export function Navbar() {
               <Link href="/reservations">
                 <Button variant="ghost">Rezervasyonlar</Button>
               </Link>
+              <Link href="/jobs">
+                <Button variant="ghost">İş İlanları</Button>
+              </Link>
             </div>
           )}
         </div>
@@ -92,6 +95,11 @@ export function Navbar() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile">Profilim</Link>
                   </DropdownMenuItem>
+                  {user.role === "Customer" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/customer/applications">Başvurularım</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/orders">Siparişlerim</Link>
                   </DropdownMenuItem>

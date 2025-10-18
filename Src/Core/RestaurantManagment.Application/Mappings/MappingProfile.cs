@@ -4,6 +4,7 @@ using RestaurantManagment.Application.DTOs.Menu;
 using RestaurantManagment.Application.DTOs.MenuItem;
 using RestaurantManagment.Application.DTOs.Order;
 using RestaurantManagment.Application.DTOs.Reservation;
+using RestaurantManagment.Application.Common.DTOs.Account;
 using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Application.Mappings;
@@ -12,6 +13,7 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
+        
         // Restaurant Mappings
         CreateMap<Restaurant, RestaurantResponseDto>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName));
@@ -58,6 +60,11 @@ public class MappingProfile : Profile
         CreateMap<CreateReservationDto, Reservation>();
         CreateMap<UpdateReservationDto, Reservation>()
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+
+        // User Mappings
+        CreateMap<UserRegisterDto, AppUser>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.FullName))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email));
+        CreateMap<UserLoginDto, AppUser>();
     }
 }
-

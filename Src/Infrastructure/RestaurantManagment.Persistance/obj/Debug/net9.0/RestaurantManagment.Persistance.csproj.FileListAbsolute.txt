@@ -37,3 +37,4 @@ C:\Users\user\Desktop\FinalProject-main\Src\Infrastructure\RestaurantManagment.P
 C:\Users\user\Desktop\FinalProject-main\Src\Infrastructure\RestaurantManagment.Persistance\obj\Debug\net9.0\RestaurantManagment.Persistance.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Infrastructure\RestaurantManagment.Persistance\obj\Debug\net9.0\RestaurantManagment.Persistance.genruntimeconfig.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Infrastructure\RestaurantManagment.Persistance\obj\Debug\net9.0\ref\RestaurantManagment.Persistance.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Infrastructure\RestaurantManagment.Persistance\obj\Debug\net9.0\RestaurantManagment.Persistance.sourcelink.json

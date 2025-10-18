@@ -35,10 +35,12 @@ public class Restaurant : BaseEntity
     public string OwnerId { get; set; } = string.Empty;
     public AppUser Owner { get; set; } = null!;
     
+    public decimal Rate { get; set; }
     
     public ICollection<Menu> Menus { get; set; } = new List<Menu>();
     public ICollection<Table> Tables { get; set; } = new List<Table>();
     public ICollection<Reservation> Reservations { get; set; } = new List<Reservation>();
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<AppUser> Employees { get; set; } = new List<AppUser>();
+    public ICollection<JobPosting> JobPostings { get; set; } = new List<JobPosting>();
 }

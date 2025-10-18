@@ -10,13 +10,12 @@ public class AppUser : IdentityUser, IAuditableEntity
     [MaxLength(200)]
     public string FullName { get; set; } = string.Empty;
     
+    
     [MaxLength(500)]
     public string? Address { get; set; }
     
-    [MaxLength(200)]
-    public string? ProfileImageUrl { get; set; }
+    public string? Phone { get; set; } = string.Empty;
     
-   
     public ICollection<Restaurant> OwnedRestaurants { get; set; } = new List<Restaurant>();
     
    
@@ -33,6 +32,9 @@ public class AppUser : IdentityUser, IAuditableEntity
     // Ownership Applications
     public ICollection<OwnershipApplication> OwnershipApplications { get; set; } = new List<OwnershipApplication>();
     public ICollection<OwnershipApplication> ReviewedApplications { get; set; } = new List<OwnershipApplication>();
+    
+    // Job Applications
+    public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
 
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
