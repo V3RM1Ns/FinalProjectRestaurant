@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { UtensilsCrossed, Chrome } from "lucide-react"
+import { UtensilsCrossed, Chrome, Mail, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
@@ -18,6 +18,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [unverifiedEmail, setUnverifiedEmail] = useState("")
   const { login } = useAuth()
   const { toast } = useToast()
 
@@ -34,15 +36,56 @@ export default function LoginPage() {
     setPassword(password)
   }
 
+  const handleResendVerification = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch("http://localhost:5000/api/Account/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: unverifiedEmail }),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Başarılı",
+          description: "Doğrulama e-postası tekrar gönderildi. Lütfen e-posta gelen kutunuzu kontrol edin.",
+        })
+      } else {
+        toast({
+          title: "Hata",
+          description: "E-posta gönderilemedi. Lütfen tekrar deneyin.",
+          variant: "destructive",
+        })
+      }
+    } catch (err) {
+      toast({
+        title: "Hata",
+        description: "Bir hata oluştu. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setNeedsVerification(false)
     setIsLoading(true)
 
     try {
       await login(email, password)
-    } catch (err) {
-      setError("Giriş başarısız. Lütfen bilgilerinizi kontrol edin.")
+    } catch (err: any) {
+      if (err?.requiresEmailVerification) {
+        setNeedsVerification(true)
+        setUnverifiedEmail(email)
+        setError("E-posta adresiniz doğrulanmamış. Lütfen e-posta gelen kutunuzu kontrol edin.")
+      } else {
+        setError(err?.message || "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -97,7 +140,29 @@ export default function LoginPage() {
             <CardContent className="space-y-4">
               {error && (
                 <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
                   <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              {needsVerification && (
+                <Alert className="bg-yellow-50 border-yellow-300">
+                  <Mail className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    <div className="space-y-2">
+                      <p className="font-semibold">E-posta doğrulaması gerekli</p>
+                      <p className="text-sm">Hesabınıza giriş yapabilmek için e-posta adresinizi doğrulamanız gerekmektedir.</p>
+                      <Button
+                        type="button"
+                        onClick={handleResendVerification}
+                        disabled={isLoading}
+                        size="sm"
+                        variant="outline"
+                        className="mt-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 border-yellow-300"
+                      >
+                        {isLoading ? "Gönderiliyor..." : "Doğrulama E-postasını Tekrar Gönder"}
+                      </Button>
+                    </div>
+                  </AlertDescription>
                 </Alert>
               )}
               <div className="space-y-2">
@@ -123,7 +188,7 @@ export default function LoginPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-2">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
               </Button>
@@ -146,6 +211,11 @@ export default function LoginPage() {
                 Hesabınız yok mu?{" "}
                 <Link href="/register" className="font-medium text-primary hover:underline">
                   Kayıt Ol
+                </Link>
+              </p>
+              <p className="text-center text-sm mt-2">
+                <Link href="/forgot-password" className="text-blue-600 hover:underline">
+                  Şifremi Unuttum?
                 </Link>
               </p>
             </CardFooter>

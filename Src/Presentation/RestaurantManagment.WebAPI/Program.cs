@@ -67,7 +67,7 @@ public class Program
             opt.Lockout.MaxFailedAccessAttempts = 5;
             opt.Lockout.AllowedForNewUsers = true;
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            opt.SignIn.RequireConfirmedEmail = false;
+            opt.SignIn.RequireConfirmedEmail = true;
             opt.Password.RequiredLength = 6;
         }).AddEntityFrameworkStores<AppDbContext>()
           .AddDefaultTokenProviders();

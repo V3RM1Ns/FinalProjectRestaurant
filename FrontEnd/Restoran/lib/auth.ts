@@ -22,8 +22,17 @@ export class AuthService {
 
         try {
           const error = JSON.parse(errorText)
+          // E-posta doğrulama hatası kontrolü
+          if (error.requiresEmailVerification || error.RequiresEmailVerification) {
+            const verificationError = new Error(error.message || error.Message || "E-posta doğrulaması gerekli") as any
+            verificationError.requiresEmailVerification = true
+            throw verificationError
+          }
           throw new Error(error.message || error.Message || "Login failed")
-        } catch (e) {
+        } catch (e: any) {
+          if (e.requiresEmailVerification) {
+            throw e
+          }
           throw new Error("Login failed")
         }
       }
