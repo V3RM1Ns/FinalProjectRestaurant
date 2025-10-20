@@ -11,18 +11,39 @@ export class ApiClient {
     }
   }
 
+  private static async handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: response.statusText }))
+
+      // Backend ModelState hatalarını handle et
+      if (errorData.errors) {
+        const errorMessages = Object.entries(errorData.errors)
+          .map(([field, messages]: [string, any]) => {
+            const msgArray = Array.isArray(messages) ? messages : [messages]
+            return `${field}: ${msgArray.join(", ")}`
+          })
+          .join("\n")
+        throw new Error(errorMessages)
+      }
+
+      throw new Error(errorData.message || errorData.Message || `API Error: ${response.statusText}`)
+    }
+
+    // 204 No Content durumu için boş obje döndür
+    if (response.status === 204) {
+      return {} as T
+    }
+
+    return response.json()
+  }
+
   static async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "GET",
       headers: this.getHeaders(),
     })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(error.message || `API Error: ${response.statusText}`)
-    }
-
-    return response.json()
+    return this.handleResponse<T>(response)
   }
 
   static async post<T>(endpoint: string, data: unknown): Promise<T> {
@@ -32,12 +53,7 @@ export class ApiClient {
       body: JSON.stringify(data),
     })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(error.message || `API Error: ${response.statusText}`)
-    }
-
-    return response.json()
+    return this.handleResponse<T>(response)
   }
 
   static async put<T>(endpoint: string, data: unknown): Promise<T> {
@@ -47,12 +63,7 @@ export class ApiClient {
       body: JSON.stringify(data),
     })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(error.message || `API Error: ${response.statusText}`)
-    }
-
-    return response.json()
+    return this.handleResponse<T>(response)
   }
 
   static async patch<T>(endpoint: string, data: unknown): Promise<T> {
@@ -62,12 +73,7 @@ export class ApiClient {
       body: JSON.stringify(data),
     })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(error.message || `API Error: ${response.statusText}`)
-    }
-
-    return response.json()
+    return this.handleResponse<T>(response)
   }
 
   static async delete<T>(endpoint: string): Promise<T> {
@@ -76,17 +82,7 @@ export class ApiClient {
       headers: this.getHeaders(),
     })
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: response.statusText }))
-      throw new Error(error.message || `API Error: ${response.statusText}`)
-    }
-
-    // DELETE may not return content
-    if (response.status === 204) {
-      return {} as T
-    }
-
-    return response.json()
+    return this.handleResponse<T>(response)
   }
 }
 

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,16 +10,33 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { User, Mail, Phone, MapPin, Lock, Store, FileText } from "lucide-react"
+import { User, Mail, Phone, MapPin, Lock, Store, FileText, Trash2 } from "lucide-react"
+import { ApiClient } from "@/lib/api"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export default function ProfilePage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [fetchingProfile, setFetchingProfile] = useState(true)
+  const [deleteType, setDeleteType] = useState<"soft" | "hard">("soft")
   const [profile, setProfile] = useState({
-    fullName: user?.fullName || "",
-    email: user?.email || "",
-    phoneNumber: user?.phoneNumber || "",
+    firstName: "",
+    lastName: "",
+    userName: "",
+    email: "",
+    phone: "",
     address: "",
   })
   const [passwords, setPasswords] = useState({
@@ -37,19 +54,55 @@ export default function ProfilePage() {
     additionalNotes: "",
   })
 
+  // Profil bilgilerini API'den çek
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await ApiClient.get<any>("/Account/profile")
+        setProfile({
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          userName: data.userName || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          address: data.address || "",
+        })
+      } catch (error: any) {
+        toast({
+          title: "Hata",
+          description: error.message || "Profil bilgileri yüklenemedi.",
+          variant: "destructive",
+        })
+      } finally {
+        setFetchingProfile(false)
+      }
+    }
+
+    fetchProfile()
+  }, [toast])
+
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    toast({
-      title: "Profil Güncellendi",
-      description: "Bilgileriniz başarıyla güncellendi.",
-    })
-
-    setLoading(false)
+    try {
+      const data = await ApiClient.post<any>("/Account/profile", profile)
+      toast({
+        title: "Başarılı",
+        description: data.message || "Profil başarıyla güncellendi.",
+      })
+    } catch (error: any) {
+      // Hata mesajını parse et
+      const errorMessage = error.message || "Profil güncellenemedi."
+      
+      toast({
+        title: "Hata",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -66,16 +119,28 @@ export default function ProfilePage() {
 
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+     try {
+      const data = await ApiClient.post<any>("/Account/change-password", {
+        currentPassword: passwords.current,
+        newPassword: passwords.new,
+        confirmPassword: passwords.confirm,
+      })
 
-    toast({
-      title: "Şifre Değiştirildi",
-      description: "Şifreniz başarıyla değiştirildi.",
-    })
+      toast({
+        title: "Başarılı",
+        description: data.message || "Şifreniz başarıyla değiştirildi.",
+      })
 
-    setPasswords({ current: "", new: "", confirm: "" })
-    setLoading(false)
+      setPasswords({ current: "", new: "", confirm: "" })
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "Şifre değiştirilemedi.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleOwnershipApplication = async (e: React.FormEvent) => {
@@ -102,6 +167,39 @@ export default function ProfilePage() {
     setLoading(false)
   }
 
+  const handleDeleteAccount = async () => {
+    setLoading(true)
+
+    try {
+      const data = await ApiClient.post<any>("/Account/delete-account", {
+        deleteType: deleteType
+      })
+
+      toast({
+        title: "E-posta Gönderildi",
+        description: data.message || "Hesap silme onayı e-postanıza gönderildi. Lütfen e-postanızı kontrol edin.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "Hesap silme işlemi başlatılamadı.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (fetchingProfile) {
+    return (
+      <div className="container py-8 max-w-4xl">
+        <div className="flex items-center justify-center h-96">
+          <p className="text-lg">Yükleniyor...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="container py-8 max-w-4xl">
       <h1 className="text-4xl font-bold mb-8">Profilim</h1>
@@ -122,13 +220,41 @@ export default function ProfilePage() {
             <CardContent>
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <div>
-                  <Label htmlFor="fullName">Ad Soyad</Label>
+                  <Label htmlFor="firstName">Ad</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="fullName"
-                      value={profile.fullName}
-                      onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                      id="firstName"
+                      value={profile.firstName}
+                      onChange={(e) => setProfile({ ...profile, firstName: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="lastName">Soyad</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="lastName"
+                      value={profile.lastName}
+                      onChange={(e) => setProfile({ ...profile, lastName: e.target.value })}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="userName">Kullanıcı Adı</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="userName"
+                      value={profile.userName}
+                      onChange={(e) => setProfile({ ...profile, userName: e.target.value })}
                       className="pl-10"
                       required
                     />
@@ -157,8 +283,8 @@ export default function ProfilePage() {
                     <Input
                       id="phone"
                       type="tel"
-                      value={profile.phoneNumber}
-                      onChange={(e) => setProfile({ ...profile, phoneNumber: e.target.value })}
+                      value={profile.phone}
+                      onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                       className="pl-10"
                       placeholder="+90 555 123 4567"
                     />
@@ -371,6 +497,74 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Hesap Silme Bölümü */}
+      <div className="mt-8">
+        <h2 className="text-2xl font-bold mb-4">Hesap Silme</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Hesabınızı Silin</CardTitle>
+            <CardDescription>
+              Hesabınızı silmek için aşağıdaki seçeneklerden birini seçin ve butona tıklayın. E-postanıza bir doğrulama linki gönderilecektir.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <RadioGroup
+                value={deleteType}
+                onValueChange={(value) => setDeleteType(value as "soft" | "hard")}
+                className="space-y-3"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="soft" id="soft-delete" />
+                  <Label htmlFor="soft-delete" className="cursor-pointer">
+                    Sadece hesabı geçici olarak devre dışı bırak (veriler korunur, tekrar aktif edebilirsiniz)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="hard" id="hard-delete" />
+                  <Label htmlFor="hard-delete" className="cursor-pointer">
+                    Hesabı ve tüm verileri kalıcı olarak sil (⚠️ Bu işlem geri alınamaz!)
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={loading} className="w-full mt-4">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Hesap Silme İsteği Gönder
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hesap Silme Onayı</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {deleteType === "soft" 
+                        ? "Hesabınız geçici olarak devre dışı bırakılacak. E-postanıza bir doğrulama linki gönderilecek. Onayladıktan sonra hesabınızı istediğiniz zaman tekrar aktif edebilirsiniz."
+                        : "⚠️ DİKKAT: Hesabınız ve tüm verileriniz kalıcı olarak silinecek. Bu işlem geri alınamaz! E-postanıza bir doğrulama linki gönderilecek."
+                      }
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={loading}>İptal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={(e) => {
+                        e.preventDefault()
+                        handleDeleteAccount()
+                      }}
+                      disabled={loading}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {loading ? "Gönderiliyor..." : "Onayla ve E-posta Gönder"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

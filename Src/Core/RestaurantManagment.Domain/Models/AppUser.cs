@@ -36,11 +36,10 @@ public class AppUser : IdentityUser, IAuditableEntity
 
     public ICollection<Order> DeliveryOrders { get; set; } = new List<Order>();
     
-    // Ownership Applications
+
     public ICollection<OwnershipApplication> OwnershipApplications { get; set; } = new List<OwnershipApplication>();
     public ICollection<OwnershipApplication> ReviewedApplications { get; set; } = new List<OwnershipApplication>();
-    
-    // Job Applications
+     
     public ICollection<JobApplication> JobApplications { get; set; } = new List<JobApplication>();
 
     public bool IsDeleted { get; set; }
