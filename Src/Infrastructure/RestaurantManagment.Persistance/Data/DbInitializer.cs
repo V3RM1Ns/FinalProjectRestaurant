@@ -40,7 +40,7 @@ public static class DbInitializer
     {
         // Önce tüm kullanıcıları kontrol et (IsDeleted dahil)
         var existingUser = userManager.Users.FirstOrDefault(u => u.Email == email);
-        
+
         if (existingUser != null)
         {
             // Kullanıcı silinmişse, tekrar aktif et
@@ -49,7 +49,7 @@ public static class DbInitializer
                 existingUser.IsDeleted = false;
                 existingUser.EmailConfirmed = true;
                 await userManager.UpdateAsync(existingUser);
-                
+
                 // Role kontrolü
                 var roles = await userManager.GetRolesAsync(existingUser);
                 if (!roles.Contains(role))

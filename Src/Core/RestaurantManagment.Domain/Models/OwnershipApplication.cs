@@ -37,7 +37,7 @@ public class OwnershipApplication : BaseEntity
     [MaxLength(2000)]
     public string? AdditionalNotes { get; set; }
 
-    // Application Status
+  
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Pending;
 
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
@@ -50,14 +50,14 @@ public class OwnershipApplication : BaseEntity
     [MaxLength(1000)]
     public string? RejectionReason { get; set; }
 
-    // Soft delete
+    
     public bool IsDeleted { get; set; } = false;
 }
 
 public enum ApplicationStatus
 {
-    Pending = 0,      // Beklemede
-    Approved = 1,     // Onaylandı
-    Rejected = 2      // Reddedildi
+    Pending = 0,
+    Approved = 1,
+    Rejected = 2
 }
 

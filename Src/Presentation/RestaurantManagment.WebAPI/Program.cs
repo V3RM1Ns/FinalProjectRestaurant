@@ -111,7 +111,7 @@ public class Program
 
         var app = builder.Build();
 
-       
+
         // Configure the HTTP request pipeline.
         app.UseSwagger();
         app.UseSwaggerUI(c =>
@@ -123,9 +123,9 @@ public class Program
         });
         app.MapOpenApi();
 
-        app.UseCors("AllowAll");
+        // CORS - ÖNEMLİ: En başta olmalı
         app.UseHttpsRedirection();
-        app.UseAuthentication();
+        
         app.UseAuthorization();
         app.MapControllers();
 

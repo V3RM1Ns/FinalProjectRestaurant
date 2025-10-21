@@ -16,8 +16,10 @@ namespace RestaurantManagment.WebAPI.Controllers
         SignInManager<AppUser> signInManager,
         IMapper mapper,
         IEmailService emailService,
-        IJwtTokenService jwtTokenService) : Controller
+        IJwtTokenService jwtTokenService,
+        IAccountService accountService) : Controller
     {
+        private readonly IAccountService _accountService = accountService;
         
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
@@ -163,7 +165,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             
 
-          
+
             if (!user.EmailConfirmed)
             {
                 return Unauthorized(new
@@ -222,7 +224,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                // Log the exception for troubleshooting; do not fail the request
+              
                 Console.WriteLine($"Failed to send password reset email: {ex}");
             }
 
@@ -441,8 +443,8 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             // Token oluştur
             var deletionToken = await userManager.GenerateUserTokenAsync(
-                currentUser, 
-                TokenOptions.DefaultProvider, 
+                currentUser,
+                TokenOptions.DefaultProvider,
                 "AccountDeletion");
 
             // E-posta ile onay linki gönder
@@ -451,10 +453,10 @@ namespace RestaurantManagment.WebAPI.Controllers
             try
             {
                 await emailService.SendAccountDeletionConfirmationAsync(
-                    currentUser.Email!, 
-                    currentUser.UserName!, 
+                    currentUser.Email!,
+                    currentUser.UserName!,
                     deletionLink);
-                
+
                 return Ok(new { Message = "Hesap silme onayı için e-posta adresinize bir link gönderdik. Lütfen e-postanızı kontrol edin." });
             }
             catch (Exception ex)
@@ -479,9 +481,9 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             // Token'ı doğrula
             var isValidToken = await userManager.VerifyUserTokenAsync(
-                user, 
-                TokenOptions.DefaultProvider, 
-                "AccountDeletion", 
+                user,
+                TokenOptions.DefaultProvider,
+                "AccountDeletion",
                 token);
 
             if (!isValidToken)
@@ -517,5 +519,45 @@ namespace RestaurantManagment.WebAPI.Controllers
             await signInManager.SignOutAsync();
             return Ok(new { Message = "Çıkış başarılı" });
         }
+        [HttpPost("restaurant-ownership-application")]
+        [Authorize]
+        public async Task<IActionResult> ApplyForRestaurantOwnership([FromBody] OwnershipApplicationDto applicationDto)
+        {
+            var currentUser = await userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+            }
+
+            // Kullanıcının bekleyen bir başvurusu var mı kontrol et
+            var hasPendingApplication = userManager.Users
+                .Where(u => u.Id == currentUser.Id)
+                .SelectMany(u => u.OwnershipApplications)
+                .Any(a => a.Status == ApplicationStatus.Pending);
+
+            if (hasPendingApplication)
+            {
+                return BadRequest(new { Message = "Zaten bekleyen bir başvurunuz var." });
+            }
+
+            var application = new OwnershipApplication
+            {
+                UserId = currentUser.Id,
+                BusinessName = applicationDto.BusinessName,
+                BusinessDescription = applicationDto.BusinessDescription,
+                BusinessAddress = applicationDto.BusinessAddress,
+                BusinessPhone = applicationDto.BusinessPhone,
+                BusinessEmail = applicationDto.BusinessEmail,
+                Category = applicationDto.Category,
+                AdditionalNotes = applicationDto.AdditionalNotes,
+                ApplicationDate = DateTime.UtcNow,
+                Status = ApplicationStatus.Pending
+            };
+
+            await _accountService.CreateApplicationAsync(application);
+
+            return Ok(new { Message = "Restoran sahipliği başvurunuz alındı ve incelenecektir." });
+        }
+       
     }
 }

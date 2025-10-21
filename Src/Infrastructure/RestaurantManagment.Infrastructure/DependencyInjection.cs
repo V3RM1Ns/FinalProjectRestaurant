@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IAccountService, AccountService>();
         
         return services;
     }

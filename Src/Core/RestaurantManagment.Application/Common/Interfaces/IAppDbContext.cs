@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using RestaurantManagment.Domain.Models;
 
@@ -16,6 +15,7 @@ public interface IAppDbContext
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<JobPosting> JobPostings { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
+    public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
