@@ -38,22 +38,41 @@ public static class DbInitializer
         string fullName,
         string role)
     {
-        var user = await userManager.FindByEmailAsync(email);
-        if (user == null)
+        // Önce tüm kullanıcıları kontrol et (IsDeleted dahil)
+        var existingUser = userManager.Users.FirstOrDefault(u => u.Email == email);
+        
+        if (existingUser != null)
         {
-            user = new AppUser
+            // Kullanıcı silinmişse, tekrar aktif et
+            if (existingUser.IsDeleted)
             {
-                UserName = email,
-                Email = email,
-                EmailConfirmed = true,
-                FullName = fullName
-            };
-
-            var result = await userManager.CreateAsync(user, password);
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(user, role);
+                existingUser.IsDeleted = false;
+                existingUser.EmailConfirmed = true;
+                await userManager.UpdateAsync(existingUser);
+                
+                // Role kontrolü
+                var roles = await userManager.GetRolesAsync(existingUser);
+                if (!roles.Contains(role))
+                {
+                    await userManager.AddToRoleAsync(existingUser, role);
+                }
             }
+            return;
+        }
+
+        // Kullanıcı yoksa yeni oluştur
+        var user = new AppUser
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = true,
+            FullName = fullName
+        };
+
+        var result = await userManager.CreateAsync(user, password);
+        if (result.Succeeded)
+        {
+            await userManager.AddToRoleAsync(user, role);
         }
     }
 }

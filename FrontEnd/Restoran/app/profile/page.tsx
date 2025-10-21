@@ -30,7 +30,6 @@ export default function ProfilePage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [fetchingProfile, setFetchingProfile] = useState(true)
-  const [deleteType, setDeleteType] = useState<"soft" | "hard">("soft")
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -171,14 +170,13 @@ export default function ProfilePage() {
     setLoading(true)
 
     try {
-      const data = await ApiClient.post<any>("/Account/delete-account", {
-        deleteType: deleteType
-      })
+      const data = await ApiClient.post<any>("/Account/request-account-deletion", {})
 
       toast({
         title: "E-posta Gönderildi",
         description: data.message || "Hesap silme onayı e-postanıza gönderildi. Lütfen e-postanızı kontrol edin.",
       })
+      
     } catch (error: any) {
       toast({
         title: "Hata",
@@ -505,45 +503,31 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Hesabınızı Silin</CardTitle>
             <CardDescription>
-              Hesabınızı silmek için aşağıdaki seçeneklerden birini seçin ve butona tıklayın. E-postanıza bir doğrulama linki gönderilecektir.
+              Hesabınızı silmek istiyorsanız aşağıdaki butona tıklayın. E-postanıza bir doğrulama linki gönderilecektir.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <RadioGroup
-                value={deleteType}
-                onValueChange={(value) => setDeleteType(value as "soft" | "hard")}
-                className="space-y-3"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="soft" id="soft-delete" />
-                  <Label htmlFor="soft-delete" className="cursor-pointer">
-                    Sadece hesabı geçici olarak devre dışı bırak (veriler korunur, tekrar aktif edebilirsiniz)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="hard" id="hard-delete" />
-                  <Label htmlFor="hard-delete" className="cursor-pointer">
-                    Hesabı ve tüm verileri kalıcı olarak sil (⚠️ Bu işlem geri alınamaz!)
-                  </Label>
-                </div>
-              </RadioGroup>
+              <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
+                <p className="text-sm text-blue-900">
+                  <strong>Bilgi:</strong> Hesabınız geçici olarak devre dışı bırakılacak ve verileriniz korunacaktır. 
+                  İstediğiniz zaman geri dönüp hesabınızı tekrar aktif edebilirsiniz.
+                </p>
+              </div>
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={loading} className="w-full mt-4">
+                  <Button variant="destructive" disabled={loading} className="w-full">
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Hesap Silme İsteği Gönder
+                    Hesabımı Silmek İstiyorum
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Hesap Silme Onayı</AlertDialogTitle>
+                    <AlertDialogTitle>Hesabınızı silmek istediğinizden emin misiniz?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      {deleteType === "soft" 
-                        ? "Hesabınız geçici olarak devre dışı bırakılacak. E-postanıza bir doğrulama linki gönderilecek. Onayladıktan sonra hesabınızı istediğiniz zaman tekrar aktif edebilirsiniz."
-                        : "⚠️ DİKKAT: Hesabınız ve tüm verileriniz kalıcı olarak silinecek. Bu işlem geri alınamaz! E-postanıza bir doğrulama linki gönderilecek."
-                      }
+                      E-postanıza bir doğrulama linki gönderilecek. Linke tıkladığınızda hesabınız geçici olarak devre dışı bırakılacaktır. 
+                      Verileriniz korunacak ve istediğiniz zaman hesabınızı tekrar aktif edebileceksiniz.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -556,7 +540,7 @@ export default function ProfilePage() {
                       disabled={loading}
                       className="bg-red-600 hover:bg-red-700"
                     >
-                      {loading ? "Gönderiliyor..." : "Onayla ve E-posta Gönder"}
+                      {loading ? "Gönderiliyor..." : "Evet, E-posta Gönder"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>

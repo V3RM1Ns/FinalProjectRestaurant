@@ -111,13 +111,7 @@ public class Program
 
         var app = builder.Build();
 
-        // Rolleri ve kullanıcıları oluştur
-        using (var scope = app.Services.CreateScope())
-        {
-            var services = scope.ServiceProvider;
-            await DbInitializer.InitializeAsync(services);
-        }
-
+       
         // Configure the HTTP request pipeline.
         app.UseSwagger();
         app.UseSwaggerUI(c =>

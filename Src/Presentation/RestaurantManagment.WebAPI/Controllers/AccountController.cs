@@ -18,24 +18,29 @@ namespace RestaurantManagment.WebAPI.Controllers
         IEmailService emailService,
         IJwtTokenService jwtTokenService) : Controller
     {
+        
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
-
-            // Username kontrolü
+            
             var existingUserByUsername = await userManager.FindByNameAsync(userRegisterDto.Username);
             if (existingUserByUsername != null)
             {
                 ModelState.AddModelError("Username", "Bu kullanıcı adı zaten kullanılıyor");
                 return BadRequest(ModelState);
             }
-
-            // Email kontrolü
+            
+            
             var existingUserByEmail = await userManager.FindByEmailAsync(userRegisterDto.Email);
             if (existingUserByEmail != null)
             {
+                if (existingUserByEmail.IsDeleted)
+                {
+                    ModelState.AddModelError("Email", "Bu e-posta adresi silinmiş bir hesaba ait. Lütfen farklı bir e-posta kullanın veya destek ile iletişime geçin,Veya hesabınızı geri yükleyin.");
+                    return BadRequest(ModelState);
+                }
                 ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor");
                 return BadRequest(ModelState);
             }
@@ -55,21 +60,20 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             await userManager.AddToRoleAsync(user, "Customer");
 
-            // E-posta doğrulama token'ı oluştur
+           
             var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            // Doğrulama linki oluştur
+            
             var verificationLink =
                 $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
 
-            // E-posta gönder
             try
             {
                 await emailService.SendEmailVerificationAsync(user.Email!, user.UserName!, verificationLink);
             }
             catch (Exception ex)
             {
-                // E-posta gönderilemezse kullanıcıyı bilgilendir ama hesap oluşturuldu
+              
                 return Ok(new
                 {
                     Message = "Kayıt başarılı ancak doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin.",
@@ -158,30 +162,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "Geçersiz e-posta veya şifre" });
             }
             
-            // Soft delete kontrolü
-            if (user.IsDeleted)
-            {
-                // Tekrar aktif etme token'ı oluştur
-                var reactivationToken = await userManager.GeneratePasswordResetTokenAsync(user);
-                var reactivationLink = $"{Request.Scheme}://{Request.Host}/api/Account/reactivate-account?userId={user.Id}&token={Uri.EscapeDataString(reactivationToken)}";
-                
-                // Tekrar aktif etme e-postası gönder
-                try
-                {
-                    await emailService.SendAccountReactivationAsync(user.Email!, user.UserName!, reactivationLink);
-                }
-                catch (Exception)
-                {
-                    // E-posta gönderilemezse yine de mesaj ver
-                }
-                
-                return Unauthorized(new
-                {
-                    Message = "Hesabınız devre dışı bırakılmış. Hesabınızı tekrar aktif etmek için e-postanıza gönderilen linke tıklayın.",
-                    IsDeleted = true,
-                    Email = user.Email
-                });
-            }
+
           
             if (!user.EmailConfirmed)
             {
@@ -448,42 +429,33 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return Ok(new { Message = "Profil güncellendi." });
         }
-
-        [HttpPost("delete-account")]
+        [HttpPost("request-account-deletion")]
         [Authorize]
-        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountRequestDto deleteAccountRequest)
+        public async Task<IActionResult> RequestAccountDeletion()
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
             var currentUser = await userManager.GetUserAsync(User);
             if (currentUser == null)
             {
                 return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
             }
 
-            // Silme türünü kontrol et
-            if (deleteAccountRequest.DeleteType.ToLower() != "soft" && deleteAccountRequest.DeleteType.ToLower() != "hard")
-            {
-                return BadRequest(new { Message = "Geçersiz silme türü. 'soft' veya 'hard' olmalıdır." });
-            }
+            // Token oluştur
+            var deletionToken = await userManager.GenerateUserTokenAsync(
+                currentUser, 
+                TokenOptions.DefaultProvider, 
+                "AccountDeletion");
 
-            // Token oluştur (şifre sıfırlama token'ını kullanıyoruz)
-            var deleteToken = await userManager.GeneratePasswordResetTokenAsync(currentUser);
-
-            // Onay linki oluştur
-            var confirmationLink = $"{Request.Scheme}://{Request.Host}/api/Account/confirm-delete?userId={currentUser.Id}&token={Uri.EscapeDataString(deleteToken)}&deleteType={deleteAccountRequest.DeleteType.ToLower()}";
+            // E-posta ile onay linki gönder
+            var deletionLink = $"{Request.Scheme}://{Request.Host}/api/Account/confirm-account-deletion?userId={currentUser.Id}&token={Uri.EscapeDataString(deletionToken)}";
 
             try
             {
-                await emailService.SendDeleteAccountConfirmationAsync(
-                    currentUser.Email!,
-                    currentUser.UserName!,
-                    confirmationLink,
-                    deleteAccountRequest.DeleteType.ToLower()
-                );
-
-                return Ok(new { Message = "Hesap silme onayı e-postanıza gönderildi. Lütfen e-postanızı kontrol edin." });
+                await emailService.SendAccountDeletionConfirmationAsync(
+                    currentUser.Email!, 
+                    currentUser.UserName!, 
+                    deletionLink);
+                
+                return Ok(new { Message = "Hesap silme onayı için e-posta adresinize bir link gönderdik. Lütfen e-postanızı kontrol edin." });
             }
             catch (Exception ex)
             {
@@ -491,135 +463,59 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        [HttpGet("confirm-delete")]
-        public async Task<IActionResult> ConfirmDeleteAccount([FromQuery] string userId, [FromQuery] string token, [FromQuery] string deleteType)
+        [HttpGet("confirm-account-deletion")]
+        public async Task<IActionResult> ConfirmAccountDeletion([FromQuery] string userId, [FromQuery] string token)
         {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(deleteType))
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
             {
-                return BadRequest(new { Message = "Geçersiz onay linki" });
+                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=invalid");
             }
 
             var user = await userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return NotFound(new { Message = "Kullanıcı bulunamadı" });
+                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=not-found");
             }
 
             // Token'ı doğrula
             var isValidToken = await userManager.VerifyUserTokenAsync(
-                user,
-                userManager.Options.Tokens.PasswordResetTokenProvider,
-                "ResetPassword",
-                token
-            );
+                user, 
+                TokenOptions.DefaultProvider, 
+                "AccountDeletion", 
+                token);
 
             if (!isValidToken)
             {
                 return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=invalid-token");
             }
 
-            if (deleteType.ToLower() == "soft")
-            {
-                // Soft Delete: Hesabı devre dışı bırak
-                user.IsDeleted = true;
-                user.DeletedAt = DateTime.UtcNow;
-                user.DeletedBy = user.Id;
-                user.LockoutEnabled = true;
-                user.LockoutEnd = DateTimeOffset.MaxValue; // Süresiz kilitle
+            // Hesabı sil (soft delete)
+            user.IsDeleted = true;
+            var result = await userManager.UpdateAsync(user);
 
-                var updateResult = await userManager.UpdateAsync(user);
-                if (updateResult.Succeeded)
-                {
-                    // Tekrar aktif etme linki gönder
-                    try
-                    {
-                        var reactivationToken = await userManager.GeneratePasswordResetTokenAsync(user);
-                        var reactivationLink = $"{Request.Scheme}://{Request.Host}/api/Account/reactivate-account?userId={user.Id}&token={Uri.EscapeDataString(reactivationToken)}";
-                        
-                        await emailService.SendAccountReactivationAsync(user.Email!, user.UserName!, reactivationLink);
-                    }
-                    catch (Exception)
-                    {
-                        // E-posta gönderilemezse yine de işleme devam et
-                    }
-
-                    return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=soft-success");
-                }
-                else
-                {
-                    return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=failed");
-                }
-            }
-            else if (deleteType.ToLower() == "hard")
+            if (result.Succeeded)
             {
-                // Hard Delete: Kullanıcıyı tamamen sil
-                var deleteResult = await userManager.DeleteAsync(user);
-                if (deleteResult.Succeeded)
-                {
-                    return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/login?deleteStatus=hard-success");
-                }
-                else
-                {
-                    return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=failed");
-                }
+                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=success");
             }
 
-            return BadRequest(new { Message = "Geçersiz silme türü" });
+            return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=failed");
         }
 
-        [HttpGet("reactivate-account")]
-        public async Task<IActionResult> ReactivateAccount([FromQuery] string userId, [FromQuery] string token)
+        [HttpPost("delete-account")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccount()
         {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=invalid-token");
-            }
+            // Bu endpoint artık kullanılmıyor, yeni endpoint: request-account-deletion
+            return BadRequest(new { Message = "Bu endpoint kullanım dışı. Lütfen 'request-account-deletion' kullanın." });
+        }
 
-            // Kullanıcıyı bul - soft delete edilmiş kullanıcılar dahil
-            var user = await userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                // Log için userId bilgisi ekleyelim
-                Console.WriteLine($"Reactivation attempt failed: User not found with ID: {userId}");
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=user-not-found");
-            }
 
-            // Eğer kullanıcı silinmemişse
-            if (!user.IsDeleted)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=already-active");
-            }
-
-            // Token'ı doğrula
-            var isValidToken = await userManager.VerifyUserTokenAsync(
-                user,
-                userManager.Options.Tokens.PasswordResetTokenProvider,
-                "ResetPassword",
-                token
-            );
-
-            if (!isValidToken)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=invalid-token");
-            }
-
-            // Hesabı tekrar aktif et
-            user.IsDeleted = false;
-            user.DeletedAt = null;
-            user.DeletedBy = null;
-            user.LockoutEnabled = false;
-            user.LockoutEnd = null;
-
-            var updateResult = await userManager.UpdateAsync(user);
-            if (updateResult.Succeeded)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=success");
-            }
-            else
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-reactivated?status=failed");
-            }
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            await signInManager.SignOutAsync();
+            return Ok(new { Message = "Çıkış başarılı" });
         }
     }
 }
-

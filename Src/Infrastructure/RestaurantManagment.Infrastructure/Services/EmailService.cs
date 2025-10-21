@@ -311,6 +311,42 @@ public class EmailService : IEmailService
         await SendEmailAsync(to, subject, body);
     }
 
+    public async Task SendAccountDeletionConfirmationAsync(string to, string userName, string confirmationLink)
+    {
+        var subject = "Hesap Silme Onayı - Restaurant Management";
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .warning {{ background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0; border-radius: 4px; }}
+        .btn {{ display: inline-block; background: #dc2626; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px; }}
+        .footer {{ margin-top: 32px; font-size: 12px; color: #888; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <h2>Merhaba {userName},</h2>
+        <p>Hesabınızı silmek için bir talepte bulundunuz.</p>
+        <div class='warning'>
+            <strong>⚠️ UYARI: Hesabınız geçici olarak devre dışı bırakılacaktır. İstediğiniz zaman tekrar aktif edebilirsiniz.</strong>
+        </div>
+        <p>Bu işlemi onaylamak için aşağıdaki butona tıklayın:</p>
+        <a href='{confirmationLink}' class='btn'>Hesap Silmeyi Onayla</a>
+        <p style='margin-top:24px;'>Eğer bu isteği siz yapmadıysanız, bu e-postayı görmezden gelebilirsiniz ve hesabınız güvende olacaktır.</p>
+        <div class='footer'>Restaurant Management ekibi</div>
+    </div>
+</body>
+</html>
+";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
     public async Task SendAccountReactivationAsync(string to, string userName, string reactivationLink)
     {
         var subject = "Hesabınızı Tekrar Aktif Edin - Restaurant Management";
