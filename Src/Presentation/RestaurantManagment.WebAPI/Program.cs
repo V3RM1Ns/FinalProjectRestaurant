@@ -124,10 +124,11 @@ public class Program
         });
         app.MapOpenApi();
 
-        
-        app.UseHttpsRedirection();
-        
+
+        app.UseHttpsRedirection(); // ÖNEMLİ: Authentication middleware'i eklenmeli
+        app.UseAuthentication(); // Bu satır eklenmeliydi!
         app.UseAuthorization();
+        
         app.MapControllers();
 
         app.Run();

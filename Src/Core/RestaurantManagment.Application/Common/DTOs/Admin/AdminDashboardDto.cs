@@ -9,7 +9,5 @@ public class AdminDashboardDto
     public int TotalRestaurants { get; set; }
     public int TotalRestaurantOwners { get; set; }
     public int TotalEmployees { get; set; }
-    public List<UserAdminShowDto> RecentUsers { get; set; } = new();
-    public List<Restaurant> RecentRestaurants { get; set; } = new();
-    public List<OwnershipApplication> RecentOwnershipApplications { get; set; } = new();
+    public int TotalPendingApplications { get; set; }
 }

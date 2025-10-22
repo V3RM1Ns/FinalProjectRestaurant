@@ -123,3 +123,6 @@ export const reservationApi = {
   update: (id: string, data: any) => ApiClient.put<any>(`/Reservation/${id}`, data),
   cancel: (id: string) => ApiClient.delete<any>(`/Reservation/${id}`),
 }
+
+// Generic API client export for direct usage
+export const api = ApiClient
