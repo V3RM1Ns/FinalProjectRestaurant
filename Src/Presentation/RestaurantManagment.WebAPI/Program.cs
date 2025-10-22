@@ -15,9 +15,8 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container.
+ 
         builder.Services.AddControllers();
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         builder.Services.AddSwaggerGen(c =>
         {
@@ -67,7 +66,7 @@ public class Program
             opt.Lockout.MaxFailedAccessAttempts = 5;
             opt.Lockout.AllowedForNewUsers = true;
             opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            opt.SignIn.RequireConfirmedEmail = true;
+            opt.SignIn.RequireConfirmedEmail = false; //DUZLET
             opt.Password.RequiredLength = 6;
         }).AddEntityFrameworkStores<AppDbContext>()
           .AddDefaultTokenProviders();
@@ -98,19 +97,21 @@ public class Program
 
         builder.Services.AddAuthorization();
 
-        // CORS
+        // CORS ekle
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy("AllowAll", policy =>
-            {
-                policy.AllowAnyOrigin()
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
-            });
+            options.AddPolicy("AllowReactApp",
+                policy =>
+                {
+                    policy.WithOrigins("http://localhost:3000") 
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
         });
 
         var app = builder.Build();
-
+        app.UseCors("AllowReactApp");
 
         // Configure the HTTP request pipeline.
         app.UseSwagger();
@@ -119,11 +120,11 @@ public class Program
             c.SwaggerEndpoint("/swagger/v1/swagger.json", "RestaurantManagment API V1");
             c.RoutePrefix = "swagger";
             c.DocumentTitle = "RestaurantManagment Swagger";
-            c.EnablePersistAuthorization(); // Bearer token için
+            c.EnablePersistAuthorization();
         });
         app.MapOpenApi();
 
-        // CORS - ÖNEMLİ: En başta olmalı
+        
         app.UseHttpsRedirection();
         
         app.UseAuthorization();

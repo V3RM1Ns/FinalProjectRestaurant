@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+ using Microsoft.EntityFrameworkCore;
 using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Application.Common.Interfaces;

@@ -17,9 +17,9 @@ namespace RestaurantManagment.WebAPI.Controllers
         IMapper mapper,
         IEmailService emailService,
         IJwtTokenService jwtTokenService,
-        IAccountService accountService) : Controller
+        IAccountService _accountService) : Controller
     {
-        private readonly IAccountService _accountService = accountService;
+ 
         
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
