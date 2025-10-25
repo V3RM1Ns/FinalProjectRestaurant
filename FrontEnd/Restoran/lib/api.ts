@@ -124,5 +124,39 @@ export const reservationApi = {
   cancel: (id: string) => ApiClient.delete<any>(`/Reservation/${id}`),
 }
 
+// Employee API
+export const employeeApi = {
+  getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/Restaurant/${restaurantId}/employees`),
+  create: (restaurantId: string, data: any) => ApiClient.post<any>(`/Restaurant/${restaurantId}/employees`, data),
+  update: (restaurantId: string, employeeId: string, data: any) => ApiClient.put<any>(`/Restaurant/${restaurantId}/employees/${employeeId}`, data),
+  delete: (restaurantId: string, employeeId: string) => ApiClient.delete<any>(`/Restaurant/${restaurantId}/employees/${employeeId}`),
+}
+
+// Job Application API
+export const jobApplicationApi = {
+  getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/JobApplication/restaurant/${restaurantId}`),
+  getById: (id: string) => ApiClient.get<any>(`/JobApplication/${id}`),
+  accept: (id: string) => ApiClient.patch<any>(`/JobApplication/${id}/accept`, {}),
+  reject: (id: string, reason?: string) => ApiClient.patch<any>(`/JobApplication/${id}/reject`, { reason }),
+}
+
+// Review API
+export const reviewApi = {
+  getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/Review/restaurant/${restaurantId}`),
+  getById: (id: string) => ApiClient.get<any>(`/Review/${id}`),
+  approve: (id: string) => ApiClient.patch<any>(`/Review/${id}/approve`, {}),
+  reject: (id: string) => ApiClient.patch<any>(`/Review/${id}/reject`, {}),
+  respond: (id: string, response: string) => ApiClient.patch<any>(`/Review/${id}/respond`, { response }),
+}
+
+// Table API
+export const tableApi = {
+  getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/Table/restaurant/${restaurantId}`),
+  getById: (id: string) => ApiClient.get<any>(`/Table/${id}`),
+  create: (data: any) => ApiClient.post<any>("/Table", data),
+  update: (id: string, data: any) => ApiClient.put<any>(`/Table/${id}`, data),
+  delete: (id: string) => ApiClient.delete<any>(`/Table/${id}`),
+}
+
 // Generic API client export for direct usage
 export const api = ApiClient

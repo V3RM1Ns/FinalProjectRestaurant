@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using RestaurantManagment.Domain.Models;
+using RestaurantManagment.Application.Common.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace RestaurantManagment.Persistance.Data;
 
@@ -10,6 +12,7 @@ public static class DbInitializer
     {
         var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
         var userManager = serviceProvider.GetRequiredService<UserManager<AppUser>>();
+        var context = serviceProvider.GetRequiredService<IAppDbContext>();
 
         // Roller
         string[] roles = { "Admin", "RestaurantOwner", "Employee", "Customer", "Delivery" };
@@ -25,13 +28,37 @@ public static class DbInitializer
 
         // Her rol için kullanıcı oluştur
         await CreateUserIfNotExists(userManager, "admin@restaurant.com", "Admin123!", "Admin User", "Admin");
-        await CreateUserIfNotExists(userManager, "owner@restaurant.com", "Owner123!", "Restaurant Owner", "RestaurantOwner");
+        var owner = await CreateUserIfNotExists(userManager, "owner@restaurant.com", "Owner123!", "Restaurant Owner", "RestaurantOwner");
         await CreateUserIfNotExists(userManager, "employee@restaurant.com", "Employee123!", "Employee User", "Employee");
         await CreateUserIfNotExists(userManager, "customer@restaurant.com", "Customer123!", "Customer User", "Customer");
         await CreateUserIfNotExists(userManager, "delivery@restaurant.com", "Delivery123!", "Delivery User", "Delivery");
+
+        // Owner için restoran oluştur
+        if (owner != null)
+        {
+            var existingRestaurant = await context.Restaurants
+                .FirstOrDefaultAsync(r => r.OwnerId == owner.Id && !r.IsDeleted);
+
+            if (existingRestaurant == null)
+            {
+                var restaurant = new Restaurant
+                {
+                    Name = "Demo Restaurant",
+                    Address = "İstanbul, Türkiye",
+                    PhoneNumber = "+905551234567",
+                    Email = "info@demorestaurant.com",
+                    Description = "Demo restoran açıklaması",
+                    OwnerId = owner.Id,
+                    Rate = 4.5m
+                };
+
+                context.Restaurants.Add(restaurant);
+                await context.SaveChangesAsync();
+            }
+        }
     }
 
-    private static async Task CreateUserIfNotExists(
+    private static async Task<AppUser?> CreateUserIfNotExists(
         UserManager<AppUser> userManager,
         string email,
         string password,
@@ -57,7 +84,7 @@ public static class DbInitializer
                     await userManager.AddToRoleAsync(existingUser, role);
                 }
             }
-            return;
+            return existingUser;
         }
 
         // Kullanıcı yoksa yeni oluştur
@@ -73,6 +100,9 @@ public static class DbInitializer
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(user, role);
+            return user;
         }
+
+        return null;
     }
 }

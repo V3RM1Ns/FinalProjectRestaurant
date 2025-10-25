@@ -18,7 +18,7 @@ export interface AppUser extends BaseEntity {
 
 export enum UserRole {
   Admin = "Admin",
-  Owner = "Owner",
+  Owner = "RestaurantOwner",
   Employee = "Employee",
   Customer = "Customer",
   Delivery = "Delivery",
@@ -221,5 +221,43 @@ export interface Review extends BaseEntity {
 export enum ReviewStatus {
   Pending = "Pending",
   Approved = "Approved",
+  Rejected = "Rejected",
+}
+
+export interface JobPosting extends BaseEntity {
+  restaurantId: string
+  title: string
+  description: string
+  requirements: string
+  salary?: string
+  workingHours?: string
+  status: JobPostingStatus
+  applicationDeadline?: string
+}
+
+export enum JobPostingStatus {
+  Active = "Active",
+  Closed = "Closed",
+  Draft = "Draft",
+}
+
+export interface JobApplication extends BaseEntity {
+  jobPostingId: string
+  applicantId: string
+  applicantName: string
+  applicantEmail: string
+  applicantPhone?: string
+  coverLetter: string
+  resumeUrl?: string
+  status: JobApplicationStatus
+  appliedDate: string
+  reviewedAt?: string
+  reviewNotes?: string
+}
+
+export enum JobApplicationStatus {
+  Pending = "Pending",
+  Reviewed = "Reviewed",
+  Accepted = "Accepted",
   Rejected = "Rejected",
 }
