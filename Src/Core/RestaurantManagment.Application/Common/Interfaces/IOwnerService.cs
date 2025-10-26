@@ -20,9 +20,9 @@ public interface IOwnerService
     Task<IEnumerable<Restaurant>> GetOwnerRestaurantsAsync(string ownerId);
     Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId);
     Task<Restaurant> CreateRestaurantAsync(CreateRestaurantDto dto, string ownerId);
-    Task<Restaurant> UpdateRestaurantAsync(int restaurantId, UpdateRestaurantDto dto, string ownerId);
-    Task DeleteRestaurantAsync(int restaurantId, string ownerId);
-    Task<bool> IsRestaurantOwnerAsync(int restaurantId, string ownerId);
+    Task<Restaurant> UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto, string ownerId);
+    Task DeleteRestaurantAsync(string restaurantId, string ownerId);
+    Task<bool> IsRestaurantOwnerAsync(string restaurantId, string ownerId);
     
    
     Task<OwnerDashboardDto> GetDashboardDataAsync(int restaurantId, string ownerId);

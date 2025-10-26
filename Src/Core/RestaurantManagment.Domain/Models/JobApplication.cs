@@ -8,7 +8,7 @@ public class JobApplication : BaseEntity
     [Required]
     public string JobPostingId { get; set; } = string.Empty;
     public JobPosting JobPosting { get; set; } = null!;
-    
+
     [Required]
     public string ApplicantId { get; set; } = string.Empty;
     public AppUser Applicant { get; set; } = null!;
@@ -27,11 +27,12 @@ public class JobApplication : BaseEntity
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
     
     public DateTime? ReviewedDate { get; set; }
-    
+
     public string? ReviewedBy { get; set; }
     
     [MaxLength(1000)]
     public string? ReviewNotes { get; set; }
 }
+
 
 

@@ -11,6 +11,7 @@ using RestaurantManagment.Application.Common.DTOs.Review;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
@@ -60,20 +61,55 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
 
         return restaurant;
     }
-
-    public Task<Restaurant> UpdateRestaurantAsync(int restaurantId, UpdateRestaurantDto dto, string ownerId)
+    
+    public async Task<Restaurant> UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto, string ownerId)
     {
-        throw new NotImplementedException();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+        
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var restaurant = await _context.Restaurants
+            .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
+ 
+        if (restaurant == null)
+            throw new Exception("Restoran bulunamadı veya bu restorana erişim yetkiniz yok.");
+
+        _mapper.Map(dto, restaurant);
+        restaurant.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return restaurant;
+    }
+    
+    public async Task DeleteRestaurantAsync(string restaurantId, string ownerId)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var restaurant = await _context.Restaurants
+            .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
+
+        if (restaurant == null)
+            throw new Exception("Restoran bulunamadı veya bu restorana erişim yetkiniz yok.");
+
+        restaurant.IsDeleted = true;
+        restaurant.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task DeleteRestaurantAsync(int restaurantId, string ownerId)
+    public async Task<bool> IsRestaurantOwnerAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
-    }
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-    public Task<bool> IsRestaurantOwnerAsync(int restaurantId, string ownerId)
-    {
-        throw new NotImplementedException();
+        var restaurant = await _context.Restaurants
+            .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
+
+        return restaurant != null;
     }
 
     public Task<OwnerDashboardDto> GetDashboardDataAsync(int restaurantId, string ownerId)
