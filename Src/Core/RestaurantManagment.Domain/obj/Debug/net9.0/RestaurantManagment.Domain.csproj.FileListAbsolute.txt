@@ -19,8 +19,8 @@ C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.AssemblyInfoInputs.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.AssemblyInfo.cs
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.csproj.CoreCompileInputs.cache
+C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.sourcelink.json
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\refint\RestaurantManagment.Domain.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\ref\RestaurantManagment.Domain.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Core\RestaurantManagment.Domain\obj\Debug\net9.0\RestaurantManagment.Domain.sourcelink.json

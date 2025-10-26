@@ -65,12 +65,12 @@ public static class DbInitializer
         string fullName,
         string role)
     {
-        // Önce tüm kullanıcıları kontrol et (IsDeleted dahil)
+       
         var existingUser = userManager.Users.FirstOrDefault(u => u.Email == email);
 
         if (existingUser != null)
         {
-            // Kullanıcı silinmişse, tekrar aktif et
+      
             if (existingUser.IsDeleted)
             {
                 existingUser.IsDeleted = false;

@@ -1,12 +1,1 @@
-{
-  "Version": 1,
-  "Hash": "t/fRqb+FIEtLY0JAw5Sf5Y4Fy0fMR46720X3q1ejrUU=",
-  "Source": "RestaurantManagment.WebAPI",
-  "BasePath": "_content/RestaurantManagment.WebAPI",
-  "Mode": "Default",
-  "ManifestType": "Build",
-  "ReferencedProjectsConfiguration": [],
-  "DiscoveryPatterns": [],
-  "Assets": [],
-  "Endpoints": []
-}
+{"Version":1,"Hash":"t/fRqb+FIEtLY0JAw5Sf5Y4Fy0fMR46720X3q1ejrUU=","Source":"RestaurantManagment.WebAPI","BasePath":"_content/RestaurantManagment.WebAPI","Mode":"Default","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}

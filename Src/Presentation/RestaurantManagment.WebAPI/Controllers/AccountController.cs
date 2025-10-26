@@ -214,7 +214,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
 
-            // Frontend URL'ini kullan
+            
             var frontendUrl = "http://localhost:3000";
             var resetLink = $"{frontendUrl}/reset-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
 
@@ -289,7 +289,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return BadRequest(new { Message = "Yeni şifre mevcut şifrenizle aynı olamaz" });
             }
 
-            // Şifreyi değiştir
+            
             var result = await userManager.ChangePasswordAsync(currentUser, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
             if (result.Succeeded)
             {
@@ -346,7 +346,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             bool emailChanged = false;
 
-            // İsim / soyisim güncelle
+           
             if (!string.IsNullOrWhiteSpace(userProfileDto.FirstName))
             {
                 currentUser.FirstName = userProfileDto.FirstName.Trim();
@@ -357,10 +357,10 @@ namespace RestaurantManagment.WebAPI.Controllers
                 currentUser.LastName = userProfileDto.LastName.Trim();
             }
 
-            // FullName'i sunucu tarafında birleştir
+           
             currentUser.FullName = $"{currentUser.FirstName} {currentUser.LastName}".Trim();
 
-            // Username değişikliği ve benzersizlik kontrolü
+          
             if (!string.IsNullOrWhiteSpace(userProfileDto.UserName) &&
                 !string.Equals(currentUser.UserName, userProfileDto.UserName, StringComparison.OrdinalIgnoreCase))
             {
@@ -374,7 +374,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 currentUser.UserName = userProfileDto.UserName;
             }
 
-            // Email değişikliği ve benzersizlik kontrolü
+          
             if (!string.IsNullOrWhiteSpace(userProfileDto.Email) &&
                 !string.Equals(currentUser.Email, userProfileDto.Email, StringComparison.OrdinalIgnoreCase))
             {
@@ -386,12 +386,12 @@ namespace RestaurantManagment.WebAPI.Controllers
                 }
 
                 currentUser.Email = userProfileDto.Email;
-                // E-posta değişince yeniden doğrulama gereksinimi
+             
                 currentUser.EmailConfirmed = false;
                 emailChanged = true;
             }
 
-            // Telefon ve adres güncelle
+   
             currentUser.Phone = userProfileDto.Phone ?? currentUser.Phone;
             currentUser.Address = userProfileDto.Address ?? currentUser.Address;
 
@@ -405,8 +405,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
                 return BadRequest(ModelState);
             }
-
-            // Eğer e-posta değiştiyse doğrulama e-posta
+             
             if (emailChanged)
             {
                 try
@@ -441,13 +440,13 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
             }
 
-            // Token oluştur
+          
             var deletionToken = await userManager.GenerateUserTokenAsync(
                 currentUser,
                 TokenOptions.DefaultProvider,
                 "AccountDeletion");
 
-            // E-posta ile onay linki gönder
+           
             var deletionLink = $"{Request.Scheme}://{Request.Host}/api/Account/confirm-account-deletion?userId={currentUser.Id}&token={Uri.EscapeDataString(deletionToken)}";
 
             try
@@ -479,7 +478,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=not-found");
             }
 
-            // Token'ı doğrula
+       
             var isValidToken = await userManager.VerifyUserTokenAsync(
                 user,
                 TokenOptions.DefaultProvider,
@@ -491,7 +490,6 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=invalid-token");
             }
 
-            // Hesabı sil (soft delete)
             user.IsDeleted = true;
             var result = await userManager.UpdateAsync(user);
 
@@ -503,13 +501,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=failed");
         }
 
-        [HttpPost("delete-account")]
-        [Authorize]
-        public async Task<IActionResult> DeleteAccount()
-        {
-            // Bu endpoint artık kullanılmıyor, yeni endpoint: request-account-deletion
-            return BadRequest(new { Message = "Bu endpoint kullanım dışı. Lütfen 'request-account-deletion' kullanın." });
-        }
+      
 
 
         [HttpPost("logout")]
@@ -529,7 +521,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
             }
 
-            // Kullanıcının bekleyen bir başvurusu var mı kontrol et
+          
             var hasPendingApplication = userManager.Users
                 .Where(u => u.Id == currentUser.Id)
                 .SelectMany(u => u.OwnershipApplications)

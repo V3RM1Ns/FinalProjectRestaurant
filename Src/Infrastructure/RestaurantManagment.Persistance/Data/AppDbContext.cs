@@ -27,10 +27,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     {
         base.OnModelCreating(modelBuilder);
 
-        // Apply all configurations from assembly
+     
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
         
-        // Configure decimal precision
+      
         modelBuilder.Entity<Restaurant>()
             .Property(r => r.Rate)
             .HasPrecision(3, 2);

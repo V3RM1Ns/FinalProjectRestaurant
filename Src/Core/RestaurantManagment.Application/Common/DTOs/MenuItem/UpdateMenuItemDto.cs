@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RestaurantManagment.Application.DTOs.MenuItem;
+namespace RestaurantManagment.Application.Common.DTOs.MenuItem;
 
 public class UpdateMenuItemDto
 {
@@ -27,4 +27,3 @@ public class UpdateMenuItemDto
 
     public bool IsAvailable { get; set; }
 }
-

@@ -6,7 +6,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // Artık düzgün çalışacak
+    [Authorize(Roles = "Admin")] 
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
@@ -16,9 +16,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             _adminService = adminService;
         }
 
-        /// <summary>
-        /// Admin dashboard istatistiklerini getirir
-        /// </summary>
+       
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard()
         {
@@ -33,9 +31,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Kullanıcıları sayfalı olarak getirir
-        /// </summary>
+      
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
@@ -50,9 +46,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Restoranları sayfalı olarak getirir
-        /// </summary>
+      
         [HttpGet("restaurants")]
         public async Task<IActionResult> GetRestaurants([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
@@ -67,9 +61,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Restoran sahibi başvurularını sayfalı olarak getirir
-        /// </summary>
+      
         [HttpGet("applications")]
         public async Task<IActionResult> GetApplications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 5)
         {
@@ -84,9 +76,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Bekleyen restoran sahibi başvurularını getirir
-        /// </summary>
+      
         [HttpGet("applications/pending")]
         public async Task<IActionResult> GetPendingApplications()
         {
@@ -101,9 +91,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Belirli bir başvuruyu getirir
-        /// </summary>
+     
         [HttpGet("applications/{id}")]
         public async Task<IActionResult> GetApplication(int id)
         {
@@ -121,9 +109,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Restoran sahibi başvurusunu onaylar
-        /// </summary>
+     
         [HttpPost("applications/{id}/approve")]
         public async Task<IActionResult> ApproveApplication(int id)
         {
@@ -142,9 +128,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Restoran sahibi başvurusunu reddeder
-        /// </summary>
+     
         [HttpPost("applications/{id}/reject")]
         public async Task<IActionResult> RejectApplication(int id, [FromBody] RejectApplicationRequest request)
         {

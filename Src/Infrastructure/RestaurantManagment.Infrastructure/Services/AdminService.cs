@@ -6,20 +6,13 @@ using RestaurantManagment.Application.Common.DTOs.Common;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
+using AutoMapper;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class AdminService : IAdminService
+public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, IMapper _mapper) : IAdminService
 {
-    private readonly IAppDbContext _context;
-    private readonly UserManager<AppUser> _userManager;
-
-    public AdminService(IAppDbContext context, UserManager<AppUser> userManager)
-    {
-        _context = context;
-        _userManager = userManager;
-    }
-
+    
     public async Task<OwnershipApplication?> GetApplicationByIdAsync(int id)
     {
         return await _context.OwnershipApplications
@@ -101,7 +94,6 @@ public class AdminService : IAdminService
         }
         dashboard.TotalRestaurantOwners = owners.Count;
 
-        // Total Employees
         var employeeRole = "Employee";
         var employeesQuery = _userManager.Users.Where(u => !u.IsDeleted);
         var allEmployees = await employeesQuery.ToListAsync();
@@ -117,7 +109,6 @@ public class AdminService : IAdminService
         }
         dashboard.TotalEmployees = employees.Count;
 
-        // Total Pending Applications
         dashboard.TotalPendingApplications = await _context.OwnershipApplications
             .Where(a => a.Status == ApplicationStatus.Pending && !a.IsDeleted)
             .CountAsync();
@@ -174,17 +165,7 @@ public class AdminService : IAdminService
             .Take(pageSize)
             .ToListAsync();
 
-        var restaurantDtos = restaurants.Select(r => new RestaurantAdminListDto
-        {
-            Id = r.Id,
-            Name = r.Name,
-            Address = r.Address,
-            PhoneNumber = r.PhoneNumber,
-            OwnerName = r.Owner.FullName,
-            OwnerEmail = r.Owner.Email ?? string.Empty,
-            Rate = r.Rate,
-            CreatedAt = r.CreatedAt
-        }).ToList();
+        var restaurantDtos = _mapper.Map<List<RestaurantAdminListDto>>(restaurants);
 
         return new PaginatedResult<RestaurantAdminListDto>
         {
@@ -209,20 +190,7 @@ public class AdminService : IAdminService
             .Take(pageSize)
             .ToListAsync();
 
-        var applicationDtos = applications.Select(a => new OwnershipApplicationAdminDto
-        {
-            Id = a.Id,
-            UserId = a.UserId,
-            UserName = a.User.UserName ?? string.Empty,
-            UserEmail = a.User.Email ?? string.Empty,
-            BusinessName = a.BusinessName,
-            BusinessAddress = a.BusinessAddress,
-            Category = a.Category,
-            Status = a.Status.ToString(),
-            ApplicationDate = a.ApplicationDate,
-            ReviewedAt = a.ReviewedAt,
-            RejectionReason = a.RejectionReason
-        }).ToList();
+        var applicationDtos = _mapper.Map<List<OwnershipApplicationAdminDto>>(applications);
 
         return new PaginatedResult<OwnershipApplicationAdminDto>
         {

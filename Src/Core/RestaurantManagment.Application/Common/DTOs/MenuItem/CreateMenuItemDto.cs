@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace RestaurantManagment.Application.DTOs.MenuItem;
+namespace RestaurantManagment.Application.Common.DTOs.MenuItem;
 
 public class CreateMenuItemDto
 {
@@ -27,4 +27,3 @@ public class CreateMenuItemDto
     [Required]
     public string MenuId { get; set; } = string.Empty;
 }
-

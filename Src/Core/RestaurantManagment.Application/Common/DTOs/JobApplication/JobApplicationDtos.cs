@@ -17,4 +17,3 @@ public class JobApplicationDto
     public DateTime? ReviewedDate { get; set; }
     public string? ReviewNotes { get; set; }
 }
-

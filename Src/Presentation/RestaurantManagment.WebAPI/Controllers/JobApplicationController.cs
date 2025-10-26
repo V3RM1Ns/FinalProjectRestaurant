@@ -24,7 +24,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             _emailService = emailService;
         }
 
-        // GET: api/JobApplication/my-applications
+     
         [HttpGet("my-applications")]
         [Authorize(Roles = "Customer")]
         public async Task<ActionResult<IEnumerable<JobApplicationDto>>> GetMyApplications()
@@ -55,23 +55,24 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(applications);
         }
 
-        // GET: api/JobApplication/restaurant/{restaurantId}
+     
         [HttpGet("restaurant/{restaurantId}")]
         [Authorize(Roles = "Owner")]
         public async Task<ActionResult<IEnumerable<JobApplicationDto>>> GetRestaurantApplications(string restaurantId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            // Verify ownership
+          
             var restaurant = await _context.Restaurants.FindAsync(restaurantId);
             if (restaurant == null)
-                return NotFound("Restaurant not found");
+                return NotFound(new { message = "Restaurant not found" });
 
             if (restaurant.OwnerId != userId)
                 return Forbid();
 
             var applications = await _context.JobApplications
                 .Include(ja => ja.JobPosting)
+                    .ThenInclude(jp => jp.Restaurant)
                 .Include(ja => ja.Applicant)
                 .Where(ja => ja.JobPosting.RestaurantId == restaurantId)
                 .Select(ja => new JobApplicationDto
@@ -97,7 +98,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(applications);
         }
 
-        // GET: api/JobApplication/job-posting/{jobPostingId}
+       
         [HttpGet("job-posting/{jobPostingId}")]
         [Authorize(Roles = "Owner")]
         public async Task<ActionResult<IEnumerable<JobApplicationDto>>> GetJobPostingApplications(string jobPostingId)
@@ -109,15 +110,15 @@ namespace RestaurantManagment.WebAPI.Controllers
                 .FirstOrDefaultAsync(jp => jp.Id == jobPostingId);
 
             if (jobPosting == null)
-                return NotFound("Job posting not found");
+                return NotFound(new { message = "Job posting not found" });
 
-            if (jobPosting.Restaurant.OwnerId != userId)
+            if (jobPosting.Restaurant == null || jobPosting.Restaurant.OwnerId != userId)
                 return Forbid();
 
             var applications = await _context.JobApplications
                 .Include(ja => ja.Applicant)
                 .Include(ja => ja.JobPosting)
-                .ThenInclude(jp => jp.Restaurant)
+                    .ThenInclude(jp => jp.Restaurant)
                 .Where(ja => ja.JobPostingId == jobPostingId)
                 .Select(ja => new JobApplicationDto
                 {
@@ -142,7 +143,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(applications);
         }
 
-        // POST: api/JobApplication
+       
         [HttpPost]
         [Authorize(Roles = "Customer")]
         public async Task<ActionResult<JobApplicationDto>> CreateJobApplication(CreateJobApplicationDto dto)
@@ -160,7 +161,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             if (!jobPosting.IsActive)
                 return BadRequest("Job posting is not active");
 
-            // Check if user already applied
+           
             var existingApplication = await _context.JobApplications
                 .FirstOrDefaultAsync(ja => ja.JobPostingId == dto.JobPostingId && ja.ApplicantId == userId);
 
@@ -182,7 +183,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             _context.JobApplications.Add(application);
             await _context.SaveChangesAsync();
 
-            // Send notification email to owner
+        
             try
             {
                 if (applicant != null && jobPosting.Restaurant.Owner != null)
@@ -198,7 +199,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception)
             {
-                // Log error but don't fail the request
+          
             }
 
             var result = new JobApplicationDto
@@ -220,7 +221,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return CreatedAtAction(nameof(GetJobPostingApplications), new { jobPostingId = application.JobPostingId }, result);
         }
 
-        // PUT: api/JobApplication/review
+     
         [HttpPut("review")]
         [Authorize(Roles = "Owner")]
         public async Task<IActionResult> ReviewJobApplication(ReviewJobApplicationDto dto)
@@ -229,12 +230,15 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             var application = await _context.JobApplications
                 .Include(ja => ja.JobPosting)
-                .ThenInclude(jp => jp.Restaurant)
+                    .ThenInclude(jp => jp.Restaurant)
                 .Include(ja => ja.Applicant)
                 .FirstOrDefaultAsync(ja => ja.Id == dto.ApplicationId);
 
             if (application == null)
-                return NotFound();
+                return NotFound(new { message = "Job application not found" });
+
+            if (application.JobPosting?.Restaurant == null)
+                return BadRequest(new { message = "Invalid job application data" });
 
             if (application.JobPosting.Restaurant.OwnerId != userId)
                 return Forbid();
@@ -246,27 +250,30 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             await _context.SaveChangesAsync();
 
-            // Send status email to applicant
+           
             try
             {
-                await _emailService.SendJobApplicationStatusEmailAsync(
-                    application.Applicant.Email ?? "",
-                    application.Applicant.FullName,
-                    application.JobPosting.Title,
-                    application.JobPosting.Restaurant.Name,
-                    dto.Status,
-                    dto.ReviewNotes
-                );
+                if (application.Applicant != null && !string.IsNullOrEmpty(application.Applicant.Email))
+                {
+                    await _emailService.SendJobApplicationStatusEmailAsync(
+                        application.Applicant.Email,
+                        application.Applicant.FullName,
+                        application.JobPosting.Title,
+                        application.JobPosting.Restaurant.Name,
+                        dto.Status,
+                        dto.ReviewNotes
+                    );
+                }
             }
             catch (Exception)
             {
-                // Log error but don't fail the request
+               
             }
 
             return NoContent();
         }
 
-        // DELETE: api/JobApplication/{id}
+      
         [HttpDelete("{id}")]
         [Authorize(Roles = "Customer")]
         public async Task<IActionResult> DeleteJobApplication(string id)
@@ -304,7 +311,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             _context = context;
         }
 
-        // GET: api/JobPosting/restaurant/{restaurantId}
+     
         [HttpGet("restaurant/{restaurantId}")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<JobPostingDto>>> GetJobPostingsByRestaurant(string restaurantId)
@@ -334,7 +341,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(jobPostings);
         }
 
-        // GET: api/JobPosting/active
+        
         [HttpGet("active")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<JobPostingDto>>> GetActiveJobPostings()
@@ -365,7 +372,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(jobPostings);
         }
 
-        // GET: api/JobPosting/{id}
+     
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<ActionResult<JobPostingDto>> GetJobPosting(string id)
@@ -398,7 +405,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             return Ok(jobPosting);
         }
 
-        // POST: api/JobPosting
+      
         [HttpPost]
         public async Task<ActionResult<JobPostingDto>> CreateJobPosting(CreateJobPostingDto dto)
         {
@@ -407,7 +414,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             // Verify ownership
             var restaurant = await _context.Restaurants.FindAsync(dto.RestaurantId);
             if (restaurant == null)
-                return NotFound("Restaurant not found");
+                return NotFound(new { message = "Restaurant not found" });
 
             if (restaurant.OwnerId != userId)
                 return Forbid();
@@ -449,12 +456,12 @@ namespace RestaurantManagment.WebAPI.Controllers
             return CreatedAtAction(nameof(GetJobPosting), new { id = jobPosting.Id }, result);
         }
 
-        // PUT: api/JobPosting/{id}
+        
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateJobPosting(string id, UpdateJobPostingDto dto)
         {
             if (id != dto.Id)
-                return BadRequest();
+                return BadRequest(new { message = "Id mismatch" });
 
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -463,9 +470,9 @@ namespace RestaurantManagment.WebAPI.Controllers
                 .FirstOrDefaultAsync(jp => jp.Id == id);
 
             if (jobPosting == null)
-                return NotFound();
+                return NotFound(new { message = "Job posting not found" });
 
-            if (jobPosting.Restaurant.OwnerId != userId)
+            if (jobPosting.Restaurant == null || jobPosting.Restaurant.OwnerId != userId)
                 return Forbid();
 
             jobPosting.Title = dto.Title;
@@ -477,7 +484,16 @@ namespace RestaurantManagment.WebAPI.Controllers
             jobPosting.ExpiryDate = dto.ExpiryDate;
             jobPosting.IsActive = dto.IsActive;
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!await JobPostingExists(id))
+                    return NotFound(new { message = "Job posting not found" });
+                throw;
+            }
 
             return NoContent();
         }
@@ -493,9 +509,9 @@ namespace RestaurantManagment.WebAPI.Controllers
                 .FirstOrDefaultAsync(jp => jp.Id == id);
 
             if (jobPosting == null)
-                return NotFound();
+                return NotFound(new { message = "Job posting not found" });
 
-            if (jobPosting.Restaurant.OwnerId != userId)
+            if (jobPosting.Restaurant == null || jobPosting.Restaurant.OwnerId != userId)
                 return Forbid();
 
             _context.JobPostings.Remove(jobPosting);
@@ -534,6 +550,11 @@ namespace RestaurantManagment.WebAPI.Controllers
                 .ToListAsync();
 
             return Ok(jobPostings);
+        }
+
+        private async Task<bool> JobPostingExists(string id)
+        {
+            return await _context.JobPostings.AnyAsync(jp => jp.Id == id);
         }
     }
 }

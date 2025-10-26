@@ -298,6 +298,7 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Azure.Core.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Azure.Identity.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Humanizer.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Cryptography.Internal.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Cryptography.KeyDerivation.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Identity.EntityFrameworkCore.dll
@@ -368,6 +369,9 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\NuGet.ProjectModel.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\NuGet.Protocol.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\NuGet.Versioning.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\System.ClientModel.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\System.CodeDom.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\System.Composition.AttributedModel.dll
@@ -542,8 +546,10 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\runtimes\win\lib\net6.0\System.Runtime.Caching.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Application.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Domain.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Persistance.dll
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Persistance.pdb
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Application.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Domain.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.csproj.AssemblyReference.cache
@@ -554,6 +560,7 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.csproj.CoreCompileInputs.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.sourcelink.json
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
@@ -568,10 +575,3 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.genruntimeconfig.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\ref\RestaurantManagment.WebAPI.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\RestaurantManagment.Infrastructure.pdb
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.sourcelink.json
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.Swagger.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerGen.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.SwaggerUI.dll
-C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
