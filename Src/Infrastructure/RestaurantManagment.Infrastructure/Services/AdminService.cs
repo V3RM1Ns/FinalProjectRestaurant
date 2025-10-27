@@ -41,7 +41,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
     {
         var application = await _context.OwnershipApplications.FindAsync(applicationId);
         if (application == null)
-            throw new Exception("Başvuru bulunamadı");
+            throw new Exception("Application not found");
 
         application.Status = ApplicationStatus.Approved;
         application.ReviewedBy = reviewerId;
@@ -54,7 +54,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
     {
         var application = await _context.OwnershipApplications.FindAsync(applicationId);
         if (application == null)
-            throw new Exception("Başvuru bulunamadı");
+            throw new Exception("Application not found");
 
         application.Status = ApplicationStatus.Rejected;
         application.ReviewedBy = reviewerId;

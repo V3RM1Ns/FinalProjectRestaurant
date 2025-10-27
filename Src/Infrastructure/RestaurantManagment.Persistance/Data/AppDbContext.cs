@@ -10,7 +10,6 @@ namespace RestaurantManagment.Persistance.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbContext<AppUser>(options), IAppDbContext
 {
-    // DbSets
     public new DbSet<AppUser> Users { get; set; }
     public DbSet<Restaurant> Restaurants { get; set; }
     public DbSet<Menu> Menus { get; set; }
@@ -23,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<JobPosting> JobPostings { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
 
+    public DbSet<Review> Reviews { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -67,7 +67,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
                         baseEntity.UpdatedAt = DateTime.UtcNow;
                         break;
                     case EntityState.Deleted:
-                        // Soft delete implementation
+                   
                         entry.State = EntityState.Modified;
                         baseEntity.IsDeleted = true;
                         baseEntity.DeletedAt = DateTime.UtcNow;

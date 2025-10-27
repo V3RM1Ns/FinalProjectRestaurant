@@ -30,7 +30,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             var existingUserByUsername = await userManager.FindByNameAsync(userRegisterDto.Username);
             if (existingUserByUsername != null)
             {
-                ModelState.AddModelError("Username", "Bu kullanıcı adı zaten kullanılıyor");
+                ModelState.AddModelError("Username", "This username is already in use");
                 return BadRequest(ModelState);
             }
             
@@ -40,10 +40,10 @@ namespace RestaurantManagment.WebAPI.Controllers
             {
                 if (existingUserByEmail.IsDeleted)
                 {
-                    ModelState.AddModelError("Email", "Bu e-posta adresi silinmiş bir hesaba ait. Lütfen farklı bir e-posta kullanın veya destek ile iletişime geçin,Veya hesabınızı geri yükleyin.");
+                    ModelState.AddModelError("Email", "This email address belongs to a deleted account. Please use a different email or contact support, or restore your account.");
                     return BadRequest(ModelState);
                 }
-                ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor");
+                ModelState.AddModelError("Email", "This email address is already in use");
                 return BadRequest(ModelState);
             }
 
@@ -75,10 +75,9 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-              
                 return Ok(new
                 {
-                    Message = "Kayıt başarılı ancak doğrulama e-postası gönderilemedi. Lütfen tekrar deneyin.",
+                    Message = "Registration successful but verification email could not be sent. Please try again.",
                     UserId = user.Id,
                     EmailSendError = ex.Message
                 });
@@ -86,7 +85,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return Ok(new
             {
-                Message = "Kayıt başarılı! Lütfen e-posta adresinizi kontrol edin ve hesabınızı doğrulayın.",
+                Message = "Registration successful! Please check your email and verify your account.",
                 UserId = user.Id,
                 Email = user.Email
             });
@@ -97,13 +96,13 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
             {
-                return BadRequest(new { Message = "Geçersiz doğrulama linki" });
+                return BadRequest(new { Message = "Invalid verification link" });
             }
 
             var user = await userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return NotFound(new { Message = "Kullanıcı bulunamadı" });
+                return NotFound(new { Message = "User not found" });
             }
 
             if (user.EmailConfirmed)
@@ -129,12 +128,12 @@ namespace RestaurantManagment.WebAPI.Controllers
             var user = await userManager.FindByEmailAsync(dto.Email);
             if (user == null)
             {
-                return NotFound(new { Message = "Kullanıcı bulunamadı" });
+                return NotFound(new { Message = "User not found" });
             }
 
             if (user.EmailConfirmed)
             {
-                return BadRequest(new { Message = "E-posta adresi zaten doğrulanmış" });
+                return BadRequest(new { Message = "Email address is already verified" });
             }
 
             var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -144,11 +143,11 @@ namespace RestaurantManagment.WebAPI.Controllers
             try
             {
                 await emailService.SendEmailVerificationAsync(user.Email!, user.UserName!, verificationLink);
-                return Ok(new { Message = "Doğrulama e-postası tekrar gönderildi" });
+                return Ok(new { Message = "Verification email has been resent" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "E-posta gönderilemedi", Error = ex.Message });
+                return StatusCode(500, new { Message = "Email could not be sent", Error = ex.Message });
             }
         }
 
@@ -161,16 +160,14 @@ namespace RestaurantManagment.WebAPI.Controllers
             var user = await userManager.FindByEmailAsync(userLoginDto.Email);
             if (user == null)
             {
-                return Unauthorized(new { Message = "Geçersiz e-posta veya şifre" });
+                return Unauthorized(new { Message = "Invalid email or password" });
             }
-            
-
 
             if (!user.EmailConfirmed)
             {
                 return Unauthorized(new
                 {
-                    Message = "Lütfen önce e-posta adresinizi doğrulayın",
+                    Message = "Please verify your email address first",
                     RequiresEmailVerification = true,
                     Email = user.Email
                 });
@@ -179,7 +176,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             var result = await signInManager.CheckPasswordSignInAsync(user, userLoginDto.Password, false);
             if (!result.Succeeded)
             {
-                return Unauthorized(new { Message = "Geçersiz e-posta veya şifre" });
+                return Unauthorized(new { Message = "Invalid email or password" });
             }
 
             var token = await jwtTokenService.GenerateTokenAsync(user);
@@ -187,7 +184,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return Ok(new
             {
-                Message = "Giriş başarılı",
+                Message = "Login successful",
                 Token = token,
                 User = new
                 {
@@ -207,8 +204,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             {
                 return Ok(new
                 {
-                    Message =
-                        "Eğer bu e-posta adresine kayıtlı bir hesap varsa, şifre sıfırlama talimatları gönderildi."
+                    Message = "If an account is registered with this email address, password reset instructions have been sent."
                 });
             }
 
@@ -230,8 +226,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return Ok(new
             {
-                Message =
-                    "Eğer bu e-posta adresine kayıtlı bir hesap varsa, şifre sıfırlama talimatları gönderildi."
+                Message = "If an account is registered with this email address, password reset instructions have been sent."
             });
         }
 
@@ -244,22 +239,22 @@ namespace RestaurantManagment.WebAPI.Controllers
             var user = await userManager.FindByIdAsync(resetPasswordDto.UserId);
             if (user == null)
             {
-                return BadRequest(new { Message = "Geçersiz kullanıcı" });
+                return BadRequest(new { Message = "Invalid user" });
             }
 
             var isSamePassword = await userManager.CheckPasswordAsync(user, resetPasswordDto.Password);
             if (isSamePassword)
             {
-                return BadRequest(new { Message = "Yeni şifre eskisiyle aynı olamaz." });
+                return BadRequest(new { Message = "New password cannot be the same as the old one." });
             }
 
             var result = await userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
             if (result.Succeeded)
             {
-                return Ok(new { Message = "Şifreniz başarıyla sıfırlandı" });
+                return Ok(new { Message = "Your password has been reset successfully" });
             }
 
-            return BadRequest(new { Message = "Şifre sıfırlama başarısız. Linkin süresi dolmuş olabilir." });
+            return BadRequest(new { Message = "Password reset failed. The link may have expired." });
         }
 
         [HttpPost("change-password")]
@@ -279,21 +274,21 @@ namespace RestaurantManagment.WebAPI.Controllers
             var isCurrentPasswordCorrect = await userManager.CheckPasswordAsync(currentUser, changePasswordDto.CurrentPassword);
             if (!isCurrentPasswordCorrect)
             {
-                return BadRequest(new { Message = "Mevcut şifreniz yanlış" });
+                return BadRequest(new { Message = "Your current password is incorrect" });
             }
 
         
             var isSamePassword = await userManager.CheckPasswordAsync(currentUser, changePasswordDto.NewPassword);
             if (isSamePassword)
             {
-                return BadRequest(new { Message = "Yeni şifre mevcut şifrenizle aynı olamaz" });
+                return BadRequest(new { Message = "New password cannot be the same as your current password" });
             }
 
             
             var result = await userManager.ChangePasswordAsync(currentUser, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
             if (result.Succeeded)
             {
-                return Ok(new { Message = "Şifreniz başarıyla değiştirildi" });
+                return Ok(new { Message = "Your password has been changed successfully" });
             }
 
             foreach (var error in result.Errors)
@@ -311,7 +306,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             var currentUser = await userManager.GetUserAsync(User);
             if (currentUser == null)
             {
-                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+                return Unauthorized(new { Message = "User not found" });
             }
 
             var roles = await userManager.GetRolesAsync(currentUser);
@@ -341,7 +336,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             var currentUser = await userManager.GetUserAsync(User);
             if (currentUser == null)
             {
-                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+                return Unauthorized(new { Message = "User not found" });
             }
 
             bool emailChanged = false;
@@ -367,21 +362,20 @@ namespace RestaurantManagment.WebAPI.Controllers
                 var existingByUsername = await userManager.FindByNameAsync(userProfileDto.UserName);
                 if (existingByUsername != null && existingByUsername.Id != currentUser.Id)
                 {
-                    ModelState.AddModelError("UserName", "Bu kullanıcı adı zaten kullanılıyor");
+                    ModelState.AddModelError("UserName", "This username is already in use");
                     return BadRequest(ModelState);
                 }
 
                 currentUser.UserName = userProfileDto.UserName;
             }
 
-          
             if (!string.IsNullOrWhiteSpace(userProfileDto.Email) &&
                 !string.Equals(currentUser.Email, userProfileDto.Email, StringComparison.OrdinalIgnoreCase))
             {
                 var existingByEmail = await userManager.FindByEmailAsync(userProfileDto.Email);
                 if (existingByEmail != null && existingByEmail.Id != currentUser.Id)
                 {
-                    ModelState.AddModelError("Email", "Bu e-posta adresi zaten kullanılıyor");
+                    ModelState.AddModelError("Email", "This email address is already in use");
                     return BadRequest(ModelState);
                 }
 
@@ -420,16 +414,17 @@ namespace RestaurantManagment.WebAPI.Controllers
                 {
                     return Ok(new
                     {
-                        Message = "Profil güncellendi ancak doğrulama e-postası gönderilemedi.",
+                        Message = "Profile updated but verification email could not be sent.",
                         Error = ex.Message
                     });
                 }
 
-                return Ok(new { Message = "Profil güncellendi. Yeni e-posta adresinizi doğrulayın." });
+                return Ok(new { Message = "Profile updated. Please verify your new email address." });
             }
 
-            return Ok(new { Message = "Profil güncellendi." });
+            return Ok(new { Message = "Profile updated." });
         }
+
         [HttpPost("request-account-deletion")]
         [Authorize]
         public async Task<IActionResult> RequestAccountDeletion()
@@ -437,7 +432,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             var currentUser = await userManager.GetUserAsync(User);
             if (currentUser == null)
             {
-                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+                return Unauthorized(new { Message = "User not found" });
             }
 
           
@@ -456,11 +451,11 @@ namespace RestaurantManagment.WebAPI.Controllers
                     currentUser.UserName!,
                     deletionLink);
 
-                return Ok(new { Message = "Hesap silme onayı için e-posta adresinize bir link gönderdik. Lütfen e-postanızı kontrol edin." });
+                return Ok(new { Message = "We have sent a confirmation link to your email address for account deletion. Please check your email." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "E-posta gönderilemedi", Error = ex.Message });
+                return StatusCode(500, new { Message = "Email could not be sent", Error = ex.Message });
             }
         }
 
@@ -509,7 +504,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         public async Task<IActionResult> Logout()
         {
             await signInManager.SignOutAsync();
-            return Ok(new { Message = "Çıkış başarılı" });
+            return Ok(new { Message = "Logout successful" });
         }
         [HttpPost("restaurant-ownership-application")]
         [Authorize]
@@ -518,10 +513,9 @@ namespace RestaurantManagment.WebAPI.Controllers
             var currentUser = await userManager.GetUserAsync(User);
             if (currentUser == null)
             {
-                return Unauthorized(new { Message = "Kullanıcı bulunamadı" });
+                return Unauthorized(new { Message = "User not found" });
             }
 
-          
             var hasPendingApplication = userManager.Users
                 .Where(u => u.Id == currentUser.Id)
                 .SelectMany(u => u.OwnershipApplications)
@@ -529,7 +523,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             if (hasPendingApplication)
             {
-                return BadRequest(new { Message = "Zaten bekleyen bir başvurunuz var." });
+                return BadRequest(new { Message = "You already have a pending application." });
             }
 
             var application = new OwnershipApplication
@@ -548,8 +542,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             await _accountService.CreateApplicationAsync(application);
 
-            return Ok(new { Message = "Restoran sahipliği başvurunuz alındı ve incelenecektir." });
+            return Ok(new { Message = "Your restaurant ownership application has been received and will be reviewed." });
         }
-       
     }
 }

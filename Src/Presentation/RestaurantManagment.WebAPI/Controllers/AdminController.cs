@@ -27,7 +27,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Dashboard verileri yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the dashboard data.", error = ex.Message });
             }
         }
 
@@ -42,7 +42,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Kullanıcılar yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the users.", error = ex.Message });
             }
         }
 
@@ -57,7 +57,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Restoranlar yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the restaurants.", error = ex.Message });
             }
         }
 
@@ -72,7 +72,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Başvurular yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the applications.", error = ex.Message });
             }
         }
 
@@ -87,7 +87,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Başvurular yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the applications.", error = ex.Message });
             }
         }
 
@@ -99,13 +99,13 @@ namespace RestaurantManagment.WebAPI.Controllers
             {
                 var application = await _adminService.GetApplicationByIdAsync(id);
                 if (application == null)
-                    return NotFound(new { message = "Başvuru bulunamadı." });
+                    return NotFound(new { message = "Application not found." });
 
                 return Ok(application);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Başvuru yüklenirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while loading the application.", error = ex.Message });
             }
         }
 
@@ -117,14 +117,14 @@ namespace RestaurantManagment.WebAPI.Controllers
             {
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
-                    return Unauthorized(new { message = "Kullanıcı kimliği bulunamadı." });
+                    return Unauthorized(new { message = "User ID not found." });
 
                 await _adminService.ApproveApplicationAsync(id, userId);
-                return Ok(new { message = "Başvuru onaylandı." });
+                return Ok(new { message = "Application approved." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Başvuru onaylanırken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while approving the application.", error = ex.Message });
             }
         }
 
@@ -136,17 +136,17 @@ namespace RestaurantManagment.WebAPI.Controllers
             {
                 var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
-                    return Unauthorized(new { message = "Kullanıcı kimliği bulunamadı." });
+                    return Unauthorized(new { message = "User ID not found." });
 
                 if (string.IsNullOrEmpty(request.Reason))
-                    return BadRequest(new { message = "Red sebebi belirtilmelidir." });
+                    return BadRequest(new { message = "Rejection reason must be specified." });
 
                 await _adminService.RejectApplicationAsync(id, userId, request.Reason);
-                return Ok(new { message = "Başvuru reddedildi." });
+                return Ok(new { message = "Application rejected." });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Başvuru reddedilirken bir hata oluştu.", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while rejecting the application.", error = ex.Message });
             }
         }
     }

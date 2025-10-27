@@ -74,7 +74,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
  
         if (restaurant == null)
-            throw new Exception("Restoran bulunamadı veya bu restorana erişim yetkiniz yok.");
+            throw new Exception("Restaurant not found or you don't have access to this restaurant.");
 
         _mapper.Map(dto, restaurant);
         restaurant.UpdatedAt = DateTime.UtcNow;
@@ -93,7 +93,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
 
         if (restaurant == null)
-            throw new Exception("Restoran bulunamadı veya bu restorana erişim yetkiniz yok.");
+            throw new Exception("Restaurant not found or you don't have access to this restaurant.");
 
         restaurant.IsDeleted = true;
         restaurant.UpdatedAt = DateTime.UtcNow;
@@ -123,7 +123,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
 
         if (restaurant == null)
-            throw new Exception("Restoran bulunamadı.");
+            throw new Exception("Restaurant not found.");
 
         var dashboard = new OwnerDashboardDto
         {
@@ -152,7 +152,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
 
         var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
         if (!isOwner)
-            throw new Exception("Bu restorana erişim yetkiniz yok.");
+            throw new Exception("You don't have access to this restaurant.");
 
         var orders = await _context.Orders
             .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted)
@@ -228,144 +228,716 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         };
     }
 
-    public Task<PaginatedResult<EmployeeDto>> GetEmployeesAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<EmployeeDto>> GetEmployeesAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.Users
+            .Where(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var employees = await query
+            .OrderBy(u => u.FullName)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var employeeDtos = _mapper.Map<List<EmployeeDto>>(employees);
+
+        return new PaginatedResult<EmployeeDto>
+        {
+            Items = employeeDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<EmployeeDto?> GetEmployeeByIdAsync(string restaurantId, string employeeId, string ownerId)
+    public async Task<EmployeeDto?> GetEmployeeByIdAsync(string restaurantId, string employeeId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var employee = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
+
+        return employee != null ? _mapper.Map<EmployeeDto>(employee) : null;
     }
 
-    public Task<EmployeeDto> CreateEmployeeAsync(string restaurantId, CreateEmployeeDto dto, string ownerId)
+    public async Task<EmployeeDto> CreateEmployeeAsync(string restaurantId, CreateEmployeeDto dto, string ownerId)
     {
-        throw new NotImplementedException();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        if (existingUser != null)
+            throw new Exception("This email address is already in use.");
+
+        var employee = _mapper.Map<AppUser>(dto);
+        employee.EmployerRestaurantId = restaurantId;
+        employee.CreatedAt = DateTime.UtcNow;
+        employee.IsDeleted = false;
+        employee.EmailConfirmed = true;
+
+       
+        var nameParts = dto.FullName.Split(' ', 2);
+        employee.FirstName = nameParts[0];
+        employee.LastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+        _context.Users.Add(employee);
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<EmployeeDto>(employee);
     }
 
-    public Task<EmployeeDto> UpdateEmployeeAsync(string restaurantId, string employeeId, UpdateEmployeeDto dto, string ownerId)
+    public async Task<EmployeeDto> UpdateEmployeeAsync(string restaurantId, string employeeId, UpdateEmployeeDto dto, string ownerId)
     {
-        throw new NotImplementedException();
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var employee = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
+
+        if (employee == null)
+            throw new Exception("Employee not found or you don't have access to this employee.");
+
+    
+        if (employee.Email != dto.Email)
+        {
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Id != employeeId);
+            if (existingUser != null)
+                throw new Exception("This email address is already in use.");
+        }
+
+        _mapper.Map(dto, employee);
+        
+   
+        var nameParts = dto.FullName.Split(' ', 2);
+        employee.FirstName = nameParts[0];
+        employee.LastName = nameParts.Length > 1 ? nameParts[1] : "";
+        
+        employee.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<EmployeeDto>(employee);
     }
 
-    public Task DeleteEmployeeAsync(string restaurantId, string employeeId, string ownerId)
+    public async Task DeleteEmployeeAsync(string restaurantId, string employeeId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var employee = await _context.Users
+            .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
+
+        if (employee == null)
+            throw new Exception("Employee not found or you don't have access to this employee.");
+
+        employee.IsDeleted = true;
+        employee.DeletedAt = DateTime.UtcNow;
+        employee.DeletedBy = ownerId;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task<int> GetEmployeeCountAsync(string restaurantId, string ownerId)
+    public async Task<int> GetEmployeeCountAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        return await _context.Users
+            .CountAsync(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
     }
 
-    public Task<PaginatedResult<JobApplicationDto>> GetJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<JobApplicationDto>> GetJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.JobApplications
+            .Include(ja => ja.JobPosting)
+                .ThenInclude(jp => jp.Restaurant)
+            .Include(ja => ja.Applicant)
+            .Where(ja => ja.JobPosting.RestaurantId == restaurantId && !ja.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var applications = await query
+            .OrderByDescending(ja => ja.ApplicationDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var applicationDtos = _mapper.Map<List<JobApplicationDto>>(applications);
+
+        return new PaginatedResult<JobApplicationDto>
+        {
+            Items = applicationDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<PaginatedResult<JobApplicationDto>> GetPendingJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<JobApplicationDto>> GetPendingJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.JobApplications
+            .Include(ja => ja.JobPosting)
+                .ThenInclude(jp => jp.Restaurant)
+            .Include(ja => ja.Applicant)
+            .Where(ja => ja.JobPosting.RestaurantId == restaurantId 
+                && ja.Status == "Pending" 
+                && !ja.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var applications = await query
+            .OrderByDescending(ja => ja.ApplicationDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var applicationDtos = _mapper.Map<List<JobApplicationDto>>(applications);
+
+        return new PaginatedResult<JobApplicationDto>
+        {
+            Items = applicationDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<JobApplicationDto?> GetJobApplicationByIdAsync(int applicationId, string ownerId)
+    public async Task<JobApplicationDto?> GetJobApplicationByIdAsync(int applicationId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var application = await _context.JobApplications
+            .Include(ja => ja.JobPosting)
+                .ThenInclude(jp => jp.Restaurant)
+            .Include(ja => ja.Applicant)
+            .Where(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted)
+            .FirstOrDefaultAsync();
+
+        if (application == null)
+            return null;
+        
+        var isOwner = await IsRestaurantOwnerAsync(application.JobPosting.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this application.");
+
+        return _mapper.Map<JobApplicationDto>(application);
     }
 
-    public Task AcceptJobApplicationAsync(int applicationId, string ownerId)
+    public async Task AcceptJobApplicationAsync(int applicationId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var application = await _context.JobApplications
+            .Include(ja => ja.JobPosting)
+            .FirstOrDefaultAsync(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted);
+
+        if (application == null)
+            throw new Exception("Job application not found.");
+        
+        var isOwner = await IsRestaurantOwnerAsync(application.JobPosting.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this application.");
+
+        application.Status = "Accepted";
+        application.ReviewedDate = DateTime.UtcNow;
+        application.ReviewedBy = ownerId;
+        application.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task RejectJobApplicationAsync(int applicationId, string ownerId, string? rejectionReason = null)
+    public async Task RejectJobApplicationAsync(int applicationId, string ownerId, string? rejectionReason = null)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var application = await _context.JobApplications
+            .Include(ja => ja.JobPosting)
+            .FirstOrDefaultAsync(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted);
+
+        if (application == null)
+            throw new Exception("Job application not found.");
+
+     
+        var isOwner = await IsRestaurantOwnerAsync(application.JobPosting.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this application.");
+
+        application.Status = "Rejected";
+        application.ReviewedDate = DateTime.UtcNow;
+        application.ReviewedBy = ownerId;
+        application.ReviewNotes = rejectionReason;
+        application.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task<int> GetPendingApplicationsCountAsync(string restaurantId, string ownerId)
+    public async Task<int> GetPendingApplicationsCountAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        return await _context.JobApplications
+            .Include(ja => ja.JobPosting)
+            .Where(ja => ja.JobPosting.RestaurantId == restaurantId 
+                && ja.Status == "Pending" 
+                && !ja.IsDeleted)
+            .CountAsync();
     }
 
-    public Task<PaginatedResult<ReviewDto>> GetRestaurantReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<ReviewDto>> GetRestaurantReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.Reviews
+            .Include(r => r.Restaurant)
+            .Include(r => r.Customer)
+            .Where(r => r.RestaurantId == restaurantId && !r.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var reviews = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+
+        return new PaginatedResult<ReviewDto>
+        {
+            Items = reviewDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.Reviews
+            .Include(r => r.Restaurant)
+            .Include(r => r.Customer)
+            .Where(r => r.RestaurantId == restaurantId 
+                && r.Status == "Pending" 
+                && !r.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var reviews = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+
+        return new PaginatedResult<ReviewDto>
+        {
+            Items = reviewDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<ReviewDto?> GetReviewByIdAsync(int reviewId, string ownerId)
+    public async Task<ReviewDto?> GetReviewByIdAsync(int reviewId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var review = await _context.Reviews
+            .Include(r => r.Restaurant)
+            .Include(r => r.Customer)
+            .Where(r => r.Id == reviewId.ToString() && !r.IsDeleted)
+            .FirstOrDefaultAsync();
+
+        if (review == null)
+            return null;
+        
+        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this review.");
+
+        return _mapper.Map<ReviewDto>(review);
     }
 
-    public Task ApproveReviewAsync(int reviewId, string ownerId)
+    public async Task ApproveReviewAsync(int reviewId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var review = await _context.Reviews
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found.");
+        
+        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this review.");
+
+        review.Status = "Approved";
+        review.UpdatedAt = DateTime.UtcNow;
+        review.UpdatedBy = ownerId;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task RejectReviewAsync(int reviewId, string ownerId)
+    public async Task RejectReviewAsync(int reviewId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var review = await _context.Reviews
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found.");
+        
+        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this review.");
+
+        review.Status = "Rejected";
+        review.UpdatedAt = DateTime.UtcNow;
+        review.UpdatedBy = ownerId;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task RespondToReviewAsync(int reviewId, string response, string ownerId)
+    public async Task RespondToReviewAsync(int reviewId, string response, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        if (string.IsNullOrEmpty(response))
+            throw new ArgumentException("Response cannot be null or empty.", nameof(response));
+
+        var review = await _context.Reviews
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found.");
+        
+        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this review.");
+
+        review.OwnerResponse = response;
+        review.RespondedAt = DateTime.UtcNow;
+        review.UpdatedAt = DateTime.UtcNow;
+        review.UpdatedBy = ownerId;
+
+        await _context.SaveChangesAsync();
     }
 
-    public Task<int> GetPendingReviewsCountAsync(string restaurantId, string ownerId)
+    public async Task<int> GetPendingReviewsCountAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        return await _context.Reviews
+            .Where(r => r.RestaurantId == restaurantId 
+                && r.Status == "Pending" 
+                && !r.IsDeleted)
+            .CountAsync();
     }
 
-    public Task<double> GetAverageRatingAsync(string restaurantId)
+    public async Task<double> GetAverageRatingAsync(string restaurantId)
     {
-        throw new NotImplementedException();
+        var approvedReviews = await _context.Reviews
+            .Where(r => r.RestaurantId == restaurantId 
+                && r.Status == "Approved" 
+                && !r.IsDeleted)
+            .ToListAsync();
+
+        if (!approvedReviews.Any())
+            return 0;
+
+        return approvedReviews.Average(r => r.Rating);
     }
 
-    public Task<PaginatedResult<OrderDto>> GetRestaurantOrdersAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<OrderDto>> GetRestaurantOrdersAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.Orders
+            .Include(o => o.Restaurant)
+            .Include(o => o.Customer)
+            .Include(o => o.Table)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var orders = await query
+            .OrderByDescending(o => o.OrderDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var orderDtos = _mapper.Map<List<OrderDto>>(orders);
+
+        return new PaginatedResult<OrderDto>
+        {
+            Items = orderDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<PaginatedResult<OrderDto>> GetOrdersByStatusAsync(string restaurantId, OrderStatus status, string ownerId, int pageNumber = 1, int pageSize = 10)
+    public async Task<PaginatedResult<OrderDto>> GetOrdersByStatusAsync(string restaurantId, OrderStatus status, string ownerId, int pageNumber = 1, int pageSize = 10)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = _context.Orders
+            .Include(o => o.Restaurant)
+            .Include(o => o.Customer)
+            .Include(o => o.Table)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.Status == status 
+                && !o.IsDeleted);
+
+        var totalCount = await query.CountAsync();
+
+        var orders = await query
+            .OrderByDescending(o => o.OrderDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var orderDtos = _mapper.Map<List<OrderDto>>(orders);
+
+        return new PaginatedResult<OrderDto>
+        {
+            Items = orderDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
     }
 
-    public Task<OrderDto?> GetOrderByIdAsync(int orderId, string ownerId)
+    public async Task<OrderDto?> GetOrderByIdAsync(int orderId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var order = await _context.Orders
+            .Include(o => o.Restaurant)
+            .Include(o => o.Customer)
+            .Include(o => o.Table)
+            .Include(o => o.DeliveryPerson)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.Id == orderId.ToString() && !o.IsDeleted)
+            .FirstOrDefaultAsync();
+
+        if (order == null)
+            return null;
+
+      
+        var isOwner = await IsRestaurantOwnerAsync(order.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this order.");
+
+        return _mapper.Map<OrderDto>(order);
     }
 
-    public Task<OrderDto> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus, string ownerId)
+    public async Task<OrderDto> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var order = await _context.Orders
+            .Include(o => o.Restaurant)
+            .Include(o => o.Customer)
+            .Include(o => o.Table)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .FirstOrDefaultAsync(o => o.Id == orderId.ToString() && !o.IsDeleted);
+
+        if (order == null)
+            throw new Exception("Order not found.");
+
+
+        var isOwner = await IsRestaurantOwnerAsync(order.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this order.");
+
+        order.Status = newStatus;
+        
+        
+        if (newStatus == OrderStatus.Completed || newStatus == OrderStatus.Served)
+        {
+            order.CompletedAt = DateTime.UtcNow;
+        }
+
+        order.UpdatedAt = DateTime.UtcNow;
+        order.UpdatedBy = ownerId;
+
+        await _context.SaveChangesAsync();
+
+        return _mapper.Map<OrderDto>(order);
     }
 
-    public Task<decimal> GetTotalRevenueAsync(string restaurantId, string ownerId)
+    public async Task<decimal> GetTotalRevenueAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var totalRevenue = await _context.Orders
+            .Where(o => o.RestaurantId == restaurantId 
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && !o.IsDeleted)
+            .SumAsync(o => o.TotalAmount);
+
+        return totalRevenue;
     }
 
-    public Task<decimal> GetTodayRevenueAsync(string restaurantId, string ownerId)
+    public async Task<decimal> GetTodayRevenueAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var today = DateTime.UtcNow.Date;
+        var todayRevenue = await _context.Orders
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.OrderDate.Date == today
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && !o.IsDeleted)
+            .SumAsync(o => o.TotalAmount);
+
+        return todayRevenue;
     }
 
-    public Task<int> GetTotalOrdersCountAsync(string restaurantId, string ownerId)
+    public async Task<int> GetTotalOrdersCountAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        return await _context.Orders
+            .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted)
+            .CountAsync();
     }
 
-    public Task<int> GetTodayOrdersCountAsync(string restaurantId, string ownerId)
+    public async Task<int> GetTodayOrdersCountAsync(string restaurantId, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var today = DateTime.UtcNow.Date;
+        return await _context.Orders
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.OrderDate.Date == today
+                && !o.IsDeleted)
+            .CountAsync();
     }
 
     public Task<PaginatedResult<ReservationDto>> GetRestaurantReservationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)

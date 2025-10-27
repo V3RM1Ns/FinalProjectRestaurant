@@ -1,16 +1,23 @@
 using AutoMapper;
 using RestaurantManagment.Application.Common.DTOs.Account;
+using RestaurantManagment.Application.Common.DTOs.Employee;
+using RestaurantManagment.Application.Common.DTOs.JobApplication;
 using RestaurantManagment.Application.Common.DTOs.MenuItem;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Admin;
+using RestaurantManagment.Application.Common.DTOs.Order;
+using RestaurantManagment.Application.Common.DTOs.Review;
 using RestaurantManagment.Application.DTOs.Menu;
 using RestaurantManagment.Application.DTOs.MenuItem;
 using RestaurantManagment.Application.DTOs.Order;
 using RestaurantManagment.Application.DTOs.Reservation;
 using RestaurantManagment.Domain.Models;
+using CreateOrderDto = RestaurantManagment.Application.DTOs.Order.CreateOrderDto;
+using CreateOrderItemDto = RestaurantManagment.Application.DTOs.Order.CreateOrderItemDto;
 using CreateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaurant.CreateRestaurantDto;
 using UpdateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaurant.UpdateRestaurantDto;
 using RestaurantResponseDto = RestaurantManagment.Application.DTOs.Restaurant.RestaurantResponseDto;
+using UpdateOrderDto = RestaurantManagment.Application.DTOs.Order.UpdateOrderDto;
 
 namespace RestaurantManagment.Application.Mappings;
 
@@ -81,5 +88,69 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName ?? string.Empty))
             .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email ?? string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+
+        // Employee mappings
+        CreateMap<AppUser, EmployeeDto>()
+            .ForMember(dest => dest.EmployerRestaurantId, opt => opt.MapFrom(src => 
+                src.EmployerRestaurantId != null ? int.Parse(src.EmployerRestaurantId) : (int?)null))
+            .ForMember(dest => dest.HireDate, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted));
+
+        CreateMap<CreateEmployeeDto, AppUser>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.EmailConfirmed, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.FirstName, opt => opt.Ignore())
+            .ForMember(dest => dest.LastName, opt => opt.Ignore());
+
+        CreateMap<UpdateEmployeeDto, AppUser>()
+            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+            .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.FirstName, opt => opt.Ignore())
+            .ForMember(dest => dest.LastName, opt => opt.Ignore())
+            .ForAllMembers(opts => opts.Condition((_, _, srcMember) => srcMember != null));
+
+   
+        CreateMap<JobApplication, JobApplicationDto>()
+            .ForMember(dest => dest.JobTitle, opt => opt.MapFrom(src => src.JobPosting.Title))
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.JobPosting.Restaurant.Name))
+            .ForMember(dest => dest.ApplicantName, opt => opt.MapFrom(src => src.Applicant.FullName))
+            .ForMember(dest => dest.ApplicantEmail, opt => opt.MapFrom(src => src.Applicant.Email ?? string.Empty))
+            .ForMember(dest => dest.ApplicantPhone, opt => opt.MapFrom(src => src.Applicant.PhoneNumber ?? string.Empty));
+
+  
+        CreateMap<Review, ReviewDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer.FullName))
+            .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer.Email));
+
+        
+        CreateMap<Order, OrderDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()))
+            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FullName : null))
+            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => src.TableId != null ? int.Parse(src.TableId) : (int?)null))
+            .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));
+
+        CreateMap<OrderItem, OrderItemDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => int.Parse(src.MenuItemId)))
+            .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.Name))
+            .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => int.Parse(src.OrderId)))
+            .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.UnitPrice * src.Quantity));
     }
 }

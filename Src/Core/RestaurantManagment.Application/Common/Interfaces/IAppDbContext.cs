@@ -1,4 +1,4 @@
- using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Application.Common.Interfaces;
@@ -16,6 +16,7 @@ public interface IAppDbContext
     public DbSet<JobPosting> JobPostings { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
+    public DbSet<Review> Reviews { get; set; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
