@@ -362,7 +362,7 @@ export default function JobPostingsManagementPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -381,7 +381,7 @@ export default function JobPostingsManagementPage() {
   const fetchData = async () => {
     try {
       const token = localStorage.getItem("token");
-      
+
       const [jobsResponse, restaurantsResponse] = await Promise.all([
         fetch("https://localhost:7268/api/JobPosting/my-restaurants", {
           headers: { Authorization: `Bearer ${token}` },

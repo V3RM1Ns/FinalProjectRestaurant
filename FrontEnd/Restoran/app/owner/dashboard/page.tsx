@@ -10,7 +10,7 @@ import {
   DollarSign, 
   ShoppingBag, 
   Star, 
-  UserPlus, 
+  UserPlus,
   MessageSquare,
   TrendingUp,
   Calendar,
@@ -23,13 +23,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRestaurant } from "@/contexts/restaurant-context"
-import { 
-  employeeApi, 
-  jobApplicationApi, 
-  reviewApi, 
-  orderApi,
-  reservationApi 
-} from "@/lib/api"
+import { ownerApi } from "@/lib/owner-api"
 import {
   Dialog,
   DialogContent,
@@ -83,6 +77,7 @@ export default function OwnerDashboardPage() {
   const { selectedRestaurant } = useRestaurant()
   const { toast } = useToast()
   
+  const [dashboard, setDashboard] = useState<any>(null)
   const [stats, setStats] = useState<DashboardStats>({
     totalRevenue: 0,
     todayRevenue: 0,
@@ -130,6 +125,21 @@ export default function OwnerDashboardPage() {
     
     setLoading(true)
     try {
+      // Yeni Owner API'yi kullanarak dashboard verilerini çek
+      const dashboardData = await ownerApi.dashboard.getDashboard(selectedRestaurant.id)
+      setDashboard(dashboardData)
+      
+      setStats({
+        totalRevenue: dashboardData.totalRevenue,
+        todayRevenue: dashboardData.todayRevenue,
+        totalOrders: dashboardData.totalOrders,
+        todayOrders: dashboardData.todayOrders,
+        totalEmployees: dashboardData.employeeCount,
+        pendingApplications: dashboardData.pendingApplicationsCount,
+        pendingReviews: dashboardData.pendingReviewsCount,
+        activeReservations: dashboardData.activeReservations,
+      })
+
       await Promise.all([
         loadEmployees(),
         loadJobApplications(),
@@ -151,9 +161,8 @@ export default function OwnerDashboardPage() {
   const loadEmployees = async () => {
     if (!selectedRestaurant) return
     try {
-      const data = await employeeApi.getByRestaurant(selectedRestaurant.id)
-      setEmployees(data)
-      updateStats({ totalEmployees: data.length })
+      const response = await ownerApi.employees.getAll(selectedRestaurant.id, 1, 100)
+      setEmployees(response.items || [])
     } catch (error: any) {
       console.error("Error loading employees:", error)
     }
@@ -162,10 +171,8 @@ export default function OwnerDashboardPage() {
   const loadJobApplications = async () => {
     if (!selectedRestaurant) return
     try {
-      const data = await jobApplicationApi.getByRestaurant(selectedRestaurant.id)
-      setJobApplications(data)
-      const pending = data.filter((app: JobApplication) => app.status === JobApplicationStatus.Pending).length
-      updateStats({ pendingApplications: pending })
+      const response = await ownerApi.jobApplications.getPending(selectedRestaurant.id, 1, 100)
+      setJobApplications(response.items || [])
     } catch (error: any) {
       console.error("Error loading job applications:", error)
     }
@@ -174,10 +181,8 @@ export default function OwnerDashboardPage() {
   const loadReviews = async () => {
     if (!selectedRestaurant) return
     try {
-      const data = await reviewApi.getByRestaurant(selectedRestaurant.id)
-      setReviews(data)
-      const pending = data.filter((review: Review) => review.status === ReviewStatus.Pending).length
-      updateStats({ pendingReviews: pending })
+      const response = await ownerApi.reviews.getPending(selectedRestaurant.id, 1, 100)
+      setReviews(response.items || [])
     } catch (error: any) {
       console.error("Error loading reviews:", error)
     }
@@ -186,23 +191,8 @@ export default function OwnerDashboardPage() {
   const loadOrders = async () => {
     if (!selectedRestaurant) return
     try {
-      const allOrders = await orderApi.getAll()
-      const restaurantOrders = allOrders.filter((order: Order) => order.restaurantId === selectedRestaurant.id)
-      setOrders(restaurantOrders)
-      
-      const total = restaurantOrders.reduce((sum: number, order: Order) => sum + order.totalAmount, 0)
-      const today = new Date().toDateString()
-      const todayOrders = restaurantOrders.filter((order: Order) => 
-        new Date(order.orderDate).toDateString() === today
-      )
-      const todayTotal = todayOrders.reduce((sum: number, order: Order) => sum + order.totalAmount, 0)
-      
-      updateStats({ 
-        totalRevenue: total,
-        todayRevenue: todayTotal,
-        totalOrders: restaurantOrders.length,
-        todayOrders: todayOrders.length,
-      })
+      const response = await ownerApi.orders.getAll(selectedRestaurant.id, 1, 20)
+      setOrders(response.items || [])
     } catch (error: any) {
       console.error("Error loading orders:", error)
     }
@@ -211,21 +201,11 @@ export default function OwnerDashboardPage() {
   const loadReservations = async () => {
     if (!selectedRestaurant) return
     try {
-      const allReservations = await reservationApi.getAll()
-      const restaurantReservations = allReservations.filter((res: Reservation) => res.restaurantId === selectedRestaurant.id)
-      setReservations(restaurantReservations)
-      
-      const active = restaurantReservations.filter((res: Reservation) => 
-        res.status === ReservationStatus.Confirmed || res.status === ReservationStatus.Pending
-      ).length
-      updateStats({ activeReservations: active })
+      const response = await ownerApi.reservations.getAll(selectedRestaurant.id, 1, 20)
+      setReservations(response.items || [])
     } catch (error: any) {
       console.error("Error loading reservations:", error)
     }
-  }
-
-  const updateStats = (newStats: Partial<DashboardStats>) => {
-    setStats(prev => ({ ...prev, ...newStats }))
   }
 
   // Employee CRUD operations
@@ -234,13 +214,13 @@ export default function OwnerDashboardPage() {
     
     try {
       if (editingEmployee) {
-        await employeeApi.update(selectedRestaurant.id, editingEmployee.id, employeeForm)
+        await ownerApi.employees.update(selectedRestaurant.id, editingEmployee.id, employeeForm)
         toast({
           title: "Başarılı",
           description: "Çalışan güncellendi",
         })
       } else {
-        await employeeApi.create(selectedRestaurant.id, employeeForm)
+        await ownerApi.employees.create(selectedRestaurant.id, employeeForm)
         toast({
           title: "Başarılı",
           description: "Çalışan eklendi",
@@ -264,7 +244,7 @@ export default function OwnerDashboardPage() {
     if (!selectedRestaurant || !confirm("Bu çalışanı silmek istediğinizden emin misiniz?")) return
     
     try {
-      await employeeApi.delete(selectedRestaurant.id, employeeId)
+      await ownerApi.employees.delete(selectedRestaurant.id, employeeId)
       toast({
         title: "Başarılı",
         description: "Çalışan silindi",
@@ -291,9 +271,9 @@ export default function OwnerDashboardPage() {
   }
 
   // Job Application operations
-  const handleAcceptApplication = async (applicationId: string) => {
+  const handleAcceptApplication = async (applicationId: number) => {
     try {
-      await jobApplicationApi.accept(applicationId)
+      await ownerApi.jobApplications.accept(applicationId)
       toast({
         title: "Başarılı",
         description: "Başvuru kabul edildi",
@@ -309,9 +289,9 @@ export default function OwnerDashboardPage() {
     }
   }
 
-  const handleRejectApplication = async (applicationId: string) => {
+  const handleRejectApplication = async (applicationId: number) => {
     try {
-      await jobApplicationApi.reject(applicationId, rejectionReason)
+      await ownerApi.jobApplications.reject(applicationId, rejectionReason)
       toast({
         title: "Başarılı",
         description: "Başvuru reddedildi",
@@ -329,9 +309,9 @@ export default function OwnerDashboardPage() {
   }
 
   // Review operations
-  const handleApproveReview = async (reviewId: string) => {
+  const handleApproveReview = async (reviewId: number) => {
     try {
-      await reviewApi.approve(reviewId)
+      await ownerApi.reviews.approve(reviewId)
       toast({
         title: "Başarılı",
         description: "Yorum onaylandı",
@@ -346,9 +326,9 @@ export default function OwnerDashboardPage() {
     }
   }
 
-  const handleRejectReview = async (reviewId: string) => {
+  const handleRejectReview = async (reviewId: number) => {
     try {
-      await reviewApi.reject(reviewId)
+      await ownerApi.reviews.reject(reviewId)
       toast({
         title: "Başarılı",
         description: "Yorum reddedildi",
@@ -363,19 +343,52 @@ export default function OwnerDashboardPage() {
     }
   }
 
-  const handleRespondToReview = async () => {
-    if (!selectedReview) return
-    
+  const handleRespondToReview = async (reviewId: number, response: string) => {
     try {
-      await reviewApi.respond(selectedReview.id, reviewResponse)
+      await ownerApi.reviews.respond(reviewId, response)
       toast({
         title: "Başarılı",
         description: "Yanıt gönderildi",
       })
       setReviewDialogOpen(false)
-      setSelectedReview(null)
       setReviewResponse("")
       await loadReviews()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "İşlem başarısız",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Order operations
+  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+    try {
+      await ownerApi.orders.updateStatus(orderId, newStatus)
+      toast({
+        title: "Başarılı",
+        description: "Sipariş durumu güncellendi",
+      })
+      await loadOrders()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "İşlem başarısız",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Reservation operations
+  const handleUpdateReservationStatus = async (reservationId: string, newStatus: string) => {
+    try {
+      await ownerApi.reservations.updateStatus(reservationId, newStatus)
+      toast({
+        title: "Başarılı",
+        description: "Rezervasyon durumu güncellendi",
+      })
+      await loadReservations()
     } catch (error: any) {
       toast({
         title: "Hata",
@@ -788,7 +801,7 @@ export default function OwnerDashboardPage() {
                         </TableCell>
                       </TableRow>
                     ))
-                  )}
+                  }
                 </TableBody>
               </Table>
             </CardContent>

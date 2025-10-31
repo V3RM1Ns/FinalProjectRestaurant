@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRestaurant } from "@/contexts/restaurant-context"
-import { menuApi } from "@/lib/api"
+import { ownerApi } from "@/lib/owner-api"
 import {
   Dialog,
   DialogContent,
@@ -75,7 +75,7 @@ export default function OwnerMenusPage() {
     
     setLoading(true)
     try {
-      const data = await menuApi.getByRestaurant(selectedRestaurant.id)
+      const data = await ownerApi.menus.getAll(selectedRestaurant.id)
       setMenus(data)
     } catch (error: any) {
       toast({
@@ -94,16 +94,13 @@ export default function OwnerMenusPage() {
     
     try {
       if (editingMenu) {
-        await menuApi.update(editingMenu.id, {
-          ...menuForm,
-          restaurantId: selectedRestaurant.id,
-        })
+        await ownerApi.menus.update(editingMenu.id, menuForm)
         toast({
           title: "Başarılı",
           description: "Menü güncellendi",
         })
       } else {
-        await menuApi.create({
+        await ownerApi.menus.create(selectedRestaurant.id, {
           ...menuForm,
           restaurantId: selectedRestaurant.id,
         })
@@ -130,7 +127,7 @@ export default function OwnerMenusPage() {
     if (!confirm("Bu menüyü silmek istediğinizden emin misiniz?")) return
     
     try {
-      await menuApi.delete(menuId)
+      await ownerApi.menus.delete(menuId)
       toast({
         title: "Başarılı",
         description: "Menü silindi",
@@ -159,19 +156,17 @@ export default function OwnerMenusPage() {
     if (!selectedMenuId) return
     
     try {
-      const data = {
-        ...menuItemForm,
-        menuId: selectedMenuId,
-      }
-      
       if (editingMenuItem) {
-        await menuApi.update(editingMenuItem.id, data)
+        await ownerApi.menuItems.update(editingMenuItem.id, menuItemForm)
         toast({
           title: "Başarılı",
           description: "Ürün güncellendi",
         })
       } else {
-        await menuApi.create(data)
+        await ownerApi.menuItems.create(selectedMenuId, {
+          ...menuItemForm,
+          menuId: selectedMenuId,
+        })
         toast({
           title: "Başarılı",
           description: "Ürün eklendi",
@@ -202,7 +197,7 @@ export default function OwnerMenusPage() {
     if (!confirm("Bu ürünü silmek istediğinizden emin misiniz?")) return
     
     try {
-      await menuApi.delete(menuItemId)
+      await ownerApi.menuItems.delete(menuItemId)
       toast({
         title: "Başarılı",
         description: "Ürün silindi",
@@ -217,32 +212,21 @@ export default function OwnerMenusPage() {
     }
   }
 
-  const handleEditMenuItem = (menuId: string, menuItem: MenuItem) => {
-    setSelectedMenuId(menuId)
-    setEditingMenuItem(menuItem)
-    setMenuItemForm({
-      name: menuItem.name,
-      description: menuItem.description,
-      price: menuItem.price,
-      category: menuItem.category || "",
-      isAvailable: menuItem.isAvailable,
-      imageUrl: menuItem.imageUrl || "",
-    })
-    setMenuItemDialogOpen(true)
-  }
-
-  const handleAddMenuItem = (menuId: string) => {
-    setSelectedMenuId(menuId)
-    setEditingMenuItem(null)
-    setMenuItemForm({
-      name: "",
-      description: "",
-      price: 0,
-      category: "",
-      isAvailable: true,
-      imageUrl: "",
-    })
-    setMenuItemDialogOpen(true)
+  const handleToggleAvailability = async (menuItemId: string, isAvailable: boolean) => {
+    try {
+      await ownerApi.menuItems.updateAvailability(menuItemId, isAvailable)
+      toast({
+        title: "Başarılı",
+        description: "Ürün durumu güncellendi",
+      })
+      await loadMenus()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "İşlem başarısız",
+        variant: "destructive",
+      })
+    }
   }
 
   if (!selectedRestaurant) {

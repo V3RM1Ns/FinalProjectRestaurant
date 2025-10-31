@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Edit, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRestaurant } from "@/contexts/restaurant-context"
-import { tableApi } from "@/lib/api"
+import { ownerApi } from "@/lib/owner-api"
 import {
   Dialog,
   DialogContent,
@@ -18,9 +18,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Table as TableType, TableStatus } from "@/types"
+import { Table, TableStatus } from "@/types"
 import {
-  Table,
+  Table as UITable,
   TableBody,
   TableCell,
   TableHead,
@@ -39,15 +39,15 @@ export default function OwnerTablesPage() {
   const { selectedRestaurant } = useRestaurant()
   const { toast } = useToast()
   
-  const [tables, setTables] = useState<TableType[]>([])
+  const [tables, setTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
   
-  const [tableDialogOpen, setTableDialogOpen] = useState(false)
-  const [editingTable, setEditingTable] = useState<TableType | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingTable, setEditingTable] = useState<Table | null>(null)
   const [tableForm, setTableForm] = useState({
     tableNumber: 0,
     capacity: 2,
-    status: TableStatus.Available,
+    status: "Available" as string,
     location: "",
   })
 
@@ -62,7 +62,7 @@ export default function OwnerTablesPage() {
     
     setLoading(true)
     try {
-      const data = await tableApi.getByRestaurant(selectedRestaurant.id)
+      const data = await ownerApi.tables.getAll(selectedRestaurant.id)
       setTables(data)
     } catch (error: any) {
       toast({
@@ -79,33 +79,23 @@ export default function OwnerTablesPage() {
     if (!selectedRestaurant) return
     
     try {
-      const data = {
-        ...tableForm,
-        restaurantId: selectedRestaurant.id,
-      }
-      
       if (editingTable) {
-        await tableApi.update(editingTable.id, data)
+        await ownerApi.tables.update(editingTable.id, tableForm)
         toast({
           title: "Başarılı",
           description: "Masa güncellendi",
         })
       } else {
-        await tableApi.create(data)
+        await ownerApi.tables.create(selectedRestaurant.id, tableForm)
         toast({
           title: "Başarılı",
           description: "Masa eklendi",
         })
       }
       
-      setTableDialogOpen(false)
+      setDialogOpen(false)
       setEditingTable(null)
-      setTableForm({
-        tableNumber: 0,
-        capacity: 2,
-        status: TableStatus.Available,
-        location: "",
-      })
+      setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
       await loadTables()
     } catch (error: any) {
       toast({
@@ -120,7 +110,7 @@ export default function OwnerTablesPage() {
     if (!confirm("Bu masayı silmek istediğinizden emin misiniz?")) return
     
     try {
-      await tableApi.delete(tableId)
+      await ownerApi.tables.delete(tableId)
       toast({
         title: "Başarılı",
         description: "Masa silindi",
@@ -135,7 +125,7 @@ export default function OwnerTablesPage() {
     }
   }
 
-  const handleEditTable = (table: TableType) => {
+  const handleEditTable = (table: Table) => {
     setEditingTable(table)
     setTableForm({
       tableNumber: table.tableNumber,
@@ -143,10 +133,27 @@ export default function OwnerTablesPage() {
       status: table.status,
       location: table.location || "",
     })
-    setTableDialogOpen(true)
+    setDialogOpen(true)
   }
 
-  const getStatusBadgeVariant = (status: TableStatus) => {
+  const handleUpdateStatus = async (tableId: string, newStatus: string) => {
+    try {
+      await ownerApi.tables.updateStatus(tableId, newStatus)
+      toast({
+        title: "Başarılı",
+        description: "Masa durumu güncellendi",
+      })
+      await loadTables()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "İşlem başarısız",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case TableStatus.Available:
         return "default"
@@ -161,7 +168,7 @@ export default function OwnerTablesPage() {
     }
   }
 
-  const getStatusText = (status: TableStatus) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case TableStatus.Available:
         return "Müsait"
@@ -199,33 +206,28 @@ export default function OwnerTablesPage() {
     )
   }
 
-  const availableCount = tables.filter(t => t.status === TableStatus.Available).length
-  const occupiedCount = tables.filter(t => t.status === TableStatus.Occupied).length
-  const reservedCount = tables.filter(t => t.status === TableStatus.Reserved).length
+  const availableTables = tables.filter(t => t.status === TableStatus.Available).length
+  const occupiedTables = tables.filter(t => t.status === TableStatus.Occupied).length
+  const reservedTables = tables.filter(t => t.status === TableStatus.Reserved).length
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Masalar</h1>
+          <h1 className="text-3xl font-bold">Masa Yönetimi</h1>
           <p className="text-muted-foreground">{selectedRestaurant.name}</p>
         </div>
         <Button onClick={() => {
           setEditingTable(null)
-          setTableForm({
-            tableNumber: tables.length + 1,
-            capacity: 2,
-            status: TableStatus.Available,
-            location: "",
-          })
-          setTableDialogOpen(true)
+          setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
+          setDialogOpen(true)
         }}>
           <Plus className="h-4 w-4 mr-2" />
           Yeni Masa
         </Button>
       </div>
 
-      {/* Stats */}
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
@@ -240,7 +242,7 @@ export default function OwnerTablesPage() {
             <CardTitle className="text-sm font-medium">Müsait</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{availableCount}</div>
+            <div className="text-2xl font-bold text-green-600">{availableTables}</div>
           </CardContent>
         </Card>
         <Card>
@@ -248,7 +250,7 @@ export default function OwnerTablesPage() {
             <CardTitle className="text-sm font-medium">Dolu</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{occupiedCount}</div>
+            <div className="text-2xl font-bold text-red-600">{occupiedTables}</div>
           </CardContent>
         </Card>
         <Card>
@@ -256,7 +258,7 @@ export default function OwnerTablesPage() {
             <CardTitle className="text-sm font-medium">Rezerve</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{reservedCount}</div>
+            <div className="text-2xl font-bold text-blue-600">{reservedTables}</div>
           </CardContent>
         </Card>
       </div>
@@ -264,7 +266,7 @@ export default function OwnerTablesPage() {
       {/* Tables List */}
       <Card>
         <CardHeader>
-          <CardTitle>Masa Listesi</CardTitle>
+          <CardTitle>Masalar</CardTitle>
           <CardDescription>Restoranınızdaki masaları yönetin</CardDescription>
         </CardHeader>
         <CardContent>
@@ -273,20 +275,15 @@ export default function OwnerTablesPage() {
               <p className="text-muted-foreground mb-4">Henüz masa eklenmemiş</p>
               <Button onClick={() => {
                 setEditingTable(null)
-                setTableForm({
-                  tableNumber: 1,
-                  capacity: 2,
-                  status: TableStatus.Available,
-                  location: "",
-                })
-                setTableDialogOpen(true)
+                setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
+                setDialogOpen(true)
               }}>
                 <Plus className="h-4 w-4 mr-2" />
                 İlk Masayı Ekle
               </Button>
             </div>
           ) : (
-            <Table>
+            <UITable>
               <TableHeader>
                 <TableRow>
                   <TableHead>Masa No</TableHead>
@@ -299,13 +296,28 @@ export default function OwnerTablesPage() {
               <TableBody>
                 {tables.map((table) => (
                   <TableRow key={table.id}>
-                    <TableCell className="font-medium">#{table.tableNumber}</TableCell>
+                    <TableCell className="font-medium">Masa {table.tableNumber}</TableCell>
                     <TableCell>{table.capacity} kişi</TableCell>
                     <TableCell>{table.location || "-"}</TableCell>
                     <TableCell>
-                      <Badge variant={getStatusBadgeVariant(table.status)}>
-                        {getStatusText(table.status)}
-                      </Badge>
+                      <Select
+                        value={table.status}
+                        onValueChange={(value) => handleUpdateStatus(table.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue>
+                            <Badge variant={getStatusBadgeVariant(table.status)}>
+                              {getStatusLabel(table.status)}
+                            </Badge>
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={TableStatus.Available}>Müsait</SelectItem>
+                          <SelectItem value={TableStatus.Occupied}>Dolu</SelectItem>
+                          <SelectItem value={TableStatus.Reserved}>Rezerve</SelectItem>
+                          <SelectItem value={TableStatus.OutOfService}>Hizmet Dışı</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -328,13 +340,13 @@ export default function OwnerTablesPage() {
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+            </UITable>
           )}
         </CardContent>
       </Card>
 
       {/* Table Dialog */}
-      <Dialog open={tableDialogOpen} onOpenChange={setTableDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingTable ? "Masayı Düzenle" : "Yeni Masa Ekle"}</DialogTitle>
@@ -355,7 +367,7 @@ export default function OwnerTablesPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="capacity">Kapasite (Kişi)</Label>
+                <Label htmlFor="capacity">Kapasite</Label>
                 <Input
                   id="capacity"
                   type="number"
@@ -378,7 +390,7 @@ export default function OwnerTablesPage() {
               <Label htmlFor="status">Durum</Label>
               <Select
                 value={tableForm.status}
-                onValueChange={(value) => setTableForm({ ...tableForm, status: value as TableStatus })}
+                onValueChange={(value) => setTableForm({ ...tableForm, status: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -393,15 +405,14 @@ export default function OwnerTablesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setTableDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
               İptal
             </Button>
-            <Button onClick={handleSaveTable}>
-              {editingTable ? "Kaydet" : "Ekle"}
-            </Button>
+            <Button onClick={handleSaveTable}>Kaydet</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
+

@@ -30,7 +30,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       // Owner'a ait restoranları filtrele
       const ownerRestaurants = data.filter((r: Restaurant) => r.ownerId === user.id)
       setRestaurants(ownerRestaurants)
-      
+
       // Eğer seçili restoran yoksa ve restoranlar varsa, ilkini seç
       if (!selectedRestaurant && ownerRestaurants.length > 0) {
         setSelectedRestaurant(ownerRestaurants[0])
