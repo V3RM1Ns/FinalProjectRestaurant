@@ -69,34 +69,34 @@ public interface IOwnerService
    
     Task<PaginatedResult<ReservationDto>> GetRestaurantReservationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<ReservationDto>> GetReservationsByStatusAsync(string restaurantId, ReservationStatus status, string ownerId, int pageNumber = 1, int pageSize = 10);
-    Task<ReservationDto?> GetReservationByIdAsync(int reservationId, string ownerId);
-    Task<ReservationDto> UpdateReservationStatusAsync(int reservationId, ReservationStatus newStatus, string ownerId);
+    Task<ReservationDto?> GetReservationByIdAsync(string reservationId, string ownerId);
+    Task<ReservationDto> UpdateReservationStatusAsync(string reservationId, ReservationStatus newStatus, string ownerId);
     Task<int> GetActiveReservationsCountAsync(string restaurantId, string ownerId);
     Task<IEnumerable<ReservationDto>> GetTodayReservationsAsync(string restaurantId, string ownerId);
     
    
     Task<IEnumerable<MenuDto>> GetRestaurantMenusAsync(string restaurantId, string ownerId);
-    Task<MenuDto?> GetMenuByIdAsync(int menuId, string ownerId);
+    Task<MenuDto?> GetMenuByIdAsync(string menuId, string ownerId);
     Task<MenuDto> CreateMenuAsync(string restaurantId, CreateMenuDto dto, string ownerId);
-    Task<MenuDto> UpdateMenuAsync(int menuId, UpdateMenuDto dto, string ownerId);
-    Task DeleteMenuAsync(int menuId, string ownerId);
+    Task<MenuDto> UpdateMenuAsync(string menuId, UpdateMenuDto dto, string ownerId);
+    Task DeleteMenuAsync(string menuId, string ownerId);
     
  
-    Task<PaginatedResult<MenuItemDto>> GetMenuItemsAsync(int menuId, string ownerId, int pageNumber = 1, int pageSize = 20);
-    Task<MenuItemDto?> GetMenuItemByIdAsync(int menuItemId, string ownerId);
-    Task<MenuItemDto> CreateMenuItemAsync(int menuId, CreateMenuItemDto dto, string ownerId);
-    Task<MenuItemDto> UpdateMenuItemAsync(int menuItemId, UpdateMenuItemDto dto, string ownerId);
-    Task DeleteMenuItemAsync(int menuItemId, string ownerId);
-    Task UpdateMenuItemAvailabilityAsync(int menuItemId, bool isAvailable, string ownerId);
+    Task<PaginatedResult<MenuItemDto>> GetMenuItemsAsync(string menuId, string ownerId, int pageNumber = 1, int pageSize = 20);
+    Task<MenuItemDto?> GetMenuItemByIdAsync(string menuItemId, string ownerId);
+    Task<MenuItemDto> CreateMenuItemAsync(string menuId, CreateMenuItemDto dto, string ownerId);
+    Task<MenuItemDto> UpdateMenuItemAsync(string menuItemId, UpdateMenuItemDto dto, string ownerId);
+    Task DeleteMenuItemAsync(string menuItemId, string ownerId);
+    Task UpdateMenuItemAvailabilityAsync(string menuItemId, bool isAvailable, string ownerId);
     Task<int> GetMenuItemsCountAsync(string restaurantId, string ownerId);
     
    
     Task<IEnumerable<TableDto>> GetRestaurantTablesAsync(string restaurantId, string ownerId);
-    Task<TableDto?> GetTableByIdAsync(int tableId, string ownerId);
+    Task<TableDto?> GetTableByIdAsync(string tableId, string ownerId);
     Task<TableDto> CreateTableAsync(string restaurantId, CreateTableDto dto, string ownerId);
-    Task<TableDto> UpdateTableAsync(int tableId, UpdateTableDto dto, string ownerId);
-    Task DeleteTableAsync(int tableId, string ownerId);
-    Task<TableDto> UpdateTableStatusAsync(int tableId, TableStatus newStatus, string ownerId);
+    Task<TableDto> UpdateTableAsync(string tableId, UpdateTableDto dto, string ownerId);
+    Task DeleteTableAsync(string tableId, string ownerId);
+    Task<TableDto> UpdateTableStatusAsync(string tableId, TableStatus newStatus, string ownerId);
     Task<int> GetAvailableTablesCountAsync(string restaurantId, string ownerId);
     
  

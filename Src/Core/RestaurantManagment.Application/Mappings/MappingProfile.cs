@@ -6,6 +6,7 @@ using RestaurantManagment.Application.Common.DTOs.MenuItem;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Admin;
 using RestaurantManagment.Application.Common.DTOs.Order;
+using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.DTOs.Review;
 using RestaurantManagment.Application.DTOs.Menu;
 using RestaurantManagment.Application.DTOs.MenuItem;
@@ -43,6 +44,11 @@ public class MappingProfile : Profile
   
         CreateMap<MenuItem, MenuItemResponseDto>()
             .ForMember(dest => dest.MenuName, opt => opt.MapFrom(src => src.Menu.Name));
+        CreateMap<MenuItem, RestaurantManagment.Application.Common.DTOs.MenuItem.MenuItemDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.MenuId, opt => opt.MapFrom(src => int.Parse(src.MenuId)))
+            .ForMember(dest => dest.MenuName, opt => opt.MapFrom(src => src.Menu.Name));
+        
         CreateMap<CreateMenuItemDto, MenuItem>();
         CreateMap<UpdateMenuItemDto, MenuItem>();
 
@@ -70,6 +76,13 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
             .ForMember(dest => dest.TableNumber, opt => opt.MapFrom(src => src.Table.TableNumber));
         
+        CreateMap<Reservation, RestaurantManagment.Application.Common.DTOs.Reservation.ReservationDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
+            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => int.Parse(src.TableId)))
+            .ForMember(dest => dest.TableNumber, opt => opt.MapFrom(src => src.Table.TableNumber));
+        
         CreateMap<CreateReservationDto, Reservation>();
         CreateMap<UpdateReservationDto, Reservation>()
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
@@ -89,7 +102,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email ?? string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
 
-        // Employee mappings
+      
         CreateMap<AppUser, EmployeeDto>()
             .ForMember(dest => dest.EmployerRestaurantId, opt => opt.MapFrom(src => 
                 src.EmployerRestaurantId != null ? int.Parse(src.EmployerRestaurantId) : (int?)null))
@@ -152,5 +165,14 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.Name))
             .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => int.Parse(src.OrderId)))
             .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.UnitPrice * src.Quantity));
+
+      
+        CreateMap<Table, TableDto>()
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)));
+        
+        CreateMap<CreateTableDto, Table>();
+        CreateMap<UpdateTableDto, Table>();
     }
 }
