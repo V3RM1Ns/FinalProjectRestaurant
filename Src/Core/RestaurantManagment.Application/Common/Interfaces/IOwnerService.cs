@@ -11,12 +11,14 @@ using CreateMenuItemDto = RestaurantManagment.Application.Common.DTOs.MenuItem.C
 using UpdateMenuItemDto = RestaurantManagment.Application.Common.DTOs.MenuItem.UpdateMenuItemDto;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Domain.Models;
+using CreateMenuDto = RestaurantManagment.Application.Common.DTOs.Menu.CreateMenuDto;
+using UpdateMenuDto = RestaurantManagment.Application.Common.DTOs.Menu.UpdateMenuDto;
 
 namespace RestaurantManagment.Application.Common.Interfaces;
 
 public interface IOwnerService
 {
-   
+
     Task<IEnumerable<Restaurant>> GetOwnerRestaurantsAsync(string ownerId);
     Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId);
     Task<Restaurant> CreateRestaurantAsync(CreateRestaurantDto dto, string ownerId);

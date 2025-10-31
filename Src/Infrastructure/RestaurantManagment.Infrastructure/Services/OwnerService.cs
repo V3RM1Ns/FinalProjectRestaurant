@@ -1571,18 +1571,139 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .CountAsync();
     }
 
-    public Task<SalesReportDto> GetSalesReportAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
+    public async Task<SalesReportDto> GetSalesReportAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+  
+        var orders = await _context.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.OrderDate >= startDate 
+                && o.OrderDate <= endDate
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && !o.IsDeleted)
+            .ToListAsync();
+
+      
+        var totalRevenue = orders.Sum(o => o.TotalAmount);
+        var totalOrders = orders.Count;
+        var averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        var dailySales = orders
+            .GroupBy(o => o.OrderDate.Date)
+            .Select(g => new DailyRevenueDto
+            {
+                Date = g.Key,
+                Revenue = g.Sum(o => o.TotalAmount),
+                OrderCount = g.Count()
+            })
+            .OrderBy(d => d.Date)
+            .ToList();
+
+       
+        var categorySales = await GetCategorySalesAsync(restaurantId, startDate, endDate, ownerId);
+
+        
+        var topProducts = orders
+            .SelectMany(o => o.OrderItems)
+            .GroupBy(oi => new { oi.MenuItemId, oi.MenuItem.Name, oi.MenuItem.Category })
+            .Select(g => new TopSellingItemDto
+            {
+                MenuItemId = int.Parse(g.Key.MenuItemId),
+                MenuItemName = g.Key.Name,
+                Category = g.Key.Category ?? "Other",
+                QuantitySold = g.Sum(oi => oi.Quantity),
+                TotalRevenue = g.Sum(oi => oi.UnitPrice * oi.Quantity),
+                Price = g.First().UnitPrice
+            })
+            .OrderByDescending(x => x.TotalRevenue)
+            .Take(10)
+            .ToList();
+
+        return new SalesReportDto
+        {
+            StartDate = startDate,
+            EndDate = endDate,
+            TotalRevenue = totalRevenue,
+            TotalOrders = totalOrders,
+            AverageOrderValue = averageOrderValue,
+            CategorySales = categorySales.ToList(),
+            DailySales = dailySales,
+            TopProducts = topProducts
+        };
     }
 
-    public Task<IEnumerable<OrderDto>> GetOrdersByDateRangeAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
+    public async Task<IEnumerable<OrderDto>> GetOrdersByDateRangeAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var orders = await _context.Orders
+            .Include(o => o.Restaurant)
+            .Include(o => o.Customer)
+            .Include(o => o.Table)
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.OrderDate >= startDate 
+                && o.OrderDate <= endDate
+                && !o.IsDeleted)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+
+       
+        return _mapper.Map<List<OrderDto>>(orders);
     }
 
-    public Task<IEnumerable<CategorySalesDto>> GetCategorySalesAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
+    public async Task<IEnumerable<CategorySalesDto>> GetCategorySalesAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
     {
-        throw new NotImplementedException();
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+    
+        var orders = await _context.Orders
+            .Include(o => o.OrderItems)
+                .ThenInclude(oi => oi.MenuItem)
+            .Where(o => o.RestaurantId == restaurantId 
+                && o.OrderDate >= startDate 
+                && o.OrderDate <= endDate
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && !o.IsDeleted)
+            .ToListAsync();
+
+
+        var totalRevenue = orders.Sum(o => o.TotalAmount);
+
+    
+        var categorySales = orders
+            .SelectMany(o => o.OrderItems)
+            .Where(oi => !oi.IsDeleted)
+            .GroupBy(oi => oi.MenuItem.Category ?? "Other")
+            .Select(g => new CategorySalesDto
+            {
+                Category = g.Key,
+                ItemsSold = g.Sum(oi => oi.Quantity),
+                Revenue = g.Sum(oi => oi.UnitPrice * oi.Quantity),
+                Percentage = totalRevenue > 0 ? (g.Sum(oi => oi.UnitPrice * oi.Quantity) / totalRevenue) * 100 : 0
+            })
+            .OrderByDescending(c => c.Revenue)
+            .ToList();
+
+        return categorySales;
     }
 }

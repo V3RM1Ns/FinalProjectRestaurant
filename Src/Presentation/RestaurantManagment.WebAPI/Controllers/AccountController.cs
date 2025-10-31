@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using RestaurantManagment.Application.Common.DTOs.Account;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
-using RestaurantManagment.Infrastructure.Services;
 
 namespace RestaurantManagment.WebAPI.Controllers
 {
@@ -13,113 +12,73 @@ namespace RestaurantManagment.WebAPI.Controllers
     [ApiController]
     public class AccountController(
         UserManager<AppUser> userManager,
-        SignInManager<AppUser> signInManager,
-        IMapper mapper,
-        IEmailService emailService,
-        IJwtTokenService jwtTokenService,
-        IAccountService _accountService) : Controller
+        IAccountService accountService) : ControllerBase
     {
- 
-        
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+
+            var verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={{0}}&token={{1}}";
             
-            var existingUserByUsername = await userManager.FindByNameAsync(userRegisterDto.Username);
-            if (existingUserByUsername != null)
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(
+                await userManager.FindByEmailAsync(userRegisterDto.Email) ?? new AppUser());
+            
+            // Önce kullanıcıyı oluştur, sonra token'ı al
+            var tempResult = await accountService.RegisterUserAsync(userRegisterDto, "temp");
+            
+            if (tempResult.Success && !string.IsNullOrEmpty(tempResult.UserId))
             {
-                ModelState.AddModelError("Username", "This username is already in use");
-                return BadRequest(ModelState);
-            }
-            
-            
-            var existingUserByEmail = await userManager.FindByEmailAsync(userRegisterDto.Email);
-            if (existingUserByEmail != null)
-            {
-                if (existingUserByEmail.IsDeleted)
+                var user = await userManager.FindByIdAsync(tempResult.UserId);
+                if (user != null)
                 {
-                    ModelState.AddModelError("Email", "This email address belongs to a deleted account. Please use a different email or contact support, or restore your account.");
-                    return BadRequest(ModelState);
-                }
-                ModelState.AddModelError("Email", "This email address is already in use");
-                return BadRequest(ModelState);
-            }
-
-            var user = mapper.Map<AppUser>(userRegisterDto);
-
-            var result = await userManager.CreateAsync(user, userRegisterDto.Password);
-            if (!result.Succeeded)
-            {
-                foreach (var error in result.Errors)
-                {
-                    ModelState.AddModelError(error.Code, error.Description);
-                }
-
-                return BadRequest(ModelState);
-            }
-
-            await userManager.AddToRoleAsync(user, "Customer");
-
-           
-            var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
-
+                    var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var actualVerificationLink = string.Format(verificationLink, user.Id, Uri.EscapeDataString(emailToken));
             
-            var verificationLink =
-                $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
-
-            try
-            {
-                await emailService.SendEmailVerificationAsync(user.Email!, user.UserName!, verificationLink);
+                }
             }
-            catch (Exception ex)
+
+            if (!tempResult.Success)
+            {
+                foreach (var error in tempResult.Errors)
+                {
+                    ModelState.AddModelError("", error);
+                }
+                return BadRequest(ModelState);
+            }
+
+            if (tempResult.Errors.Any())
             {
                 return Ok(new
                 {
-                    Message = "Registration successful but verification email could not be sent. Please try again.",
-                    UserId = user.Id,
-                    EmailSendError = ex.Message
+                    Message = tempResult.Message,
+                    UserId = tempResult.UserId,
+                    EmailSendError = string.Join(", ", tempResult.Errors)
                 });
             }
 
             return Ok(new
             {
-                Message = "Registration successful! Please check your email and verify your account.",
-                UserId = user.Id,
-                Email = user.Email
+                Message = tempResult.Message,
+                UserId = tempResult.UserId,
+                Email = tempResult.Email
             });
         }
 
         [HttpGet("verify-email")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string userId, [FromQuery] string token)
         {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            var result = await accountService.VerifyEmailAsync(userId, token);
+            
+            if (!result.Success)
             {
-                return BadRequest(new { Message = "Invalid verification link" });
+                var status = result.Message == "User not found" ? "not-found" : "failed";
+                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/email-verified?status={status}");
             }
 
-            var user = await userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return NotFound(new { Message = "User not found" });
-            }
-
-            if (user.EmailConfirmed)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/email-verified?status=already-verified");
-            }
-
-            var result = await userManager.ConfirmEmailAsync(user, token);
-            if (result.Succeeded)
-            {
-              
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/email-verified?status=success");
-            }
-            else
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/email-verified?status=failed");
-            }
+            var verificationStatus = result.Message == "Email already verified" ? "already-verified" : "success";
+            return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/email-verified?status={verificationStatus}");
         }
 
         [HttpPost("resend-verification")]
@@ -131,24 +90,19 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return NotFound(new { Message = "User not found" });
             }
 
-            if (user.EmailConfirmed)
-            {
-                return BadRequest(new { Message = "Email address is already verified" });
-            }
-
             var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
-            var verificationLink =
-                $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
+            var verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
 
-            try
+            var result = await accountService.ResendVerificationEmailAsync(dto.Email, verificationLink);
+
+            if (!result.Success)
             {
-                await emailService.SendEmailVerificationAsync(user.Email!, user.UserName!, verificationLink);
-                return Ok(new { Message = "Verification email has been resent" });
+                return result.Message.Contains("already verified") 
+                    ? BadRequest(new { Message = result.Message })
+                    : StatusCode(500, new { Message = result.Message });
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "Email could not be sent", Error = ex.Message });
-            }
+
+            return Ok(new { Message = result.Message });
         }
 
         [HttpPost("login")]
@@ -157,42 +111,27 @@ namespace RestaurantManagment.WebAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = await userManager.FindByEmailAsync(userLoginDto.Email);
-            if (user == null)
-            {
-                return Unauthorized(new { Message = "Invalid email or password" });
-            }
+            var result = await accountService.LoginAsync(userLoginDto);
 
-            if (!user.EmailConfirmed)
+            if (!result.Success)
             {
-                return Unauthorized(new
+                if (result.RequiresEmailVerification)
                 {
-                    Message = "Please verify your email address first",
-                    RequiresEmailVerification = true,
-                    Email = user.Email
-                });
+                    return Unauthorized(new
+                    {
+                        Message = result.Message,
+                        RequiresEmailVerification = true,
+                        result.User
+                    });
+                }
+                return Unauthorized(new { Message = result.Message });
             }
-
-            var result = await signInManager.CheckPasswordSignInAsync(user, userLoginDto.Password, false);
-            if (!result.Succeeded)
-            {
-                return Unauthorized(new { Message = "Invalid email or password" });
-            }
-
-            var token = await jwtTokenService.GenerateTokenAsync(user);
-            var roles = await userManager.GetRolesAsync(user);
 
             return Ok(new
             {
-                Message = "Login successful",
-                Token = token,
-                User = new
-                {
-                    user.Id,
-                    user.UserName,
-                    user.Email,
-                    Roles = roles
-                }
+                Message = result.Message,
+                Token = result.Token,
+                User = result.User
             });
         }
 
@@ -200,28 +139,14 @@ namespace RestaurantManagment.WebAPI.Controllers
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto forgotPasswordDto)
         {
             var user = await userManager.FindByEmailAsync(forgotPasswordDto.Email);
-            if (user == null || !(await userManager.IsEmailConfirmedAsync(user)))
+            if (user != null)
             {
-                return Ok(new
-                {
-                    Message = "If an account is registered with this email address, password reset instructions have been sent."
-                });
-            }
-
-            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
-
-            
-            var frontendUrl = "http://localhost:3000";
-            var resetLink = $"{frontendUrl}/reset-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
-
-            try
-            {
-                await emailService.SendPasswordResetAsync(user.Email!, user.UserName!, resetLink);
-            }
-            catch (Exception ex)
-            {
-              
-                Console.WriteLine($"Failed to send password reset email: {ex}");
+                var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+                var frontendUrl = "http://localhost:3000";
+                var resetLink = $"{frontendUrl}/reset-password?userId={user.Id}&token={Uri.EscapeDataString(resetToken)}";
+                
+                var result = await accountService.ForgotPasswordAsync(forgotPasswordDto.Email, resetLink);
+                return Ok(new { Message = result.Message });
             }
 
             return Ok(new
@@ -236,25 +161,12 @@ namespace RestaurantManagment.WebAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = await userManager.FindByIdAsync(resetPasswordDto.UserId);
-            if (user == null)
-            {
-                return BadRequest(new { Message = "Invalid user" });
-            }
+            var result = await accountService.ResetPasswordAsync(resetPasswordDto);
 
-            var isSamePassword = await userManager.CheckPasswordAsync(user, resetPasswordDto.Password);
-            if (isSamePassword)
-            {
-                return BadRequest(new { Message = "New password cannot be the same as the old one." });
-            }
+            if (!result.Success)
+                return BadRequest(new { Message = result.Message });
 
-            var result = await userManager.ResetPasswordAsync(user, resetPasswordDto.Token, resetPasswordDto.Password);
-            if (result.Succeeded)
-            {
-                return Ok(new { Message = "Your password has been reset successfully" });
-            }
-
-            return BadRequest(new { Message = "Password reset failed. The link may have expired." });
+            return Ok(new { Message = result.Message });
         }
 
         [HttpPost("change-password")]
@@ -270,33 +182,18 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/login");
             }
 
-       
-            var isCurrentPasswordCorrect = await userManager.CheckPasswordAsync(currentUser, changePasswordDto.CurrentPassword);
-            if (!isCurrentPasswordCorrect)
+            var result = await accountService.ChangePasswordAsync(currentUser.Id, changePasswordDto);
+
+            if (!result.Success)
             {
-                return BadRequest(new { Message = "Your current password is incorrect" });
+                foreach (var error in result.Errors)
+                {
+                    ModelState.AddModelError("", error);
+                }
+                return BadRequest(ModelState);
             }
 
-        
-            var isSamePassword = await userManager.CheckPasswordAsync(currentUser, changePasswordDto.NewPassword);
-            if (isSamePassword)
-            {
-                return BadRequest(new { Message = "New password cannot be the same as your current password" });
-            }
-
-            
-            var result = await userManager.ChangePasswordAsync(currentUser, changePasswordDto.CurrentPassword, changePasswordDto.NewPassword);
-            if (result.Succeeded)
-            {
-                return Ok(new { Message = "Your password has been changed successfully" });
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError(error.Code, error.Description);
-            }
-
-            return BadRequest(ModelState);
+            return Ok(new { Message = result.Message });
         }
 
         [HttpGet("profile")]
@@ -309,21 +206,12 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "User not found" });
             }
 
-            var roles = await userManager.GetRolesAsync(currentUser);
+            var result = await accountService.GetUserProfileAsync(currentUser.Id);
 
-            return Ok(new
-            {
-                currentUser.Id,
-                currentUser.FirstName,
-                currentUser.LastName,
-                currentUser.FullName,
-                currentUser.UserName,
-                currentUser.Email,
-                currentUser.EmailConfirmed,
-                currentUser.Phone,
-                currentUser.Address,
-                Roles = roles
-            });
+            if (!result.Success)
+                return Unauthorized(new { Message = result.Message });
+
+            return Ok(result.Profile);
         }
 
         [HttpPost("profile")]
@@ -339,90 +227,35 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "User not found" });
             }
 
-            bool emailChanged = false;
-
-           
-            if (!string.IsNullOrWhiteSpace(userProfileDto.FirstName))
-            {
-                currentUser.FirstName = userProfileDto.FirstName.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(userProfileDto.LastName))
-            {
-                currentUser.LastName = userProfileDto.LastName.Trim();
-            }
-
-           
-            currentUser.FullName = $"{currentUser.FirstName} {currentUser.LastName}".Trim();
-
-          
-            if (!string.IsNullOrWhiteSpace(userProfileDto.UserName) &&
-                !string.Equals(currentUser.UserName, userProfileDto.UserName, StringComparison.OrdinalIgnoreCase))
-            {
-                var existingByUsername = await userManager.FindByNameAsync(userProfileDto.UserName);
-                if (existingByUsername != null && existingByUsername.Id != currentUser.Id)
-                {
-                    ModelState.AddModelError("UserName", "This username is already in use");
-                    return BadRequest(ModelState);
-                }
-
-                currentUser.UserName = userProfileDto.UserName;
-            }
-
-            if (!string.IsNullOrWhiteSpace(userProfileDto.Email) &&
+            string? verificationLink = null;
+            if (!string.IsNullOrWhiteSpace(userProfileDto.Email) && 
                 !string.Equals(currentUser.Email, userProfileDto.Email, StringComparison.OrdinalIgnoreCase))
             {
-                var existingByEmail = await userManager.FindByEmailAsync(userProfileDto.Email);
-                if (existingByEmail != null && existingByEmail.Id != currentUser.Id)
-                {
-                    ModelState.AddModelError("Email", "This email address is already in use");
-                    return BadRequest(ModelState);
-                }
-
-                currentUser.Email = userProfileDto.Email;
-             
-                currentUser.EmailConfirmed = false;
-                emailChanged = true;
+                var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(currentUser);
+                verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={currentUser.Id}&token={Uri.EscapeDataString(emailToken)}";
             }
 
-   
-            currentUser.Phone = userProfileDto.Phone ?? currentUser.Phone;
-            currentUser.Address = userProfileDto.Address ?? currentUser.Address;
+            var result = await accountService.UpdateUserProfileAsync(currentUser.Id, userProfileDto, verificationLink);
 
-            var updateResult = await userManager.UpdateAsync(currentUser);
-            if (!updateResult.Succeeded)
+            if (!result.Success)
             {
-                foreach (var error in updateResult.Errors)
+                foreach (var error in result.Errors)
                 {
-                    ModelState.AddModelError(error.Code, error.Description);
+                    ModelState.AddModelError("", error);
                 }
-
                 return BadRequest(ModelState);
             }
-             
-            if (emailChanged)
-            {
-                try
-                {
-                    var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(currentUser);
-                    var verificationLink =
-                        $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={currentUser.Id}&token={Uri.EscapeDataString(emailToken)}";
-                    await emailService.SendEmailVerificationAsync(currentUser.Email!, currentUser.UserName!,
-                        verificationLink);
-                }
-                catch (Exception ex)
-                {
-                    return Ok(new
-                    {
-                        Message = "Profile updated but verification email could not be sent.",
-                        Error = ex.Message
-                    });
-                }
 
-                return Ok(new { Message = "Profile updated. Please verify your new email address." });
+            if (result.Errors.Any())
+            {
+                return Ok(new
+                {
+                    Message = result.Message,
+                    Error = string.Join(", ", result.Errors)
+                });
             }
 
-            return Ok(new { Message = "Profile updated." });
+            return Ok(new { Message = result.Message });
         }
 
         [HttpPost("request-account-deletion")]
@@ -435,77 +268,42 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "User not found" });
             }
 
-          
             var deletionToken = await userManager.GenerateUserTokenAsync(
                 currentUser,
                 TokenOptions.DefaultProvider,
                 "AccountDeletion");
 
-           
             var deletionLink = $"{Request.Scheme}://{Request.Host}/api/Account/confirm-account-deletion?userId={currentUser.Id}&token={Uri.EscapeDataString(deletionToken)}";
 
-            try
-            {
-                await emailService.SendAccountDeletionConfirmationAsync(
-                    currentUser.Email!,
-                    currentUser.UserName!,
-                    deletionLink);
+            var result = await accountService.RequestAccountDeletionAsync(currentUser.Id, deletionLink);
 
-                return Ok(new { Message = "We have sent a confirmation link to your email address for account deletion. Please check your email." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "Email could not be sent", Error = ex.Message });
-            }
+            if (!result.Success)
+                return StatusCode(500, new { Message = result.Message });
+
+            return Ok(new { Message = result.Message });
         }
 
         [HttpGet("confirm-account-deletion")]
         public async Task<IActionResult> ConfirmAccountDeletion([FromQuery] string userId, [FromQuery] string token)
         {
-            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=invalid");
-            }
+            var result = await accountService.ConfirmAccountDeletionAsync(userId, token);
 
-            var user = await userManager.FindByIdAsync(userId);
-            if (user == null)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=not-found");
-            }
+            var status = result.Success ? "success" : 
+                        result.Message == "User not found" ? "not-found" :
+                        result.Message == "Invalid deletion link" ? "invalid" :
+                        result.Message == "Invalid or expired token" ? "invalid-token" : "failed";
 
-       
-            var isValidToken = await userManager.VerifyUserTokenAsync(
-                user,
-                TokenOptions.DefaultProvider,
-                "AccountDeletion",
-                token);
-
-            if (!isValidToken)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=invalid-token");
-            }
-
-            user.IsDeleted = true;
-            var result = await userManager.UpdateAsync(user);
-
-            if (result.Succeeded)
-            {
-                return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=success");
-            }
-
-            return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status=failed");
+            return Redirect($"{Request.Scheme}://{Request.Host.Host}:3000/account-deleted?status={status}");
         }
-
-      
-
 
         [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            await signInManager.SignOutAsync();
+            await accountService.LogoutAsync();
             return Ok(new { Message = "Logout successful" });
         }
+
         [HttpPost("restaurant-ownership-application")]
         [Authorize]
         public async Task<IActionResult> ApplyForRestaurantOwnership([FromBody] OwnershipApplicationDto applicationDto)
@@ -516,33 +314,12 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return Unauthorized(new { Message = "User not found" });
             }
 
-            var hasPendingApplication = userManager.Users
-                .Where(u => u.Id == currentUser.Id)
-                .SelectMany(u => u.OwnershipApplications)
-                .Any(a => a.Status == ApplicationStatus.Pending);
+            var result = await accountService.ApplyForRestaurantOwnershipAsync(currentUser.Id, applicationDto);
 
-            if (hasPendingApplication)
-            {
-                return BadRequest(new { Message = "You already have a pending application." });
-            }
+            if (!result.Success)
+                return BadRequest(new { Message = result.Message });
 
-            var application = new OwnershipApplication
-            {
-                UserId = currentUser.Id,
-                BusinessName = applicationDto.BusinessName,
-                BusinessDescription = applicationDto.BusinessDescription,
-                BusinessAddress = applicationDto.BusinessAddress,
-                BusinessPhone = applicationDto.BusinessPhone,
-                BusinessEmail = applicationDto.BusinessEmail,
-                Category = applicationDto.Category,
-                AdditionalNotes = applicationDto.AdditionalNotes,
-                ApplicationDate = DateTime.UtcNow,
-                Status = ApplicationStatus.Pending
-            };
-
-            await _accountService.CreateApplicationAsync(application);
-
-            return Ok(new { Message = "Your restaurant ownership application has been received and will be reviewed." });
+            return Ok(new { Message = result.Message });
         }
     }
 }

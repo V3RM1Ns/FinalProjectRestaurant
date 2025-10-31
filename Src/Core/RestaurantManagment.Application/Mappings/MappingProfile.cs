@@ -174,5 +174,24 @@ public class MappingProfile : Profile
         
         CreateMap<CreateTableDto, Table>();
         CreateMap<UpdateTableDto, Table>();
+        
+        CreateMap<Order, RecentOrderDto>()
+            .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FullName : "Guest"))
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.OrderType, opt => opt.MapFrom(src => src.Type.ToString()));
+
+      
+        CreateMap<MenuItem, TopSellingItemDto>()
+            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.Name))
+            .ForMember(dest => dest.QuantitySold, opt => opt.Ignore())
+            .ForMember(dest => dest.TotalRevenue, opt => opt.Ignore());
+
+  
+        CreateMap<(DateTime Date, decimal Revenue, int OrderCount), DailyRevenueDto>()
+            .ForMember(dest => dest.Date, opt => opt.MapFrom(src => src.Date))
+            .ForMember(dest => dest.Revenue, opt => opt.MapFrom(src => src.Revenue))
+            .ForMember(dest => dest.OrderCount, opt => opt.MapFrom(src => src.OrderCount));
     }
 }
