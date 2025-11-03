@@ -9,6 +9,7 @@ public class EmployeeDto
     public string? Address { get; set; }
     public string? ProfileImageUrl { get; set; }
     public int? EmployerRestaurantId { get; set; }
+    public string? RestaurantName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime HireDate { get; set; }
     public bool IsActive { get; set; }
@@ -34,4 +35,3 @@ public class UpdateEmployeeDto
     public string? ProfileImageUrl { get; set; }
     public string? Password { get; set; }
 }
-

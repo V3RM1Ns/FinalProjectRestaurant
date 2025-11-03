@@ -42,6 +42,7 @@ public static class DbSeeder
         // Her restoran için verileri oluştur
         foreach (var restaurant in restaurants)
         {
+            await SeedEmployeesAsync(context, userManager, restaurant.Id);
             await SeedMenusAsync(context, restaurant.Id);
             await SeedTablesAsync(context, restaurant.Id);
             await SeedOrdersAsync(context, restaurant.Id);
@@ -880,6 +881,60 @@ public static class DbSeeder
                 };
 
                 context.JobApplications.Add(application);
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedEmployeesAsync(AppDbContext context, UserManager<AppUser> userManager, string restaurantId)
+    {
+        // Bu restoranda çalışan var mı kontrol et
+        var existingEmployees = await context.Users
+            .Where(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted)
+            .CountAsync();
+
+        if (existingEmployees >= 2) return;
+
+        // Her restoran için 2-3 çalışan oluştur
+        var random = new Random();
+        var employeeCount = random.Next(2, 4); // 2 veya 3 çalışan
+
+        for (int i = 1; i <= employeeCount; i++)
+        {
+            var uniqueId = Guid.NewGuid().ToString().Substring(0, 8);
+            var employeeEmail = $"employee_{uniqueId}@gmail.com";
+            
+            var employee = await userManager.FindByEmailAsync(employeeEmail);
+            if (employee == null)
+            {
+                var positions = new[] { "Garson", "Aşçı", "Komi", "Kasiyer", "Mutfak Personeli" };
+                var names = new[] { "Mehmet", "Ayşe", "Fatma", "Ali", "Zeynep", "Ahmet", "Elif", "Mustafa", "Emine", "Hasan" };
+                var surnames = new[] { "Yılmaz", "Kaya", "Demir", "Çelik", "Şahin", "Yıldız", "Öztürk", "Aydın", "Arslan", "Doğan" };
+
+                var firstName = names[random.Next(names.Length)];
+                var lastName = surnames[random.Next(surnames.Length)];
+                var position = positions[random.Next(positions.Length)];
+
+                employee = new AppUser
+                {
+                    UserName = employeeEmail,
+                    Email = employeeEmail,
+                    EmailConfirmed = true,
+                    FullName = $"{firstName} {lastName} ({position})",
+                    FirstName = firstName,
+                    LastName = lastName,
+                    PhoneNumber = $"+90555{random.Next(100, 999)}{random.Next(1000, 9999)}",
+                    EmployerRestaurantId = restaurantId,
+                    CreatedAt = DateTime.UtcNow,
+                    IsDeleted = false
+                };
+
+                var result = await userManager.CreateAsync(employee, "Employee123!");
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(employee, "Employee");
+                }
             }
         }
 

@@ -240,6 +240,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
         var query = _context.Users
+            .Include(u => u.EmployerRestaurant)
             .Where(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
 
         var totalCount = await query.CountAsync();

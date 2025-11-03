@@ -126,9 +126,6 @@ using (var scope = app.Services.CreateScope())
             
             logger.LogInformation("Seed data başarıyla oluşturuldu.");
             
-            // Owner ID'lerini düzelt
-            logger.LogInformation("Restoran owner ID'leri kontrol ediliyor...");
-            await OwnerIdFixer.FixRestaurantOwnerIds(services);
         }
     }
     catch (Exception ex)

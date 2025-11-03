@@ -106,8 +106,11 @@ public class MappingProfile : Profile
         CreateMap<AppUser, EmployeeDto>()
             .ForMember(dest => dest.EmployerRestaurantId, opt => opt.MapFrom(src => 
                 src.EmployerRestaurantId != null ? int.Parse(src.EmployerRestaurantId) : (int?)null))
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => 
+                src.EmployerRestaurant != null ? src.EmployerRestaurant.Name : null))
             .ForMember(dest => dest.HireDate, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted));
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
+            .ForMember(dest => dest.Roles, opt => opt.Ignore());
 
         CreateMap<CreateEmployeeDto, AppUser>()
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
