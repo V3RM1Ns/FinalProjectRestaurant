@@ -168,8 +168,8 @@ export interface PaginatedResponse<T> {
   totalCount: number
 }
 
-// Owner API Service
-export const ownerApi = {
+// Owner API Service - Base implementation
+const ownerApi = {
   // Restaurant Management
   restaurants: {
     getMyRestaurants: () => 
@@ -425,3 +425,208 @@ export const ownerApi = {
   },
 }
 
+// Owner API Service - Convenient wrapper class
+export class OwnerApi {
+  // Restaurant Management
+  static async getMyRestaurants() {
+    return ownerApi.restaurants.getMyRestaurants()
+  }
+
+  static async getRestaurantById(restaurantId: string) {
+    return ownerApi.restaurants.getById(restaurantId)
+  }
+
+  static async createRestaurant(data: CreateRestaurantDto) {
+    return ownerApi.restaurants.create(data)
+  }
+
+  static async updateRestaurant(restaurantId: string, data: UpdateRestaurantDto) {
+    return ownerApi.restaurants.update(restaurantId, data)
+  }
+
+  static async deleteRestaurant(restaurantId: string) {
+    return ownerApi.restaurants.delete(restaurantId)
+  }
+
+  // Dashboard & Statistics
+  static async getDashboard(restaurantId: string) {
+    return ownerApi.dashboard.getDashboard(restaurantId)
+  }
+
+  static async getStatistics(restaurantId: string) {
+    return ownerApi.dashboard.getStatistics(restaurantId)
+  }
+
+  static async getTopSellingItems(restaurantId: string, count: number = 10) {
+    return ownerApi.dashboard.getTopSellingItems(restaurantId, count)
+  }
+
+  static async getRevenueChart(restaurantId: string, days: number = 30) {
+    return ownerApi.dashboard.getRevenueChart(restaurantId, days)
+  }
+
+  // Reports
+  static async getSalesReport(restaurantId: string, startDate: string, endDate: string) {
+    return ownerApi.reports.getSalesReport(restaurantId, startDate, endDate)
+  }
+
+  static async getOrdersByDateRange(restaurantId: string, startDate: string, endDate: string) {
+    return ownerApi.reports.getOrdersByDateRange(restaurantId, startDate, endDate)
+  }
+
+  static async getCategorySales(restaurantId: string, startDate: string, endDate: string) {
+    return ownerApi.reports.getCategorySales(restaurantId, startDate, endDate)
+  }
+
+  // Employees
+  static async getEmployees(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.employees.getAll(restaurantId, pageNumber, pageSize)
+  }
+
+  static async getEmployeeById(restaurantId: string, employeeId: string) {
+    return ownerApi.employees.getById(restaurantId, employeeId)
+  }
+
+  static async createEmployee(restaurantId: string, data: CreateEmployeeDto) {
+    return ownerApi.employees.create(restaurantId, data)
+  }
+
+  static async updateEmployee(restaurantId: string, employeeId: string, data: UpdateEmployeeDto) {
+    return ownerApi.employees.update(restaurantId, employeeId, data)
+  }
+
+  static async deleteEmployee(restaurantId: string, employeeId: string) {
+    return ownerApi.employees.delete(restaurantId, employeeId)
+  }
+
+  // Job Applications
+  static async getJobApplications(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.jobApplications.getAll(restaurantId, pageNumber, pageSize)
+  }
+
+  static async getPendingJobApplications(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.jobApplications.getPending(restaurantId, pageNumber, pageSize)
+  }
+
+  static async acceptJobApplication(applicationId: number) {
+    return ownerApi.jobApplications.accept(applicationId)
+  }
+
+  static async rejectJobApplication(applicationId: number, reason?: string) {
+    return ownerApi.jobApplications.reject(applicationId, reason)
+  }
+
+  // Reviews
+  static async getReviews(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.reviews.getAll(restaurantId, pageNumber, pageSize)
+  }
+
+  static async getPendingReviews(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.reviews.getPending(restaurantId, pageNumber, pageSize)
+  }
+
+  static async approveReview(reviewId: number) {
+    return ownerApi.reviews.approve(reviewId)
+  }
+
+  static async rejectReview(reviewId: number) {
+    return ownerApi.reviews.reject(reviewId)
+  }
+
+  static async respondToReview(reviewId: number, response: string) {
+    return ownerApi.reviews.respond(reviewId, response)
+  }
+
+  // Orders
+  static async getOrders(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.orders.getAll(restaurantId, pageNumber, pageSize)
+  }
+
+  static async getOrdersByStatus(restaurantId: string, status: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.orders.getByStatus(restaurantId, status, pageNumber, pageSize)
+  }
+
+  static async getOrderById(orderId: number) {
+    return ownerApi.orders.getById(orderId)
+  }
+
+  static async updateOrderStatus(orderId: number, status: string) {
+    return ownerApi.orders.updateStatus(orderId, status)
+  }
+
+  // Reservations
+  static async getReservations(restaurantId: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.reservations.getAll(restaurantId, pageNumber, pageSize)
+  }
+
+  static async getReservationsByStatus(restaurantId: string, status: string, pageNumber: number = 1, pageSize: number = 10) {
+    return ownerApi.reservations.getByStatus(restaurantId, status, pageNumber, pageSize)
+  }
+
+  static async updateReservationStatus(reservationId: string, status: string) {
+    return ownerApi.reservations.updateStatus(reservationId, status)
+  }
+
+  static async getTodayReservations(restaurantId: string) {
+    return ownerApi.reservations.getToday(restaurantId)
+  }
+
+  // Menus
+  static async getMenus(restaurantId: string) {
+    return ownerApi.menus.getAll(restaurantId)
+  }
+
+  static async createMenu(restaurantId: string, data: CreateMenuDto) {
+    return ownerApi.menus.create(restaurantId, data)
+  }
+
+  static async updateMenu(menuId: string, data: UpdateMenuDto) {
+    return ownerApi.menus.update(menuId, data)
+  }
+
+  static async deleteMenu(menuId: string) {
+    return ownerApi.menus.delete(menuId)
+  }
+
+  // Menu Items
+  static async getMenuItems(menuId: string, pageNumber: number = 1, pageSize: number = 20) {
+    return ownerApi.menuItems.getAll(menuId, pageNumber, pageSize)
+  }
+
+  static async createMenuItem(menuId: string, data: CreateMenuItemDto) {
+    return ownerApi.menuItems.create(menuId, data)
+  }
+
+  static async updateMenuItem(menuItemId: string, data: UpdateMenuItemDto) {
+    return ownerApi.menuItems.update(menuItemId, data)
+  }
+
+  static async deleteMenuItem(menuItemId: string) {
+    return ownerApi.menuItems.delete(menuItemId)
+  }
+
+  static async updateMenuItemAvailability(menuItemId: string, isAvailable: boolean) {
+    return ownerApi.menuItems.updateAvailability(menuItemId, isAvailable)
+  }
+
+  // Tables
+  static async getTables(restaurantId: string) {
+    return ownerApi.tables.getAll(restaurantId)
+  }
+
+  static async createTable(restaurantId: string, data: CreateTableDto) {
+    return ownerApi.tables.create(restaurantId, data)
+  }
+
+  static async updateTable(tableId: string, data: UpdateTableDto) {
+    return ownerApi.tables.update(tableId, data)
+  }
+
+  static async deleteTable(tableId: string) {
+    return ownerApi.tables.delete(tableId)
+  }
+
+  static async updateTableStatus(tableId: string, status: string) {
+    return ownerApi.tables.updateStatus(tableId, status)
+  }
+}

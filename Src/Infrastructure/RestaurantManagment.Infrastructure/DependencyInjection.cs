@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IOwnerService, OwnerService>();
         
         return services;
     }

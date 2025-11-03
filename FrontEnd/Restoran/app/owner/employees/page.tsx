@@ -1,402 +1,153 @@
-"use client"
+﻿"use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter, useSearchParams } from "next/navigation"
+import { OwnerApi } from "@/lib/owner-api"
+import { UserRole } from "@/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, Edit, Trash2, Mail, Phone } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { useRestaurant } from "@/contexts/restaurant-context"
-import { employeeApi } from "@/lib/api"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { AppUser } from "@/types"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@/components/ui/avatar"
+import { Users, Plus, Mail, Phone } from "lucide-react"
+import Link from "next/link"
 
 export default function OwnerEmployeesPage() {
-  const { selectedRestaurant } = useRestaurant()
-  const { toast } = useToast()
-  
-  const [employees, setEmployees] = useState<AppUser[]>([])
-  const [loading, setLoading] = useState(true)
-  
-  const [employeeDialogOpen, setEmployeeDialogOpen] = useState(false)
-  const [editingEmployee, setEditingEmployee] = useState<AppUser | null>(null)
-  const [employeeForm, setEmployeeForm] = useState({
-    fullName: "",
-    email: "",
-    phoneNumber: "",
-    password: "",
-    address: "",
-  })
+  const { hasRole } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const restaurantId = searchParams.get("restaurant")
+
+  const [employees, setEmployees] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
-    if (selectedRestaurant) {
+    if (!hasRole(UserRole.Owner)) {
+      router.push("/unauthorized")
+      return
+    }
+
+    if (restaurantId) {
       loadEmployees()
     }
-  }, [selectedRestaurant])
+  }, [hasRole, router, restaurantId, currentPage])
 
   const loadEmployees = async () => {
-    if (!selectedRestaurant) return
-    
-    setLoading(true)
+    if (!restaurantId) return
+
     try {
-      const data = await employeeApi.getByRestaurant(selectedRestaurant.id)
-      setEmployees(data)
-    } catch (error: any) {
-      toast({
-        title: "Hata",
-        description: error.message || "Çalışanlar yüklenirken hata oluştu",
-        variant: "destructive",
-      })
+      setIsLoading(true)
+      const response = await OwnerApi.getEmployees(restaurantId, currentPage, 10)
+      setEmployees(response.items || [])
+      setTotalPages(response.totalPages || 1)
+    } catch (error) {
+      console.error("Error loading employees:", error)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const handleSaveEmployee = async () => {
-    if (!selectedRestaurant) return
-    
-    // Validasyon
-    if (!employeeForm.fullName || !employeeForm.email) {
-      toast({
-        title: "Hata",
-        description: "Lütfen zorunlu alanları doldurun",
-        variant: "destructive",
-      })
-      return
-    }
-
-    if (!editingEmployee && !employeeForm.password) {
-      toast({
-        title: "Hata",
-        description: "Şifre gereklidir",
-        variant: "destructive",
-      })
-      return
-    }
-    
-    try {
-      const data = {
-        ...employeeForm,
-        ...(editingEmployee && !employeeForm.password && { password: undefined }),
-      }
-      
-      if (editingEmployee) {
-        await employeeApi.update(selectedRestaurant.id, editingEmployee.id, data)
-        toast({
-          title: "Başarılı",
-          description: "Çalışan güncellendi",
-        })
-      } else {
-        await employeeApi.create(selectedRestaurant.id, data)
-        toast({
-          title: "Başarılı",
-          description: "Çalışan eklendi",
-        })
-      }
-      
-      setEmployeeDialogOpen(false)
-      setEditingEmployee(null)
-      setEmployeeForm({
-        fullName: "",
-        email: "",
-        phoneNumber: "",
-        password: "",
-        address: "",
-      })
-      await loadEmployees()
-    } catch (error: any) {
-      toast({
-        title: "Hata",
-        description: error.message || "İşlem başarısız",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleDeleteEmployee = async (employeeId: string) => {
-    if (!selectedRestaurant || !confirm("Bu çalışanı silmek istediğinizden emin misiniz?")) return
-    
-    try {
-      await employeeApi.delete(selectedRestaurant.id, employeeId)
-      toast({
-        title: "Başarılı",
-        description: "Çalışan silindi",
-      })
-      await loadEmployees()
-    } catch (error: any) {
-      toast({
-        title: "Hata",
-        description: error.message || "Silme işlemi başarısız",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleEditEmployee = (employee: AppUser) => {
-    setEditingEmployee(employee)
-    setEmployeeForm({
-      fullName: employee.fullName,
-      email: employee.email,
-      phoneNumber: employee.phoneNumber || "",
-      password: "",
-      address: employee.address || "",
-    })
-    setEmployeeDialogOpen(true)
-  }
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
-  if (!selectedRestaurant) {
+  if (!restaurantId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-96">
+      <div className="container mx-auto p-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Restoran Seçin</CardTitle>
-            <CardDescription>
-              Devam etmek için lütfen bir restoran seçin
-            </CardDescription>
+            <CardTitle>Restoran Seçilmedi</CardTitle>
+            <CardDescription>Lütfen bir restoran seçin.</CardDescription>
           </CardHeader>
         </Card>
       </div>
     )
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    )
-  }
-
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Çalışanlar</h1>
-          <p className="text-muted-foreground">{selectedRestaurant.name}</p>
+          <h1 className="text-3xl font-bold flex items-center">
+            <Users className="mr-2" />
+            Çalışanlar
+          </h1>
+          <p className="text-muted-foreground">Restoran çalışanlarını yönetin</p>
         </div>
-        <Button onClick={() => {
-          setEditingEmployee(null)
-          setEmployeeForm({
-            fullName: "",
-            email: "",
-            phoneNumber: "",
-            password: "",
-            address: "",
-          })
-          setEmployeeDialogOpen(true)
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Yeni Çalışan
-        </Button>
+        <div className="flex gap-2">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Yeni Çalışan
+          </Button>
+          <Link href="/owner/dashboard">
+            <Button variant="outline">Dashboard'a Dön</Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Stats */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Toplam Çalışan</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{employees.length}</div>
-          <p className="text-xs text-muted-foreground">
-            Aktif personel sayısı
-          </p>
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Yükleniyor...</p>
+        </div>
+      ) : employees.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-muted-foreground">Henüz çalışan eklenmemiş.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {employees.map((employee) => (
+            <Card key={employee.id}>
+              <CardHeader>
+                <CardTitle>{employee.fullName}</CardTitle>
+                <CardDescription>{employee.role || "Çalışan"}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {employee.email && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{employee.email}</span>
+                  </div>
+                )}
+                {employee.phoneNumber && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{employee.phoneNumber}</span>
+                  </div>
+                )}
+                <div className="flex gap-2 pt-4">
+                  <Button size="sm" variant="outline" className="flex-1">
+                    Düzenle
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-red-500">
+                    Sil
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Employees List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Çalışan Listesi</CardTitle>
-          <CardDescription>Restoranınızda çalışan personeli yönetin</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {employees.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground mb-4">Henüz çalışan bulunmuyor</p>
-              <Button onClick={() => {
-                setEditingEmployee(null)
-                setEmployeeForm({
-                  fullName: "",
-                  email: "",
-                  phoneNumber: "",
-                  password: "",
-                  address: "",
-                })
-                setEmployeeDialogOpen(true)
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                İlk Çalışanı Ekle
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Çalışan</TableHead>
-                  <TableHead>İletişim</TableHead>
-                  <TableHead>Adres</TableHead>
-                  <TableHead>Kayıt Tarihi</TableHead>
-                  <TableHead className="text-right">İşlemler</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {employees.map((employee) => (
-                  <TableRow key={employee.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={employee.profileImageUrl} />
-                          <AvatarFallback>{getInitials(employee.fullName)}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{employee.fullName}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {employee.email}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {employee.phoneNumber ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Phone className="h-3 w-3" />
-                          {employee.phoneNumber}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {employee.address || <span className="text-muted-foreground">-</span>}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(employee.createdAt).toLocaleDateString('tr-TR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditEmployee(employee)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDeleteEmployee(employee.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Employee Dialog */}
-      <Dialog open={employeeDialogOpen} onOpenChange={setEmployeeDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{editingEmployee ? "Çalışanı Düzenle" : "Yeni Çalışan Ekle"}</DialogTitle>
-            <DialogDescription>
-              Çalışan bilgilerini girin
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">Ad Soyad *</Label>
-              <Input
-                id="fullName"
-                value={employeeForm.fullName}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, fullName: e.target.value })}
-                placeholder="Örn: Ahmet Yılmaz"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={employeeForm.email}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
-                placeholder="ornek@email.com"
-              />
-            </div>
-            <div>
-              <Label htmlFor="phoneNumber">Telefon</Label>
-              <Input
-                id="phoneNumber"
-                value={employeeForm.phoneNumber}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, phoneNumber: e.target.value })}
-                placeholder="0555 123 45 67"
-              />
-            </div>
-            <div>
-              <Label htmlFor="address">Adres</Label>
-              <Input
-                id="address"
-                value={employeeForm.address}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })}
-                placeholder="Tam adres..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">
-                Şifre {editingEmployee ? "(Değiştirmek için doldurun)" : "*"}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={employeeForm.password}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, password: e.target.value })}
-                placeholder={editingEmployee ? "Boş bırakabilirsiniz" : "Güçlü şifre"}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEmployeeDialogOpen(false)}>
-              İptal
-            </Button>
-            <Button onClick={handleSaveEmployee}>Kaydet</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >
+            Önceki
+          </Button>
+          <span className="py-2 px-4">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >
+            Sonraki
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace RestaurantManagment.Persistance.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -98,9 +98,11 @@ namespace RestaurantManagment.Persistance.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FirstName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     Address = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ProfileImageUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EmployerRestaurantId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -150,6 +152,49 @@ namespace RestaurantManagment.Persistance.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OwnershipApplications",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    BusinessName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    BusinessDescription = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    BusinessAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    BusinessPhone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    BusinessEmail = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Category = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    AdditionalNotes = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    ApplicationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReviewedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedBy = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    RejectionReason = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OwnershipApplications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OwnershipApplications_AspNetUsers_ReviewedBy",
+                        column: x => x.ReviewedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_OwnershipApplications_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Restaurants",
                 columns: table => new
                 {
@@ -161,6 +206,7 @@ namespace RestaurantManagment.Persistance.Migrations
                     Website = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
                     OwnerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Rate = table.Column<decimal>(type: "decimal(3,2)", precision: 3, scale: 2, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -178,6 +224,40 @@ namespace RestaurantManagment.Persistance.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "JobPostings",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    Requirements = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Position = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Salary = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: true),
+                    EmploymentType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PostedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiryDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    RestaurantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_JobPostings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_JobPostings_Restaurants_RestaurantId",
+                        column: x => x.RestaurantId,
+                        principalTable: "Restaurants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -201,6 +281,43 @@ namespace RestaurantManagment.Persistance.Migrations
                     table.PrimaryKey("PK_Menus", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Menus_Restaurants_RestaurantId",
+                        column: x => x.RestaurantId,
+                        principalTable: "Restaurants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Reviews",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RestaurantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    Comment = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OwnerResponse = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    RespondedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Reviews", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Reviews_AspNetUsers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Reviews_Restaurants_RestaurantId",
                         column: x => x.RestaurantId,
                         principalTable: "Restaurants",
                         principalColumn: "Id",
@@ -232,6 +349,45 @@ namespace RestaurantManagment.Persistance.Migrations
                         name: "FK_Tables_Restaurants_RestaurantId",
                         column: x => x.RestaurantId,
                         principalTable: "Restaurants",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "JobApplications",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    JobPostingId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ApplicantId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CoverLetter = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    ResumeUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ApplicationDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReviewedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReviewedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReviewNotes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    DeletedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_JobApplications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_JobApplications_AspNetUsers_ApplicantId",
+                        column: x => x.ApplicantId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_JobApplications_JobPostings_JobPostingId",
+                        column: x => x.JobPostingId,
+                        principalTable: "JobPostings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -455,6 +611,31 @@ namespace RestaurantManagment.Persistance.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_JobApplications_ApplicantId",
+                table: "JobApplications",
+                column: "ApplicantId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_JobApplications_JobPostingId",
+                table: "JobApplications",
+                column: "JobPostingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_JobApplications_Status",
+                table: "JobApplications",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_JobPostings_IsActive",
+                table: "JobPostings",
+                column: "IsActive");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_JobPostings_RestaurantId",
+                table: "JobPostings",
+                column: "RestaurantId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MenuItems_Category",
                 table: "MenuItems",
                 column: "Category");
@@ -510,6 +691,26 @@ namespace RestaurantManagment.Persistance.Migrations
                 column: "TableId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OwnershipApplications_ApplicationDate",
+                table: "OwnershipApplications",
+                column: "ApplicationDate");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OwnershipApplications_ReviewedBy",
+                table: "OwnershipApplications",
+                column: "ReviewedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OwnershipApplications_Status",
+                table: "OwnershipApplications",
+                column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OwnershipApplications_UserId",
+                table: "OwnershipApplications",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Reservations_CustomerId",
                 table: "Reservations",
                 column: "CustomerId");
@@ -538,6 +739,16 @@ namespace RestaurantManagment.Persistance.Migrations
                 name: "IX_Restaurants_OwnerId",
                 table: "Restaurants",
                 column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reviews_CustomerId",
+                table: "Reviews",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reviews_RestaurantId",
+                table: "Reviews",
+                column: "RestaurantId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tables_RestaurantId_TableNumber",
@@ -601,13 +812,25 @@ namespace RestaurantManagment.Persistance.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "JobApplications");
+
+            migrationBuilder.DropTable(
                 name: "OrderItems");
+
+            migrationBuilder.DropTable(
+                name: "OwnershipApplications");
 
             migrationBuilder.DropTable(
                 name: "Reservations");
 
             migrationBuilder.DropTable(
+                name: "Reviews");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "JobPostings");
 
             migrationBuilder.DropTable(
                 name: "MenuItems");

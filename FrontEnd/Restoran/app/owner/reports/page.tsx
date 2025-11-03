@@ -1,109 +1,70 @@
 ﻿"use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/auth-context"
+import { useRouter, useSearchParams } from "next/navigation"
+import { OwnerApi } from "@/lib/owner-api"
+import { UserRole } from "@/types"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
-import { useToast } from "@/hooks/use-toast"
-import { useRestaurant } from "@/contexts/restaurant-context"
-import { ownerApi, SalesReportDto, RevenueChartDto, CategorySalesDto } from "@/lib/owner-api"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, Download, TrendingUp, DollarSign, ShoppingBag, BarChart3 } from "lucide-react"
-import { format } from "date-fns"
-import { tr } from "date-fns/locale"
-import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { FileText, Download } from "lucide-react"
+import Link from "next/link"
 
 export default function OwnerReportsPage() {
-  const { selectedRestaurant } = useRestaurant()
-  const { toast } = useToast()
-  
-  const [loading, setLoading] = useState(false)
-  const [reportType, setReportType] = useState<"sales" | "revenue" | "category">("sales")
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-    from: new Date(new Date().setDate(new Date().getDate() - 30)),
-    to: new Date(),
-  })
-  
-  const [salesReport, setSalesReport] = useState<SalesReportDto | null>(null)
-  const [revenueChart, setRevenueChart] = useState<RevenueChartDto | null>(null)
-  const [categorySales, setCategorySales] = useState<CategorySalesDto[]>([])
+  const { hasRole } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const restaurantId = searchParams.get("restaurant")
+
+  const [startDate, setStartDate] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [salesReport, setSalesReport] = useState<any>(null)
+  const [categorySales, setCategorySales] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState(false)
 
   useEffect(() => {
-    if (selectedRestaurant) {
-      loadReports()
+    if (!hasRole(UserRole.Owner)) {
+      router.push("/unauthorized")
+      return
     }
-  }, [selectedRestaurant, reportType, dateRange])
+
+    // Set default dates (last 30 days)
+    const end = new Date()
+    const start = new Date()
+    start.setDate(start.getDate() - 30)
+
+    setEndDate(end.toISOString().split("T")[0])
+    setStartDate(start.toISOString().split("T")[0])
+  }, [hasRole, router])
 
   const loadReports = async () => {
-    if (!selectedRestaurant) return
-    
-    setLoading(true)
-    try {
-      const startDate = dateRange.from.toISOString()
-      const endDate = dateRange.to.toISOString()
+    if (!restaurantId || !startDate || !endDate) return
 
-      if (reportType === "sales") {
-        const data = await ownerApi.reports.getSalesReport(
-          selectedRestaurant.id,
-          startDate,
-          endDate
-        )
-        setSalesReport(data)
-      } else if (reportType === "revenue") {
-        const days = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))
-        const data = await ownerApi.dashboard.getRevenueChart(selectedRestaurant.id, days)
-        setRevenueChart(data)
-      } else if (reportType === "category") {
-        const data = await ownerApi.reports.getCategorySales(
-          selectedRestaurant.id,
-          startDate,
-          endDate
-        )
-        setCategorySales(data)
-      }
-    } catch (error: any) {
-      toast({
-        title: "Hata",
-        description: error.message || "Raporlar yüklenirken hata oluştu",
-        variant: "destructive",
-      })
+    try {
+      setIsLoading(true)
+      const [salesData, categoryData] = await Promise.all([
+        OwnerApi.getSalesReport(restaurantId, startDate, endDate),
+        OwnerApi.getCategorySales(restaurantId, startDate, endDate),
+      ])
+
+      setSalesReport(salesData)
+      setCategorySales(categoryData || [])
+    } catch (error) {
+      console.error("Error loading reports:", error)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  const handleExportReport = () => {
-    toast({
-      title: "Rapor İndiriliyor",
-      description: "Rapor Excel formatında indiriliyor...",
-    })
-    // Export logic would go here
-  }
-
-  if (!selectedRestaurant) {
+  if (!restaurantId) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-96">
+      <div className="container mx-auto p-6">
+        <Card>
           <CardHeader>
-            <CardTitle>Restoran Seçin</CardTitle>
-            <CardDescription>
-              Devam etmek için lütfen bir restoran seçin
-            </CardDescription>
+            <CardTitle>Restoran Seçilmedi</CardTitle>
+            <CardDescription>Lütfen bir restoran seçin.</CardDescription>
           </CardHeader>
         </Card>
       </div>
@@ -112,292 +73,151 @@ export default function OwnerReportsPage() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Raporlar ve İstatistikler</h1>
-          <p className="text-muted-foreground">{selectedRestaurant.name}</p>
+          <h1 className="text-3xl font-bold flex items-center">
+            <FileText className="mr-2" />
+            Raporlar
+          </h1>
+          <p className="text-muted-foreground">Satış raporlarını ve analizleri görüntüleyin</p>
         </div>
-        <Button onClick={handleExportReport}>
-          <Download className="h-4 w-4 mr-2" />
-          Rapor İndir
-        </Button>
+        <Link href="/owner/dashboard">
+          <Button variant="outline">Dashboard'a Dön</Button>
+        </Link>
       </div>
 
-      {/* Filters */}
+      {/* Date Range Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>Filtreler</CardTitle>
-          <CardDescription>Rapor türü ve tarih aralığı seçin</CardDescription>
+          <CardTitle>Rapor Dönemi</CardTitle>
+          <CardDescription>Rapor için tarih aralığı seçin</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex gap-4 items-end">
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Rapor Türü</label>
-              <Select value={reportType} onValueChange={(value: any) => setReportType(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sales">Satış Raporu</SelectItem>
-                  <SelectItem value="revenue">Gelir Grafiği</SelectItem>
-                  <SelectItem value="category">Kategori Satışları</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="startDate">Başlangıç Tarihi</Label>
+              <Input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
             </div>
-            
             <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Başlangıç Tarihi</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateRange.from && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.from ? format(dateRange.from, "PPP", { locale: tr }) : "Tarih seçin"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateRange.from}
-                    onSelect={(date) => date && setDateRange({ ...dateRange, from: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label htmlFor="endDate">Bitiş Tarihi</Label>
+              <Input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
-
-            <div className="flex-1">
-              <label className="text-sm font-medium mb-2 block">Bitiş Tarihi</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !dateRange.to && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRange.to ? format(dateRange.to, "PPP", { locale: tr }) : "Tarih seçin"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={dateRange.to}
-                    onSelect={(date) => date && setDateRange({ ...dateRange, to: date })}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            <Button onClick={loadReports} disabled={isLoading}>
+              {isLoading ? "Yükleniyor..." : "Rapor Oluştur"}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-        </div>
-      ) : (
+      {/* Sales Summary */}
+      {salesReport && (
         <>
-          {/* Sales Report */}
-          {reportType === "sales" && salesReport && (
-            <>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Toplam Gelir</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">₺{salesReport.totalRevenue.toFixed(2)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Toplam Sipariş</CardTitle>
-                    <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{salesReport.totalOrders}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ortalama Sipariş</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">₺{salesReport.averageOrderValue.toFixed(2)}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>En Çok Satan Ürünler</CardTitle>
-                  <CardDescription>Seçilen tarih aralığındaki en popüler ürünler</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Ürün Adı</TableHead>
-                        <TableHead>Kategori</TableHead>
-                        <TableHead>Satış Adedi</TableHead>
-                        <TableHead>Toplam Gelir</TableHead>
-                        <TableHead>Birim Fiyat</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {salesReport.topProducts.map((product) => (
-                        <TableRow key={product.menuItemId}>
-                          <TableCell className="font-medium">{product.menuItemName}</TableCell>
-                          <TableCell>{product.category}</TableCell>
-                          <TableCell>{product.quantitySold}</TableCell>
-                          <TableCell>₺{product.totalRevenue.toFixed(2)}</TableCell>
-                          <TableCell>₺{product.price.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Günlük Satışlar</CardTitle>
-                  <CardDescription>Tarih bazında gelir dağılımı</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tarih</TableHead>
-                        <TableHead>Sipariş Sayısı</TableHead>
-                        <TableHead>Gelir</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {salesReport.dailySales.map((daily) => (
-                        <TableRow key={daily.date}>
-                          <TableCell>{format(new Date(daily.date), "PPP", { locale: tr })}</TableCell>
-                          <TableCell>{daily.orderCount}</TableCell>
-                          <TableCell className="font-medium">₺{daily.revenue.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* Revenue Chart */}
-          {reportType === "revenue" && revenueChart && (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Toplam Gelir</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">₺{revenueChart.totalRevenue.toFixed(2)}</div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Günlük Ortalama</CardTitle>
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">₺{revenueChart.averageDailyRevenue.toFixed(2)}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Günlük Gelir Grafiği</CardTitle>
-                  <CardDescription>Tarih bazında gelir analizi</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tarih</TableHead>
-                        <TableHead>Sipariş Sayısı</TableHead>
-                        <TableHead>Gelir</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {revenueChart.dailyRevenue.map((daily) => (
-                        <TableRow key={daily.date}>
-                          <TableCell>{format(new Date(daily.date), "PPP", { locale: tr })}</TableCell>
-                          <TableCell>{daily.orderCount}</TableCell>
-                          <TableCell className="font-medium">₺{daily.revenue.toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </>
-          )}
-
-          {/* Category Sales */}
-          {reportType === "category" && categorySales.length > 0 && (
+          <div className="grid gap-4 md:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle>Kategori Satışları</CardTitle>
-                <CardDescription>Ürün kategorilerine göre satış dağılımı</CardDescription>
+                <CardTitle>Toplam Gelir</CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead>Satılan Ürün</TableHead>
-                      <TableHead>Gelir</TableHead>
-                      <TableHead>Yüzde</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {categorySales.map((category) => (
-                      <TableRow key={category.category}>
-                        <TableCell className="font-medium">{category.category}</TableCell>
-                        <TableCell>{category.itemsSold}</TableCell>
-                        <TableCell>₺{category.revenue.toFixed(2)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
-                              <div
-                                className="bg-primary h-full"
-                                style={{ width: `${category.percentage}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {category.percentage.toFixed(1)}%
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="text-3xl font-bold">₺{salesReport.totalRevenue?.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Toplam Sipariş</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{salesReport.totalOrders}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Ortalama Sipariş</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">₺{salesReport.averageOrderValue?.toFixed(2)}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Category Sales */}
+          {categorySales.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Kategori Bazlı Satışlar</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {categorySales.map((category, index) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{category.category}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {category.itemsSold} adet satıldı
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₺{category.revenue?.toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">
+                          %{category.percentage?.toFixed(1)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
+
+          {/* Top Products */}
+          {salesReport.topProducts && salesReport.topProducts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>En Çok Satan Ürünler</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {salesReport.topProducts.slice(0, 10).map((product: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="font-semibold text-lg text-muted-foreground">
+                          #{index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">{product.menuItemName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {product.quantitySold} adet
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">₺{product.totalRevenue?.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Export Button */}
+          <div className="flex justify-end">
+            <Button>
+              <Download className="mr-2 h-4 w-4" />
+              Raporu İndir (PDF)
+            </Button>
+          </div>
         </>
       )}
     </div>

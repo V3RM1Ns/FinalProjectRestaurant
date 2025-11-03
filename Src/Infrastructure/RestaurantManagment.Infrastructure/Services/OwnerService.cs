@@ -24,24 +24,24 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
             
-        var restaurants = _context.Restaurants
+        var restaurants = await _context.Restaurants
             .Where(r => r.OwnerId == ownerId && !r.IsDeleted)
-            .ToList();
+            .ToListAsync();
         
-        return await Task.FromResult(restaurants);
+        return restaurants;
     }
 
-    public Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId)
+    public async Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurants = _context.Restaurants
-            .Where(r => r.OwnerId == ownerId)
-            .ToList();
+        var restaurants = await _context.Restaurants
+            .Where(r => r.OwnerId == ownerId && !r.IsDeleted)
+            .ToListAsync();
         
-        var restaurant = restaurants.FirstOrDefault(r => r.Id == restaurantId  && !r.IsDeleted);
-        return Task.FromResult(restaurant);
+        var restaurant = restaurants.FirstOrDefault(r => r.Id == restaurantId);
+        return restaurant;
     }
 
     public async Task<Restaurant> CreateRestaurantAsync(CreateRestaurantDto dto, string ownerId)
