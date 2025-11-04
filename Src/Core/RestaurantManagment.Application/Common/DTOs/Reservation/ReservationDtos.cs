@@ -2,7 +2,7 @@
 
 public class ReservationDto
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public DateTime ReservationDate { get; set; }
     public int NumberOfGuests { get; set; }
     public string Status { get; set; } = string.Empty;
@@ -11,9 +11,9 @@ public class ReservationDto
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }
     public string? CustomerId { get; set; }
-    public int RestaurantId { get; set; }
+    public string RestaurantId { get; set; } = string.Empty;
     public string RestaurantName { get; set; } = string.Empty;
-    public int TableId { get; set; }
+    public string TableId { get; set; } = string.Empty;
     public int? TableNumber { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -26,8 +26,8 @@ public class CreateReservationDto
     public string CustomerName { get; set; } = string.Empty;
     public string CustomerPhone { get; set; } = string.Empty;
     public string? CustomerEmail { get; set; }
-    public int RestaurantId { get; set; }
-    public int TableId { get; set; }
+    public string RestaurantId { get; set; } = string.Empty;
+    public string TableId { get; set; } = string.Empty;
 }
 
 public class UpdateReservationDto
@@ -35,11 +35,10 @@ public class UpdateReservationDto
     public DateTime ReservationDate { get; set; }
     public int NumberOfGuests { get; set; }
     public string? SpecialRequests { get; set; }
-    public int TableId { get; set; }
+    public string TableId { get; set; } = string.Empty;
 }
 
 public class UpdateReservationStatusDto
 {
     public string Status { get; set; } = string.Empty;
 }
-

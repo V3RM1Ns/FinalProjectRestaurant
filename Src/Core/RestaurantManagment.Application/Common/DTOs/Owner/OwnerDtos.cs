@@ -2,7 +2,7 @@
 
 public class OwnerDashboardDto
 {
-    public int RestaurantId { get; set; }
+    public string RestaurantId { get; set; } = string.Empty;
     public string RestaurantName { get; set; } = string.Empty;
     public decimal TotalRevenue { get; set; }
     public decimal TodayRevenue { get; set; }
@@ -34,7 +34,7 @@ public class OwnerStatisticsDto
 
 public class TopSellingItemDto
 {
-    public int MenuItemId { get; set; }
+    public string MenuItemId { get; set; } = string.Empty;
     public string MenuItemName { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public int QuantitySold { get; set; }
@@ -44,7 +44,7 @@ public class TopSellingItemDto
 
 public class RecentOrderDto
 {
-    public int OrderId { get; set; }
+    public string OrderId { get; set; } = string.Empty;
     public DateTime OrderDate { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public decimal TotalAmount { get; set; }
@@ -88,12 +88,12 @@ public class CategorySalesDto
 
 public class TableDto
 {
-    public int Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public int TableNumber { get; set; }
     public int Capacity { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? Location { get; set; }
-    public int RestaurantId { get; set; }
+    public string RestaurantId { get; set; } = string.Empty;
 }
 
 public class CreateTableDto

@@ -43,26 +43,26 @@ public interface IOwnerService
 
     Task<PaginatedResult<JobApplicationDto>> GetJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<JobApplicationDto>> GetPendingJobApplicationsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
-    Task<JobApplicationDto?> GetJobApplicationByIdAsync(int applicationId, string ownerId);
-    Task AcceptJobApplicationAsync(int applicationId, string ownerId);
-    Task RejectJobApplicationAsync(int applicationId, string ownerId, string? rejectionReason = null);
+    Task<JobApplicationDto?> GetJobApplicationByIdAsync(string applicationId, string ownerId);
+    Task AcceptJobApplicationAsync(string applicationId, string ownerId);
+    Task RejectJobApplicationAsync(string applicationId, string ownerId, string? rejectionReason = null);
     Task<int> GetPendingApplicationsCountAsync(string restaurantId, string ownerId);
     
    
     Task<PaginatedResult<ReviewDto>> GetRestaurantReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
-    Task<ReviewDto?> GetReviewByIdAsync(int reviewId, string ownerId);
-    Task ApproveReviewAsync(int reviewId, string ownerId);
-    Task RejectReviewAsync(int reviewId, string ownerId);
-    Task RespondToReviewAsync(int reviewId, string response, string ownerId);
+    Task<ReviewDto?> GetReviewByIdAsync(string reviewId, string ownerId);
+    Task ApproveReviewAsync(string reviewId, string ownerId);
+    Task RejectReviewAsync(string reviewId, string ownerId);
+    Task RespondToReviewAsync(string reviewId, string response, string ownerId);
     Task<int> GetPendingReviewsCountAsync(string restaurantId, string ownerId);
     Task<double> GetAverageRatingAsync(string restaurantId);
     
     
     Task<PaginatedResult<OrderDto>> GetRestaurantOrdersAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<OrderDto>> GetOrdersByStatusAsync(string restaurantId, OrderStatus status, string ownerId, int pageNumber = 1, int pageSize = 10);
-    Task<OrderDto?> GetOrderByIdAsync(int orderId, string ownerId);
-    Task<OrderDto> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus, string ownerId);
+    Task<OrderDto?> GetOrderByIdAsync(string orderId, string ownerId);
+    Task<OrderDto> UpdateOrderStatusAsync(string orderId, OrderStatus newStatus, string ownerId);
     Task<decimal> GetTotalRevenueAsync(string restaurantId, string ownerId);
     Task<decimal> GetTodayRevenueAsync(string restaurantId, string ownerId);
     Task<int> GetTotalOrdersCountAsync(string restaurantId, string ownerId);

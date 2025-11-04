@@ -436,7 +436,7 @@ public class OwnerController(
     }
 
     [HttpGet("job-applications/{applicationId}")]
-    public async Task<IActionResult> GetJobApplicationById(int applicationId)
+    public async Task<IActionResult> GetJobApplicationById(string applicationId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -457,7 +457,7 @@ public class OwnerController(
     }
 
     [HttpPost("job-applications/{applicationId}/accept")]
-    public async Task<IActionResult> AcceptJobApplication(int applicationId)
+    public async Task<IActionResult> AcceptJobApplication(string applicationId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -476,7 +476,7 @@ public class OwnerController(
 
     [HttpPost("job-applications/{applicationId}/reject")]
     public async Task<IActionResult> RejectJobApplication(
-        int applicationId,
+        string applicationId,
         [FromBody] string? rejectionReason = null)
     {
         var currentUser = await userManager.GetUserAsync(User);
@@ -559,7 +559,7 @@ public class OwnerController(
     }
 
     [HttpGet("reviews/{reviewId}")]
-    public async Task<IActionResult> GetReviewById(int reviewId)
+    public async Task<IActionResult> GetReviewById(string reviewId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -580,7 +580,7 @@ public class OwnerController(
     }
 
     [HttpPost("reviews/{reviewId}/approve")]
-    public async Task<IActionResult> ApproveReview(int reviewId)
+    public async Task<IActionResult> ApproveReview(string reviewId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -598,7 +598,7 @@ public class OwnerController(
     }
 
     [HttpPost("reviews/{reviewId}/reject")]
-    public async Task<IActionResult> RejectReview(int reviewId)
+    public async Task<IActionResult> RejectReview(string reviewId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -616,7 +616,7 @@ public class OwnerController(
     }
 
     [HttpPost("reviews/{reviewId}/respond")]
-    public async Task<IActionResult> RespondToReview(int reviewId, [FromBody] string response)
+    public async Task<IActionResult> RespondToReview(string reviewId, [FromBody] string response)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -706,7 +706,7 @@ public class OwnerController(
     }
 
     [HttpGet("orders/{orderId}")]
-    public async Task<IActionResult> GetOrderById(int orderId)
+    public async Task<IActionResult> GetOrderById(string orderId)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -727,7 +727,7 @@ public class OwnerController(
     }
 
     [HttpPut("orders/{orderId}/status")]
-    public async Task<IActionResult> UpdateOrderStatus(int orderId, [FromBody] OrderStatus newStatus)
+    public async Task<IActionResult> UpdateOrderStatus(string orderId, [FromBody] OrderStatus newStatus)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -1292,3 +1292,4 @@ public class OwnerController(
 
     #endregion
 }
+

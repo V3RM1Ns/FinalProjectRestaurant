@@ -45,8 +45,6 @@ public class MappingProfile : Profile
         CreateMap<MenuItem, MenuItemResponseDto>()
             .ForMember(dest => dest.MenuName, opt => opt.MapFrom(src => src.Menu.Name));
         CreateMap<MenuItem, RestaurantManagment.Application.Common.DTOs.MenuItem.MenuItemDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
-            .ForMember(dest => dest.MenuId, opt => opt.MapFrom(src => int.Parse(src.MenuId)))
             .ForMember(dest => dest.MenuName, opt => opt.MapFrom(src => src.Menu.Name));
         
         CreateMap<CreateMenuItemDto, MenuItem>();
@@ -78,9 +76,7 @@ public class MappingProfile : Profile
         
         CreateMap<Reservation, RestaurantManagment.Application.Common.DTOs.Reservation.ReservationDto>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
-            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => int.Parse(src.TableId)))
             .ForMember(dest => dest.TableNumber, opt => opt.MapFrom(src => src.Table.TableNumber));
         
         CreateMap<CreateReservationDto, Reservation>();
@@ -104,19 +100,18 @@ public class MappingProfile : Profile
 
       
         CreateMap<AppUser, EmployeeDto>()
-            .ForMember(dest => dest.EmployerRestaurantId, opt => opt.MapFrom(src => 
-                src.EmployerRestaurantId != null ? int.Parse(src.EmployerRestaurantId) : (int?)null))
+            .ForMember(dest => dest.EmployerRestaurantId, opt => opt.MapFrom(src => src.EmployerRestaurantId))
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => 
                 src.EmployerRestaurant != null ? src.EmployerRestaurant.Name : null))
-            .ForMember(dest => dest.HireDate, opt => opt.MapFrom(src => src.CreatedAt))
-            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
-            .ForMember(dest => dest.Roles, opt => opt.Ignore());
+            .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email ?? string.Empty))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted));
 
         CreateMap<CreateEmployeeDto, AppUser>()
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
-            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Phone))
             .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
             .ForMember(dest => dest.EmailConfirmed, opt => opt.MapFrom(src => true))
             .ForMember(dest => dest.IsDeleted, opt => opt.MapFrom(src => false))
@@ -128,7 +123,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
             .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
-            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+            .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Phone))
             .ForMember(dest => dest.Address, opt => opt.MapFrom(src => src.Address))
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
             .ForMember(dest => dest.FirstName, opt => opt.Ignore())
@@ -145,48 +140,38 @@ public class MappingProfile : Profile
 
   
         CreateMap<Review, ReviewDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
-            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer.FullName))
             .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.Customer.Email));
 
         
         CreateMap<Order, OrderDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
             .ForMember(dest => dest.Type, opt => opt.MapFrom(src => src.Type.ToString()))
-            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)))
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FullName : null))
-            .ForMember(dest => dest.TableId, opt => opt.MapFrom(src => src.TableId != null ? int.Parse(src.TableId) : (int?)null))
             .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));
 
         CreateMap<OrderItem, OrderItemDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
-            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => int.Parse(src.MenuItemId)))
             .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.Name))
-            .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => int.Parse(src.OrderId)))
             .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.UnitPrice * src.Quantity));
 
       
         CreateMap<Table, TableDto>()
-            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => int.Parse(src.Id)))
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.RestaurantId, opt => opt.MapFrom(src => int.Parse(src.RestaurantId)));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
         
         CreateMap<CreateTableDto, Table>();
         CreateMap<UpdateTableDto, Table>();
         
         CreateMap<Order, RecentOrderDto>()
-            .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FullName : "Guest"))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
             .ForMember(dest => dest.OrderType, opt => opt.MapFrom(src => src.Type.ToString()));
 
       
         CreateMap<MenuItem, TopSellingItemDto>()
-            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => int.Parse(src.Id)))
+            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.Name))
             .ForMember(dest => dest.QuantitySold, opt => opt.Ignore())
             .ForMember(dest => dest.TotalRevenue, opt => opt.Ignore());

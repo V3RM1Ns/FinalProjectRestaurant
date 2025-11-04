@@ -12,19 +12,18 @@ using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerService
+public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<AppUser> userManager): IOwnerService
 {
-    private IOwnerService _ownerServiceImplementation;
-
     public async Task<IEnumerable<Restaurant>> GetOwnerRestaurantsAsync(string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
             
-        var restaurants = await _context.Restaurants
+        var restaurants = await context.Restaurants
             .Where(r => r.OwnerId == ownerId && !r.IsDeleted)
             .ToListAsync();
         
@@ -36,7 +35,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurants = await _context.Restaurants
+        var restaurants = await context.Restaurants
             .Where(r => r.OwnerId == ownerId && !r.IsDeleted)
             .ToListAsync();
         
@@ -52,14 +51,14 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = _mapper.Map<Restaurant>(dto);
+        var restaurant = mapper.Map<Restaurant>(dto);
         restaurant.OwnerId = ownerId;
         restaurant.Rate = 0;
         restaurant.CreatedAt = DateTime.UtcNow;
         restaurant.IsDeleted = false;
 
-        _context.Restaurants.Add(restaurant);
-        await _context.SaveChangesAsync();
+        context.Restaurants.Add(restaurant);
+        await context.SaveChangesAsync();
 
         return restaurant;
     }
@@ -72,16 +71,16 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = await _context.Restaurants
+        var restaurant = await context.Restaurants
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
  
         if (restaurant == null)
             throw new Exception("Restaurant not found or you don't have access to this restaurant.");
 
-        _mapper.Map(dto, restaurant);
+        mapper.Map(dto, restaurant);
         restaurant.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
         return restaurant;
     }
@@ -91,7 +90,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = await _context.Restaurants
+        var restaurant = await context.Restaurants
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
 
         if (restaurant == null)
@@ -100,7 +99,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         restaurant.IsDeleted = true;
         restaurant.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<bool> IsRestaurantOwnerAsync(string restaurantId, string ownerId)
@@ -108,7 +107,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = await _context.Restaurants
+        var restaurant = await context.Restaurants
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
 
         return restaurant != null;
@@ -119,7 +118,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = await _context.Restaurants
+        var restaurant = await context.Restaurants
             .Include(r => r.Orders)
             .Include(r => r.Menus)
             .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
@@ -129,7 +128,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
 
         var dashboard = new OwnerDashboardDto
         {
-            RestaurantId = int.Parse(restaurantId),
+            RestaurantId = restaurantId,
             RestaurantName = restaurant.Name,
             TotalRevenue = await GetTotalRevenueAsync(restaurantId, ownerId),
             TodayRevenue = await GetTodayRevenueAsync(restaurantId, ownerId),
@@ -156,7 +155,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var orders = await _context.Orders
+        var orders = await context.Orders
             .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted)
             .ToListAsync();
 
@@ -178,14 +177,14 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
 
     public async Task<IEnumerable<TopSellingItemDto>> GetTopSellingItemsAsync(string restaurantId, int count = 10)
     {
-        var topItems = await _context.OrderItems
+        var topItems = await context.OrderItems
             .Include(oi => oi.MenuItem)
             .Include(oi => oi.Order)
             .Where(oi => oi.Order.RestaurantId == restaurantId && !oi.IsDeleted && !oi.Order.IsDeleted)
             .GroupBy(oi => new { oi.MenuItemId, oi.MenuItem.Name, oi.MenuItem.Category })
             .Select(g => new TopSellingItemDto
             {
-                MenuItemId = int.Parse(g.Key.MenuItemId),
+                MenuItemId = g.Key.MenuItemId,
                 MenuItemName = g.Key.Name,
                 Category = g.Key.Category ?? "Other",
                 QuantitySold = g.Sum(oi => oi.Quantity),
@@ -202,7 +201,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
     public async Task<RevenueChartDto> GetRevenueChartDataAsync(string restaurantId, int days = 30)
     {
         var startDate = DateTime.UtcNow.Date.AddDays(-days);
-        var orders = await _context.Orders
+        var orders = await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate >= startDate 
                 && !o.IsDeleted)
@@ -239,7 +238,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Users
+        var query = context.Users
             .Include(u => u.EmployerRestaurant)
             .Where(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
 
@@ -250,9 +249,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-
-        var employeeDtos = _mapper.Map<List<EmployeeDto>>(employees);
-
+        
+        var employeeDtos = mapper.Map<List<EmployeeDto>>(employees);
+       
         return new PaginatedResult<EmployeeDto>
         {
             Items = employeeDtos,
@@ -271,10 +270,10 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var employee = await _context.Users
+        var employee = await context.Users
             .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
 
-        return employee != null ? _mapper.Map<EmployeeDto>(employee) : null;
+        return employee != null ? mapper.Map<EmployeeDto>(employee) : null;
     }
 
     public async Task<EmployeeDto> CreateEmployeeAsync(string restaurantId, CreateEmployeeDto dto, string ownerId)
@@ -290,11 +289,11 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
         
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         if (existingUser != null)
             throw new Exception("This email address is already in use.");
 
-        var employee = _mapper.Map<AppUser>(dto);
+        var employee = mapper.Map<AppUser>(dto);
         employee.EmployerRestaurantId = restaurantId;
         employee.CreatedAt = DateTime.UtcNow;
         employee.IsDeleted = false;
@@ -305,10 +304,10 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         employee.FirstName = nameParts[0];
         employee.LastName = nameParts.Length > 1 ? nameParts[1] : "";
 
-        _context.Users.Add(employee);
-        await _context.SaveChangesAsync();
+        context.Users.Add(employee);
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<EmployeeDto>(employee);
+        return mapper.Map<EmployeeDto>(employee);
     }
 
     public async Task<EmployeeDto> UpdateEmployeeAsync(string restaurantId, string employeeId, UpdateEmployeeDto dto, string ownerId)
@@ -323,7 +322,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var employee = await _context.Users
+        var employee = await context.Users
             .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
 
         if (employee == null)
@@ -332,12 +331,12 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
     
         if (employee.Email != dto.Email)
         {
-            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Id != employeeId);
+            var existingUser = await context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email && u.Id != employeeId);
             if (existingUser != null)
                 throw new Exception("This email address is already in use.");
         }
 
-        _mapper.Map(dto, employee);
+        mapper.Map(dto, employee);
         
    
         var nameParts = dto.FullName.Split(' ', 2);
@@ -346,9 +345,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         
         employee.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<EmployeeDto>(employee);
+        return mapper.Map<EmployeeDto>(employee);
     }
 
     public async Task DeleteEmployeeAsync(string restaurantId, string employeeId, string ownerId)
@@ -360,7 +359,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var employee = await _context.Users
+        var employee = await context.Users
             .FirstOrDefaultAsync(u => u.Id == employeeId && u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
 
         if (employee == null)
@@ -370,7 +369,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         employee.DeletedAt = DateTime.UtcNow;
         employee.DeletedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<int> GetEmployeeCountAsync(string restaurantId, string ownerId)
@@ -382,7 +381,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.Users
+        return await context.Users
             .CountAsync(u => u.EmployerRestaurantId == restaurantId && !u.IsDeleted);
     }
 
@@ -395,7 +394,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.JobApplications
+        var query = context.JobApplications
             .Include(ja => ja.JobPosting)
                 .ThenInclude(jp => jp.Restaurant)
             .Include(ja => ja.Applicant)
@@ -409,7 +408,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var applicationDtos = _mapper.Map<List<JobApplicationDto>>(applications);
+        var applicationDtos = mapper.Map<List<JobApplicationDto>>(applications);
 
         return new PaginatedResult<JobApplicationDto>
         {
@@ -429,7 +428,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.JobApplications
+        var query = context.JobApplications
             .Include(ja => ja.JobPosting)
                 .ThenInclude(jp => jp.Restaurant)
             .Include(ja => ja.Applicant)
@@ -445,7 +444,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var applicationDtos = _mapper.Map<List<JobApplicationDto>>(applications);
+        var applicationDtos = mapper.Map<List<JobApplicationDto>>(applications);
 
         return new PaginatedResult<JobApplicationDto>
         {
@@ -456,16 +455,16 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         };
     }
 
-    public async Task<JobApplicationDto?> GetJobApplicationByIdAsync(int applicationId, string ownerId)
+    public async Task<JobApplicationDto?> GetJobApplicationByIdAsync(string applicationId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var application = await _context.JobApplications
+        var application = await context.JobApplications
             .Include(ja => ja.JobPosting)
                 .ThenInclude(jp => jp.Restaurant)
             .Include(ja => ja.Applicant)
-            .Where(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted)
+            .Where(ja => ja.Id == applicationId && !ja.IsDeleted)
             .FirstOrDefaultAsync();
 
         if (application == null)
@@ -475,17 +474,17 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this application.");
 
-        return _mapper.Map<JobApplicationDto>(application);
+        return mapper.Map<JobApplicationDto>(application);
     }
 
-    public async Task AcceptJobApplicationAsync(int applicationId, string ownerId)
+    public async Task AcceptJobApplicationAsync(string applicationId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var application = await _context.JobApplications
+        var application = await context.JobApplications
             .Include(ja => ja.JobPosting)
-            .FirstOrDefaultAsync(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted);
+            .FirstOrDefaultAsync(ja => ja.Id == applicationId && !ja.IsDeleted);
 
         if (application == null)
             throw new Exception("Job application not found.");
@@ -499,17 +498,17 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         application.ReviewedBy = ownerId;
         application.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
-    public async Task RejectJobApplicationAsync(int applicationId, string ownerId, string? rejectionReason = null)
+    public async Task RejectJobApplicationAsync(string applicationId, string ownerId, string? rejectionReason = null)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var application = await _context.JobApplications
+        var application = await context.JobApplications
             .Include(ja => ja.JobPosting)
-            .FirstOrDefaultAsync(ja => ja.Id == applicationId.ToString() && !ja.IsDeleted);
+            .FirstOrDefaultAsync(ja => ja.Id == applicationId && !ja.IsDeleted);
 
         if (application == null)
             throw new Exception("Job application not found.");
@@ -525,7 +524,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         application.ReviewNotes = rejectionReason;
         application.UpdatedAt = DateTime.UtcNow;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<int> GetPendingApplicationsCountAsync(string restaurantId, string ownerId)
@@ -537,7 +536,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.JobApplications
+        return await context.JobApplications
             .Include(ja => ja.JobPosting)
             .Where(ja => ja.JobPosting.RestaurantId == restaurantId 
                 && ja.Status == "Pending" 
@@ -554,7 +553,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Reviews
+        var query = context.Reviews
             .Include(r => r.Restaurant)
             .Include(r => r.Customer)
             .Where(r => r.RestaurantId == restaurantId && !r.IsDeleted);
@@ -567,7 +566,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+        var reviewDtos = mapper.Map<List<ReviewDto>>(reviews);
 
         return new PaginatedResult<ReviewDto>
         {
@@ -587,7 +586,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Reviews
+        var query = context.Reviews
             .Include(r => r.Restaurant)
             .Include(r => r.Customer)
             .Where(r => r.RestaurantId == restaurantId 
@@ -602,7 +601,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+        var reviewDtos = mapper.Map<List<ReviewDto>>(reviews);
 
         return new PaginatedResult<ReviewDto>
         {
@@ -613,15 +612,15 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         };
     }
 
-    public async Task<ReviewDto?> GetReviewByIdAsync(int reviewId, string ownerId)
+    public async Task<ReviewDto?> GetReviewByIdAsync(string reviewId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var review = await _context.Reviews
+        var review = await context.Reviews
             .Include(r => r.Restaurant)
             .Include(r => r.Customer)
-            .Where(r => r.Id == reviewId.ToString() && !r.IsDeleted)
+            .Where(r => r.Id == reviewId && !r.IsDeleted)
             .FirstOrDefaultAsync();
 
         if (review == null)
@@ -631,17 +630,17 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this review.");
 
-        return _mapper.Map<ReviewDto>(review);
+        return mapper.Map<ReviewDto>(review);
     }
 
-    public async Task ApproveReviewAsync(int reviewId, string ownerId)
+    public async Task ApproveReviewAsync(string reviewId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var review = await _context.Reviews
+        var review = await context.Reviews
             .Include(r => r.Restaurant)
-            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
 
         if (review == null)
             throw new Exception("Review not found.");
@@ -654,17 +653,17 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         review.UpdatedAt = DateTime.UtcNow;
         review.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
-    public async Task RejectReviewAsync(int reviewId, string ownerId)
+    public async Task RejectReviewAsync(string reviewId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var review = await _context.Reviews
+        var review = await context.Reviews
             .Include(r => r.Restaurant)
-            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
 
         if (review == null)
             throw new Exception("Review not found.");
@@ -677,10 +676,10 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         review.UpdatedAt = DateTime.UtcNow;
         review.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
-    public async Task RespondToReviewAsync(int reviewId, string response, string ownerId)
+    public async Task RespondToReviewAsync(string reviewId, string response, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
@@ -688,9 +687,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(response))
             throw new ArgumentException("Response cannot be null or empty.", nameof(response));
 
-        var review = await _context.Reviews
+        var review = await context.Reviews
             .Include(r => r.Restaurant)
-            .FirstOrDefaultAsync(r => r.Id == reviewId.ToString() && !r.IsDeleted);
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
 
         if (review == null)
             throw new Exception("Review not found.");
@@ -704,7 +703,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         review.UpdatedAt = DateTime.UtcNow;
         review.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<int> GetPendingReviewsCountAsync(string restaurantId, string ownerId)
@@ -716,7 +715,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.Reviews
+        return await context.Reviews
             .Where(r => r.RestaurantId == restaurantId 
                 && r.Status == "Pending" 
                 && !r.IsDeleted)
@@ -725,7 +724,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
 
     public async Task<double> GetAverageRatingAsync(string restaurantId)
     {
-        var approvedReviews = await _context.Reviews
+        var approvedReviews = await context.Reviews
             .Where(r => r.RestaurantId == restaurantId 
                 && r.Status == "Approved" 
                 && !r.IsDeleted)
@@ -746,7 +745,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Orders
+        var query = context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.Customer)
             .Include(o => o.Table)
@@ -762,7 +761,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var orderDtos = _mapper.Map<List<OrderDto>>(orders);
+        var orderDtos = mapper.Map<List<OrderDto>>(orders);
 
         return new PaginatedResult<OrderDto>
         {
@@ -782,7 +781,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Orders
+        var query = context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.Customer)
             .Include(o => o.Table)
@@ -800,7 +799,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var orderDtos = _mapper.Map<List<OrderDto>>(orders);
+        var orderDtos = mapper.Map<List<OrderDto>>(orders);
 
         return new PaginatedResult<OrderDto>
         {
@@ -811,19 +810,19 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         };
     }
 
-    public async Task<OrderDto?> GetOrderByIdAsync(int orderId, string ownerId)
+    public async Task<OrderDto?> GetOrderByIdAsync(string orderId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var order = await _context.Orders
+        var order = await context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.Customer)
             .Include(o => o.Table)
             .Include(o => o.DeliveryPerson)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
-            .Where(o => o.Id == orderId.ToString() && !o.IsDeleted)
+            .Where(o => o.Id == orderId && !o.IsDeleted)
             .FirstOrDefaultAsync();
 
         if (order == null)
@@ -834,21 +833,21 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this order.");
 
-        return _mapper.Map<OrderDto>(order);
+        return mapper.Map<OrderDto>(order);
     }
 
-    public async Task<OrderDto> UpdateOrderStatusAsync(int orderId, OrderStatus newStatus, string ownerId)
+    public async Task<OrderDto> UpdateOrderStatusAsync(string orderId, OrderStatus newStatus, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var order = await _context.Orders
+        var order = await context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.Customer)
             .Include(o => o.Table)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
-            .FirstOrDefaultAsync(o => o.Id == orderId.ToString() && !o.IsDeleted);
+            .FirstOrDefaultAsync(o => o.Id == orderId && !o.IsDeleted);
 
         if (order == null)
             throw new Exception("Order not found.");
@@ -869,9 +868,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         order.UpdatedAt = DateTime.UtcNow;
         order.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<OrderDto>(order);
+        return mapper.Map<OrderDto>(order);
     }
 
     public async Task<decimal> GetTotalRevenueAsync(string restaurantId, string ownerId)
@@ -883,7 +882,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var totalRevenue = await _context.Orders
+        var totalRevenue = await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
                 && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
                 && !o.IsDeleted)
@@ -902,7 +901,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
         var today = DateTime.UtcNow.Date;
-        var todayRevenue = await _context.Orders
+        var todayRevenue = await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate.Date == today
                 && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
@@ -921,7 +920,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.Orders
+        return await context.Orders
             .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted)
             .CountAsync();
     }
@@ -936,7 +935,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
         var today = DateTime.UtcNow.Date;
-        return await _context.Orders
+        return await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate.Date == today
                 && !o.IsDeleted)
@@ -952,7 +951,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Reservations
+        var query = context.Reservations
             .Include(r => r.Restaurant)
             .Include(r => r.Table)
             .Where(r => r.RestaurantId == restaurantId && !r.IsDeleted)
@@ -964,7 +963,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var reservationDtos = _mapper.Map<List<ReservationDto>>(reservations);
+        var reservationDtos = mapper.Map<List<ReservationDto>>(reservations);
 
         return new PaginatedResult<ReservationDto>
         {
@@ -984,7 +983,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var query = _context.Reservations
+        var query = context.Reservations
             .Include(r => r.Restaurant)
             .Include(r => r.Table)
             .Where(r => r.RestaurantId == restaurantId && r.Status == status && !r.IsDeleted)
@@ -996,7 +995,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var reservationDtos = _mapper.Map<List<ReservationDto>>(reservations);
+        var reservationDtos = mapper.Map<List<ReservationDto>>(reservations);
 
         return new PaginatedResult<ReservationDto>
         {
@@ -1012,7 +1011,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var reservation = await _context.Reservations
+        var reservation = await context.Reservations
             .Include(r => r.Restaurant)
             .Include(r => r.Table)
             .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
@@ -1024,7 +1023,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this reservation.");
 
-        return _mapper.Map<ReservationDto>(reservation);
+        return mapper.Map<ReservationDto>(reservation);
     }
 
     public async Task<ReservationDto> UpdateReservationStatusAsync(string reservationId, ReservationStatus newStatus, string ownerId)
@@ -1032,7 +1031,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var reservation = await _context.Reservations
+        var reservation = await context.Reservations
             .Include(r => r.Restaurant)
             .Include(r => r.Table)
             .FirstOrDefaultAsync(r => r.Id == reservationId && !r.IsDeleted);
@@ -1048,9 +1047,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         reservation.UpdatedAt = DateTime.UtcNow;
         reservation.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<ReservationDto>(reservation);
+        return mapper.Map<ReservationDto>(reservation);
     }
 
     public async Task<int> GetActiveReservationsCountAsync(string restaurantId, string ownerId)
@@ -1062,7 +1061,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.Reservations
+        return await context.Reservations
             .Where(r => r.RestaurantId == restaurantId 
                 && (r.Status == ReservationStatus.Pending || r.Status == ReservationStatus.Confirmed)
                 && !r.IsDeleted)
@@ -1078,7 +1077,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var reservations = await _context.Reservations
+        var reservations = await context.Reservations
             .Include(r => r.Restaurant)
             .Include(r => r.Table)
             .Where(r => r.RestaurantId == restaurantId 
@@ -1088,7 +1087,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .OrderBy(r => r.ReservationDate)
             .ToListAsync();
 
-        return _mapper.Map<List<ReservationDto>>(reservations);
+        return mapper.Map<List<ReservationDto>>(reservations);
     }
 
     public async Task<IEnumerable<MenuDto>> GetRestaurantMenusAsync(string restaurantId, string ownerId)
@@ -1100,11 +1099,11 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var menus = await _context.Menus
+        var menus = await context.Menus
             .Where(m => m.RestaurantId == restaurantId && !m.IsDeleted)
             .ToListAsync();
 
-        return _mapper.Map<List<MenuDto>>(menus);
+        return mapper.Map<List<MenuDto>>(menus);
     }
 
     public async Task<MenuDto?> GetMenuByIdAsync(string menuId, string ownerId)
@@ -1112,8 +1111,8 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menu = await _context.Menus
-            .FirstOrDefaultAsync(m => m.Id == menuId.ToString() && !m.IsDeleted);
+        var menu = await context.Menus
+            .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
 
         if (menu == null)
             return null;
@@ -1122,7 +1121,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this menu.");
 
-        return _mapper.Map<MenuDto>(menu);
+        return mapper.Map<MenuDto>(menu);
     }
 
     public async Task<MenuDto> CreateMenuAsync(string restaurantId, CreateMenuDto dto, string ownerId)
@@ -1133,7 +1132,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var restaurant = await _context.Restaurants
+        var restaurant = await context.Restaurants
             .FirstOrDefaultAsync(r => r.Id == restaurantId && !r.IsDeleted);
 
         if (restaurant == null)
@@ -1143,16 +1142,16 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var menu = _mapper.Map<Menu>(dto);
+        var menu = mapper.Map<Menu>(dto);
         menu.RestaurantId = restaurantId;
         menu.CreatedAt = DateTime.UtcNow;
         menu.CreatedBy = ownerId;
         menu.IsDeleted = false;
 
-        _context.Menus.Add(menu);
-        await _context.SaveChangesAsync();
+        context.Menus.Add(menu);
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<MenuDto>(menu);
+        return mapper.Map<MenuDto>(menu);
     }
 
     public async Task<MenuDto> UpdateMenuAsync(string menuId, UpdateMenuDto dto, string ownerId)
@@ -1163,23 +1162,22 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menu = await _context.Menus
-            .FirstOrDefaultAsync(m => m.Id == menuId.ToString() && !m.IsDeleted);
+        var menu = await context.Menus
+            .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
 
         if (menu == null)
             throw new Exception("Menu not found.");
 
         var isOwner = await IsRestaurantOwnerAsync(menu.RestaurantId, ownerId);
         if (!isOwner)
-            throw new Exception("You don't have access to this menu.");
-
-        _mapper.Map(dto, menu);
+            throw new Exception("You don't have access to this restaurant.");
+        mapper.Map(dto, menu);
         menu.UpdatedAt = DateTime.UtcNow;
         menu.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<MenuDto>(menu);
+        return mapper.Map<MenuDto>(menu);
     }
 
     public async Task DeleteMenuAsync(string menuId, string ownerId)
@@ -1187,8 +1185,8 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menu = await _context.Menus
-            .FirstOrDefaultAsync(m => m.Id == menuId.ToString() && !m.IsDeleted);
+        var menu = await context.Menus
+            .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
 
         if (menu == null)
             throw new Exception("Menu not found.");
@@ -1201,7 +1199,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         menu.DeletedAt = DateTime.UtcNow;
         menu.DeletedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<PaginatedResult<MenuItemDto>> GetMenuItemsAsync(string menuId, string ownerId, int pageNumber = 1, int pageSize = 20)
@@ -1209,7 +1207,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menu = await _context.Menus
+        var menu = await context.Menus
             .Include(m => m.Restaurant)
             .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
 
@@ -1220,7 +1218,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this menu.");
 
-        var query = _context.MenuItems
+        var query = context.MenuItems
             .Include(mi => mi.Menu)
             .Where(mi => mi.MenuId == menuId && !mi.IsDeleted)
             .OrderBy(mi => mi.Category)
@@ -1232,7 +1230,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .Take(pageSize)
             .ToListAsync();
 
-        var menuItemDtos = _mapper.Map<List<MenuItemDto>>(menuItems);
+        var menuItemDtos = mapper.Map<List<MenuItemDto>>(menuItems);
 
         return new PaginatedResult<MenuItemDto>
         {
@@ -1248,7 +1246,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menuItem = await _context.MenuItems
+        var menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
                 .ThenInclude(m => m.Restaurant)
             .FirstOrDefaultAsync(mi => mi.Id == menuItemId && !mi.IsDeleted);
@@ -1260,7 +1258,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this menu item.");
 
-        return _mapper.Map<MenuItemDto>(menuItem);
+        return mapper.Map<MenuItemDto>(menuItem);
     }
 
     public async Task<MenuItemDto> CreateMenuItemAsync(string menuId, CreateMenuItemDto dto, string ownerId)
@@ -1271,7 +1269,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menu = await _context.Menus
+        var menu = await context.Menus
             .Include(m => m.Restaurant)
             .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
 
@@ -1282,21 +1280,21 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this menu.");
 
-        var menuItem = _mapper.Map<MenuItem>(dto);
+        var menuItem = mapper.Map<MenuItem>(dto);
         menuItem.MenuId = menuId;
         menuItem.CreatedAt = DateTime.UtcNow;
         menuItem.CreatedBy = ownerId;
         menuItem.IsDeleted = false;
 
-        _context.MenuItems.Add(menuItem);
-        await _context.SaveChangesAsync();
+        context.MenuItems.Add(menuItem);
+        await context.SaveChangesAsync();
 
         // Reload with navigation properties
-        menuItem = await _context.MenuItems
+        menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
             .FirstAsync(mi => mi.Id == menuItem.Id);
 
-        return _mapper.Map<MenuItemDto>(menuItem);
+        return mapper.Map<MenuItemDto>(menuItem);
     }
 
     public async Task<MenuItemDto> UpdateMenuItemAsync(string menuItemId, UpdateMenuItemDto dto, string ownerId)
@@ -1307,7 +1305,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menuItem = await _context.MenuItems
+        var menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
                 .ThenInclude(m => m.Restaurant)
             .FirstOrDefaultAsync(mi => mi.Id == menuItemId && !mi.IsDeleted);
@@ -1319,13 +1317,13 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this menu item.");
 
-        _mapper.Map(dto, menuItem);
+        mapper.Map(dto, menuItem);
         menuItem.UpdatedAt = DateTime.UtcNow;
         menuItem.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<MenuItemDto>(menuItem);
+        return mapper.Map<MenuItemDto>(menuItem);
     }
 
     public async Task DeleteMenuItemAsync(string menuItemId, string ownerId)
@@ -1333,7 +1331,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menuItem = await _context.MenuItems
+        var menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
                 .ThenInclude(m => m.Restaurant)
             .FirstOrDefaultAsync(mi => mi.Id == menuItemId && !mi.IsDeleted);
@@ -1349,7 +1347,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         menuItem.DeletedAt = DateTime.UtcNow;
         menuItem.DeletedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task UpdateMenuItemAvailabilityAsync(string menuItemId, bool isAvailable, string ownerId)
@@ -1357,7 +1355,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var menuItem = await _context.MenuItems
+        var menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
                 .ThenInclude(m => m.Restaurant)
             .FirstOrDefaultAsync(mi => mi.Id == menuItemId && !mi.IsDeleted);
@@ -1373,7 +1371,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         menuItem.UpdatedAt = DateTime.UtcNow;
         menuItem.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<int> GetMenuItemsCountAsync(string restaurantId, string ownerId)
@@ -1385,7 +1383,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.MenuItems
+        return await context.MenuItems
             .Include(mi => mi.Menu)
             .Where(mi => mi.Menu.RestaurantId == restaurantId && !mi.IsDeleted)
             .CountAsync();
@@ -1400,12 +1398,12 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var tables = await _context.Tables
+        var tables = await context.Tables
             .Where(t => t.RestaurantId == restaurantId && !t.IsDeleted)
             .OrderBy(t => t.TableNumber)
             .ToListAsync();
 
-        return _mapper.Map<List<TableDto>>(tables);
+        return mapper.Map<List<TableDto>>(tables);
     }
 
     public async Task<TableDto?> GetTableByIdAsync(string tableId, string ownerId)
@@ -1413,7 +1411,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var table = await _context.Tables
+        var table = await context.Tables
             .FirstOrDefaultAsync(t => t.Id == tableId && !t.IsDeleted);
 
         if (table == null)
@@ -1423,7 +1421,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this table.");
 
-        return _mapper.Map<TableDto>(table);
+        return mapper.Map<TableDto>(table);
     }
 
     public async Task<TableDto> CreateTableAsync(string restaurantId, CreateTableDto dto, string ownerId)
@@ -1439,7 +1437,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
        
-        var existingTable = await _context.Tables
+        var existingTable = await context.Tables
             .FirstOrDefaultAsync(t => t.RestaurantId == restaurantId 
                 && t.TableNumber == dto.TableNumber 
                 && !t.IsDeleted);
@@ -1447,7 +1445,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (existingTable != null)
             throw new Exception($"Table number {dto.TableNumber} already exists in this restaurant.");
 
-        var table = _mapper.Map<Table>(dto);
+        var table = mapper.Map<Table>(dto);
         table.RestaurantId = restaurantId;
         table.CreatedAt = DateTime.UtcNow;
         table.CreatedBy = ownerId;
@@ -1458,10 +1456,10 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         else
             table.Status = TableStatus.Available;
 
-        _context.Tables.Add(table);
-        await _context.SaveChangesAsync();
+        context.Tables.Add(table);
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<TableDto>(table);
+        return mapper.Map<TableDto>(table);
     }
 
     public async Task<TableDto> UpdateTableAsync(string tableId, UpdateTableDto dto, string ownerId)
@@ -1472,7 +1470,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var table = await _context.Tables
+        var table = await context.Tables
             .FirstOrDefaultAsync(t => t.Id == tableId && !t.IsDeleted);
 
         if (table == null)
@@ -1485,7 +1483,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
       
         if (table.TableNumber != dto.TableNumber)
         {
-            var existingTable = await _context.Tables
+            var existingTable = await context.Tables
                 .FirstOrDefaultAsync(t => t.RestaurantId == table.RestaurantId 
                     && t.TableNumber == dto.TableNumber 
                     && t.Id != tableId
@@ -1505,9 +1503,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         table.UpdatedAt = DateTime.UtcNow;
         table.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<TableDto>(table);
+        return mapper.Map<TableDto>(table);
     }
 
     public async Task DeleteTableAsync(string tableId, string ownerId)
@@ -1515,7 +1513,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var table = await _context.Tables
+        var table = await context.Tables
             .FirstOrDefaultAsync(t => t.Id == tableId && !t.IsDeleted);
 
         if (table == null)
@@ -1529,7 +1527,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         table.DeletedAt = DateTime.UtcNow;
         table.DeletedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 
     public async Task<TableDto> UpdateTableStatusAsync(string tableId, TableStatus newStatus, string ownerId)
@@ -1537,7 +1535,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        var table = await _context.Tables
+        var table = await context.Tables
             .FirstOrDefaultAsync(t => t.Id == tableId && !t.IsDeleted);
 
         if (table == null)
@@ -1551,9 +1549,9 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         table.UpdatedAt = DateTime.UtcNow;
         table.UpdatedBy = ownerId;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
 
-        return _mapper.Map<TableDto>(table);
+        return mapper.Map<TableDto>(table);
     }
 
     public async Task<int> GetAvailableTablesCountAsync(string restaurantId, string ownerId)
@@ -1565,7 +1563,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        return await _context.Tables
+        return await context.Tables
             .Where(t => t.RestaurantId == restaurantId 
                 && t.Status == TableStatus.Available 
                 && !t.IsDeleted)
@@ -1582,7 +1580,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
   
-        var orders = await _context.Orders
+        var orders = await context.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
             .Where(o => o.RestaurantId == restaurantId 
@@ -1617,7 +1615,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .GroupBy(oi => new { oi.MenuItemId, oi.MenuItem.Name, oi.MenuItem.Category })
             .Select(g => new TopSellingItemDto
             {
-                MenuItemId = int.Parse(g.Key.MenuItemId),
+                MenuItemId = g.Key.MenuItemId,
                 MenuItemName = g.Key.Name,
                 Category = g.Key.Category ?? "Other",
                 QuantitySold = g.Sum(oi => oi.Quantity),
@@ -1650,7 +1648,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
         if (!isOwner)
             throw new Exception("You don't have access to this restaurant.");
 
-        var orders = await _context.Orders
+        var orders = await context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.Customer)
             .Include(o => o.Table)
@@ -1664,7 +1662,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             .ToListAsync();
 
        
-        return _mapper.Map<List<OrderDto>>(orders);
+        return mapper.Map<List<OrderDto>>(orders);
     }
 
     public async Task<IEnumerable<CategorySalesDto>> GetCategorySalesAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId)
@@ -1677,7 +1675,7 @@ public class OwnerService(IAppDbContext _context, IMapper _mapper): IOwnerServic
             throw new Exception("You don't have access to this restaurant.");
 
     
-        var orders = await _context.Orders
+        var orders = await context.Orders
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
             .Where(o => o.RestaurantId == restaurantId 
