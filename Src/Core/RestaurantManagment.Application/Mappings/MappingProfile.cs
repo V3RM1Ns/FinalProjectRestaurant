@@ -8,7 +8,7 @@ using RestaurantManagment.Application.Common.DTOs.Admin;
 using RestaurantManagment.Application.Common.DTOs.Order;
 using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.DTOs.Review;
-using RestaurantManagment.Application.DTOs.Menu;
+using RestaurantManagment.Application.Common.DTOs.Menu;
 using RestaurantManagment.Application.DTOs.MenuItem;
 using RestaurantManagment.Application.DTOs.Order;
 using RestaurantManagment.Application.DTOs.Reservation;
@@ -19,6 +19,9 @@ using CreateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaura
 using UpdateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaurant.UpdateRestaurantDto;
 using RestaurantResponseDto = RestaurantManagment.Application.DTOs.Restaurant.RestaurantResponseDto;
 using UpdateOrderDto = RestaurantManagment.Application.DTOs.Order.UpdateOrderDto;
+using MenuResponseDto = RestaurantManagment.Application.DTOs.Menu.MenuResponseDto;
+using CreateMenuDtoOld = RestaurantManagment.Application.DTOs.Menu.CreateMenuDto;
+using UpdateMenuDtoOld = RestaurantManagment.Application.DTOs.Menu.UpdateMenuDto;
 
 namespace RestaurantManagment.Application.Mappings;
 
@@ -36,10 +39,19 @@ public class MappingProfile : Profile
         CreateMap<UpdateRestaurantDto, Restaurant>();
 
      
+        // Menu mappings
         CreateMap<Menu, MenuResponseDto>()
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name));
-        CreateMap<CreateMenuDto, Menu>();
-        CreateMap<UpdateMenuDto, Menu>();
+        
+        CreateMap<Menu, MenuDto>()
+            .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
+            .ForMember(dest => dest.MenuItems, opt => opt.MapFrom(src => src.MenuItems));
+        
+        CreateMap<CreateMenuDtoOld, Menu>();
+        CreateMap<RestaurantManagment.Application.Common.DTOs.Menu.CreateMenuDto, Menu>();
+        
+        CreateMap<UpdateMenuDtoOld, Menu>();
+        CreateMap<RestaurantManagment.Application.Common.DTOs.Menu.UpdateMenuDto, Menu>();
 
   
         CreateMap<MenuItem, MenuItemResponseDto>()
@@ -97,6 +109,15 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName ?? string.Empty))
             .ForMember(dest => dest.UserEmail, opt => opt.MapFrom(src => src.User.Email ?? string.Empty))
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+
+        // OwnershipApplication to Response DTO with limited User info
+        CreateMap<OwnershipApplication, OwnershipApplicationResponseDto>()
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User));
+
+        CreateMap<AppUser, UserBasicInfoDto>()
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName));
 
       
         CreateMap<AppUser, EmployeeDto>()

@@ -8,11 +8,11 @@ namespace RestaurantManagment.Application.Common.Interfaces;
 
 public interface IAdminService
 {
-    Task<OwnershipApplication?> GetApplicationByIdAsync(int id);
-    Task<IEnumerable<OwnershipApplication>> GetPendingApplicationsAsync();
+    Task<OwnershipApplicationResponseDto?> GetApplicationByIdAsync(string id);
+    Task<IEnumerable<OwnershipApplicationResponseDto>> GetPendingApplicationsAsync();
     Task<IEnumerable<OwnershipApplication>> GetApplicationsByUserIdAsync(string userId);
-    Task ApproveApplicationAsync(int applicationId, string reviewerId);
-    Task RejectApplicationAsync(int applicationId, string reviewerId, string reason);
+    Task ApproveApplicationAsync(string applicationId, string reviewerId);
+    Task RejectApplicationAsync(string applicationId, string reviewerId, string reason);
     
     // Admin Dashboard methods
     Task<AdminDashboardDto> GetAdminDashboardDataAsync();

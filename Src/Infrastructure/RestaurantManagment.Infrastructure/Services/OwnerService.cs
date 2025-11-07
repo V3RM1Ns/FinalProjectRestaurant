@@ -1101,6 +1101,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         var menus = await context.Menus
             .Where(m => m.RestaurantId == restaurantId && !m.IsDeleted)
+            .Include(m => m.MenuItems)
             .ToListAsync();
 
         return mapper.Map<List<MenuDto>>(menus);
@@ -1112,7 +1113,9 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
         var menu = await context.Menus
-            .FirstOrDefaultAsync(m => m.Id == menuId && !m.IsDeleted);
+            .Where(m => m.Id == menuId && !m.IsDeleted)
+            .Include(m => m.MenuItems)
+            .FirstOrDefaultAsync();
 
         if (menu == null)
             return null;

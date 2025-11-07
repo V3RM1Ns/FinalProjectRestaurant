@@ -7,7 +7,6 @@ public class MenuDto
     public string Description { get; set; } = string.Empty;
     public string RestaurantId { get; set; } = string.Empty;
     public string RestaurantName { get; set; } = string.Empty;
-    public DateTime CreatedAt { get; set; }
     public List<RestaurantManagment.Application.Common.DTOs.MenuItem.MenuItemDto> MenuItems { get; set; } = new();
 }
 

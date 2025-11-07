@@ -88,12 +88,12 @@ namespace RestaurantManagment.WebAPI.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred while loading the applications.", error = ex.Message });
-            }
+            }  
         }
 
      
         [HttpGet("applications/{id}")]
-        public async Task<IActionResult> GetApplication(int id)
+        public async Task<IActionResult> GetApplication(string id)
         {
             try
             {
@@ -111,7 +111,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
      
         [HttpPost("applications/{id}/approve")]
-        public async Task<IActionResult> ApproveApplication(int id)
+        public async Task<IActionResult> ApproveApplication(string id)
         {
             try
             {
@@ -130,7 +130,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
      
         [HttpPost("applications/{id}/reject")]
-        public async Task<IActionResult> RejectApplication(int id, [FromBody] RejectApplicationRequest request)
+        public async Task<IActionResult> RejectApplication(string id, [FromBody] RejectApplicationRequest request)
         {
             try
             {

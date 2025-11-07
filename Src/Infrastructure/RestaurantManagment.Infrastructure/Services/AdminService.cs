@@ -7,26 +7,31 @@ using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using AutoMapper;
+using AutoMapper.QueryableExtensions;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
 public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, IMapper _mapper) : IAdminService
 {
     
-    public async Task<OwnershipApplication?> GetApplicationByIdAsync(int id)
+    public async Task<OwnershipApplicationResponseDto?> GetApplicationByIdAsync(string id)
     {
         return await _context.OwnershipApplications
             .Include(a => a.User)
-            .FirstOrDefaultAsync(a => a.Id.ToString() == id.ToString() && !a.IsDeleted);
+            .Where(a => a.Id == id && !a.IsDeleted)
+            .ProjectTo<OwnershipApplicationResponseDto>(_mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync();
     }
 
-    public async Task<IEnumerable<OwnershipApplication>> GetPendingApplicationsAsync()
+    public async Task<IEnumerable<OwnershipApplicationResponseDto>> GetPendingApplicationsAsync()
     {
-        return await _context.OwnershipApplications
+        var applications = await _context.OwnershipApplications
             .Include(a => a.User)
             .Where(a => a.Status == ApplicationStatus.Pending && !a.IsDeleted)
             .OrderBy(a => a.ApplicationDate)
             .ToListAsync();
+
+        return _mapper.Map<IEnumerable<OwnershipApplicationResponseDto>>(applications);
     }
 
     public async Task<IEnumerable<OwnershipApplication>> GetApplicationsByUserIdAsync(string userId)
@@ -37,9 +42,11 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
             .ToListAsync();
     }
 
-    public async Task ApproveApplicationAsync(int applicationId, string reviewerId)
+    public async Task ApproveApplicationAsync(string applicationId, string reviewerId)
     {
-        var application = await _context.OwnershipApplications.FindAsync(applicationId);
+        var application = await _context.OwnershipApplications
+            .FirstOrDefaultAsync(a => a.Id == applicationId && !a.IsDeleted);
+        
         if (application == null)
             throw new Exception("Application not found");
 
@@ -50,9 +57,11 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         await _context.SaveChangesAsync();
     }
 
-    public async Task RejectApplicationAsync(int applicationId, string reviewerId, string reason)
+    public async Task RejectApplicationAsync(string applicationId, string reviewerId, string reason)
     {
-        var application = await _context.OwnershipApplications.FindAsync(applicationId);
+        var application = await _context.OwnershipApplications
+            .FirstOrDefaultAsync(a => a.Id == applicationId && !a.IsDeleted);
+        
         if (application == null)
             throw new Exception("Application not found");
 
@@ -68,17 +77,17 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
     {
         var dashboard = new AdminDashboardDto();
 
-        // Total Users (excluding deleted ones)
+     
         dashboard.TotalUsers = await _userManager.Users
             .Where(u => !u.IsDeleted)
             .CountAsync();
 
-        // Total Restaurants (excluding deleted ones)
+        
         dashboard.TotalRestaurants = await _context.Restaurants
             .Where(r => !r.IsDeleted)
             .CountAsync();
 
-        // Total Restaurant Owners
+         
         var restaurantOwnerRole = "RestaurantOwner";
         var ownersQuery = _userManager.Users.Where(u => !u.IsDeleted);
         var allOwners = await ownersQuery.ToListAsync();
