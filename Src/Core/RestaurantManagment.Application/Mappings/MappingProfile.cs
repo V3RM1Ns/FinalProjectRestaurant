@@ -34,7 +34,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName));
         CreateMap<Restaurant, RestaurantAdminListDto>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName))
-            .ForMember(dest => dest.OwnerEmail, opt => opt.MapFrom(src => src.Owner.Email ?? string.Empty));
+            .ForMember(dest => dest.OwnerEmail, opt => opt.MapFrom(src => src.Owner.Email ?? string.Empty))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
+            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => "General"));
         CreateMap<CreateRestaurantDto, Restaurant>();
         CreateMap<UpdateRestaurantDto, Restaurant>();
 
@@ -113,7 +115,11 @@ public class MappingProfile : Profile
         // OwnershipApplication to Response DTO with limited User info
         CreateMap<OwnershipApplication, OwnershipApplicationResponseDto>()
             .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
-            .ForMember(dest => dest.User, opt => opt.MapFrom(src => src.User));
+            .ForMember(dest => dest.User, opt => opt.MapFrom(src => new UserBasicInfoDto
+            {
+                FirstName = src.User.FirstName,
+                LastName = src.User.LastName
+            }));
 
         CreateMap<AppUser, UserBasicInfoDto>()
             .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))

@@ -149,10 +149,101 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while rejecting the application.", error = ex.Message });
             }
         }
+
+        // User management endpoints
+        [HttpPost("users/{userId}/toggle-status")]
+        public async Task<IActionResult> ToggleUserStatus(string userId)
+        {
+            try
+            {
+                await _adminService.ToggleUserActiveStatusAsync(userId);
+                return Ok(new { message = "User status updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating user status.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("users/{userId}/roles")]
+        public async Task<IActionResult> GetUserRoles(string userId)
+        {
+            try
+            {
+                var roles = await _adminService.GetUserRolesAsync(userId);
+                return Ok(new { roles });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while fetching user roles.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("roles")]
+        public async Task<IActionResult> GetAllRoles()
+        {
+            try
+            {
+                var roles = await _adminService.GetAllRolesAsync();
+                return Ok(new { roles });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while fetching roles.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("users/{userId}/roles")]
+        public async Task<IActionResult> AddRoleToUser(string userId, [FromBody] RoleRequest request)
+        {
+            try
+            {
+                await _adminService.AddRoleToUserAsync(userId, request.Role);
+                return Ok(new { message = $"Role '{request.Role}' added successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while adding role.", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("users/{userId}/roles/{role}")]
+        public async Task<IActionResult> RemoveRoleFromUser(string userId, string role)
+        {
+            try
+            {
+                await _adminService.RemoveRoleFromUserAsync(userId, role);
+                return Ok(new { message = $"Role '{role}' removed successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while removing role.", error = ex.Message });
+            }
+        }
+
+        // Restaurant management endpoints
+        [HttpPost("restaurants/{restaurantId}/toggle-status")]
+        public async Task<IActionResult> ToggleRestaurantStatus(string restaurantId)
+        {
+            try
+            {
+                await _adminService.ToggleRestaurantActiveStatusAsync(restaurantId);
+                return Ok(new { message = "Restaurant status updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating restaurant status.", error = ex.Message });
+            }
+        }
     }
 
     public class RejectApplicationRequest
     {
         public string Reason { get; set; } = string.Empty;
+    }
+
+    public class RoleRequest
+    {
+        public string Role { get; set; } = string.Empty;
     }
 }

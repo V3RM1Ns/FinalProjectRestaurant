@@ -11,7 +11,7 @@ using AutoMapper.QueryableExtensions;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, IMapper _mapper) : IAdminService
+public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, RoleManager<IdentityRole> _roleManager, IMapper _mapper) : IAdminService
 {
     
     public async Task<OwnershipApplicationResponseDto?> GetApplicationByIdAsync(string id)
@@ -44,16 +44,52 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task ApproveApplicationAsync(string applicationId, string reviewerId)
     {
+        // Önce application'ı bul
         var application = await _context.OwnershipApplications
             .FirstOrDefaultAsync(a => a.Id == applicationId && !a.IsDeleted);
         
         if (application == null)
             throw new Exception("Application not found");
 
+        // Application'ı approved yap
         application.Status = ApplicationStatus.Approved;
         application.ReviewedBy = reviewerId;
         application.ReviewedAt = DateTime.UtcNow;
 
+        // Kullanıcıyı database'den çek
+        var user = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == application.UserId);
+        
+        if (user == null)
+            throw new Exception("User not found");
+
+        // Önce Customer rolünü kaldır
+        var roles = await _userManager.GetRolesAsync(user);
+
+        var isCustomer = await _userManager.IsInRoleAsync(user, "Customer");
+        if (isCustomer)
+        {
+            var removeResult = await _userManager.RemoveFromRoleAsync(user, "Customer");
+            if (!removeResult.Succeeded)
+            {
+                var errors = string.Join(", ", removeResult.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to remove Customer role: {errors}");
+            }
+        }
+
+        // Kullanıcının zaten RestaurantOwner rolü var mı kontrol et
+        var isInRole = await _userManager.IsInRoleAsync(user, "RestaurantOwner");
+        if (!isInRole)
+        {
+            var result = await _userManager.AddToRoleAsync(user, "RestaurantOwner");
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new Exception($"Failed to add RestaurantOwner role: {errors}");
+            }
+        }
+
+        // Application değişikliklerini kaydet
         await _context.SaveChangesAsync();
     }
 
@@ -127,7 +163,8 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task<PaginatedResult<UserAdminShowDto>> GetUsersAsync(int pageNumber = 1, int pageSize = 5)
     {
-        var query = _userManager.Users.Where(u => !u.IsDeleted);
+        // Tüm kullanıcıları getir (IgnoreQueryFilters ile IsDeleted filter'ını bypass et)
+        var query = _context.Users.IgnoreQueryFilters().AsQueryable();
 
         var totalCount = await query.CountAsync();
 
@@ -162,9 +199,10 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task<PaginatedResult<RestaurantAdminListDto>> GetRestaurantsAsync(int pageNumber = 1, int pageSize = 5)
     {
+        // Tüm restoranları getir (IgnoreQueryFilters ile IsDeleted filter'ını bypass et)
         var query = _context.Restaurants
-            .Include(r => r.Owner)
-            .Where(r => !r.IsDeleted);
+            .IgnoreQueryFilters()
+            .Include(r => r.Owner);
 
         var totalCount = await query.CountAsync();
 
@@ -208,5 +246,112 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
             PageNumber = pageNumber,
             PageSize = pageSize
         };
+    }
+
+    public async Task ToggleUserActiveStatusAsync(string userId)
+    {
+        // IgnoreQueryFilters kullanarak deleted kullanıcıları da bulabilelim
+        var user = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId);
+            
+        if (user == null)
+            throw new Exception("User not found");
+
+        // IsDeleted field'ini tersine çevir (true ise false, false ise true)
+        user.IsDeleted = !user.IsDeleted;
+        
+        if (user.IsDeleted)
+        {
+            user.DeletedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            user.DeletedAt = null;
+        }
+
+        await _userManager.UpdateAsync(user);
+    }
+
+    public async Task<List<string>> GetUserRolesAsync(string userId)
+    {
+        // IgnoreQueryFilters kullanarak deleted kullanıcıları da bulabilelim
+        var user = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId);
+            
+        if (user == null)
+            throw new Exception("User not found");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        return roles.ToList();
+    }
+
+    public async Task AddRoleToUserAsync(string userId, string role)
+    {
+        // IgnoreQueryFilters kullanarak deleted kullanıcıları da bulabilelim
+        var user = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId);
+            
+        if (user == null)
+            throw new Exception("User not found");
+
+        var roleExists = await _roleManager.RoleExistsAsync(role);
+        if (!roleExists)
+            throw new Exception($"Role '{role}' does not exist");
+
+        var isInRole = await _userManager.IsInRoleAsync(user, role);
+        if (isInRole)
+            throw new Exception($"User already has the '{role}' role");
+
+        var result = await _userManager.AddToRoleAsync(user, role);
+        if (!result.Succeeded)
+            throw new Exception($"Failed to add role: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+    }
+
+    public async Task RemoveRoleFromUserAsync(string userId, string role)
+    {
+        // IgnoreQueryFilters kullanarak deleted kullanıcıları da bulabilelim
+        var user = await _context.Users.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId);
+            
+        if (user == null)
+            throw new Exception("User not found");
+
+        var isInRole = await _userManager.IsInRoleAsync(user, role);
+        if (!isInRole)
+            throw new Exception($"User does not have the '{role}' role");
+
+        var result = await _userManager.RemoveFromRoleAsync(user, role);
+        if (!result.Succeeded)
+            throw new Exception($"Failed to remove role: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+    }
+
+    public async Task<List<string>> GetAllRolesAsync()
+    {
+        var roles = await _roleManager.Roles.Select(r => r.Name).ToListAsync();
+        return roles.Where(r => r != null).Cast<string>().ToList();
+    }
+
+    public async Task ToggleRestaurantActiveStatusAsync(string restaurantId)
+    {
+        // IgnoreQueryFilters kullanarak deleted restoranları da bulabilelim
+        var restaurant = await _context.Restaurants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.Id == restaurantId);
+            
+        if (restaurant == null)
+            throw new Exception("Restaurant not found");
+
+        // IsDeleted field'ini tersine çevir (true ise false, false ise true)
+        restaurant.IsDeleted = !restaurant.IsDeleted;
+        
+        if (restaurant.IsDeleted)
+        {
+            restaurant.DeletedAt = DateTime.UtcNow;
+        }
+        else
+        {
+            restaurant.DeletedAt = null;
+        }
+
+        await _context.SaveChangesAsync();
     }
 }
