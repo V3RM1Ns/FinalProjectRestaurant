@@ -7,9 +7,7 @@ public class RestaurantAdminListDto
     public string Address { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
-    public string OwnerName { get; set; } = string.Empty;
     public string OwnerEmail { get; set; } = string.Empty;
-    public bool IsActive { get; set; }
     public decimal Rate { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public bool IsActive { get; set; }
 }

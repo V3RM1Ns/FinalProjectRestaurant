@@ -18,9 +18,9 @@ export default function NewRestaurantPage() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    address: '',
+    phoneNumber: '',
     phone: '',
-    email: '',
+    website: '',
     category: '',
     openingTime: '',
     closingTime: '',
@@ -47,8 +47,8 @@ export default function NewRestaurantPage() {
       if (response.ok) {
         const data = await response.json()
         toast({
-          title: 'Success',
-          description: 'Restaurant created successfully',
+        router.push(`/owner/restaurants`)
+        router.refresh()
         })
         router.push(`/owner/restaurants/${data.id}/dashboard`)
       } else {
@@ -121,13 +121,13 @@ export default function NewRestaurantPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Turkish">Turkish</SelectItem>
-                  <SelectItem value="Italian">Italian</SelectItem>
+                <Label htmlFor="phoneNumber">Phone *</Label>
                   <SelectItem value="Japanese">Japanese</SelectItem>
-                  <SelectItem value="Chinese">Chinese</SelectItem>
+                  id="phoneNumber"
                   <SelectItem value="American">American</SelectItem>
                   <SelectItem value="Mexican">Mexican</SelectItem>
-                  <SelectItem value="Indian">Indian</SelectItem>
-                  <SelectItem value="Mediterranean">Mediterranean</SelectItem>
+                  value={formData.phoneNumber}
+                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   <SelectItem value="Fast Food">Fast Food</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
@@ -143,15 +143,15 @@ export default function NewRestaurantPage() {
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Street address, city, postal code"
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="phone">Phone *</Label>
-                <Input
-                  id="phone"
-                  required
-                  type="tel"
+            <div>
+              <Label htmlFor="website">Website (Optional)</Label>
+              <Input
+                id="website"
+                type="url"
+                value={formData.website}
+                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                placeholder="https://www.example.com"
+              />
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="+90 XXX XXX XX XX"

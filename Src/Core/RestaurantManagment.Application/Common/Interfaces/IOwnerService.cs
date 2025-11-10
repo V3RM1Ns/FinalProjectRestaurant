@@ -19,7 +19,7 @@ namespace RestaurantManagment.Application.Common.Interfaces;
 public interface IOwnerService
 {
 
-    Task<IEnumerable<Restaurant>> GetOwnerRestaurantsAsync(string ownerId);
+    Task<IEnumerable<OwnerRestaurantDto>> GetOwnerRestaurantsAsync(string ownerId);
     Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId);
     Task<Restaurant> CreateRestaurantAsync(CreateRestaurantDto dto, string ownerId);
     Task<Restaurant> UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto, string ownerId);

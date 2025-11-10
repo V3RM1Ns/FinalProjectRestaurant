@@ -16,11 +16,40 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
     
     public async Task<OwnershipApplicationResponseDto?> GetApplicationByIdAsync(string id)
     {
-        return await _context.OwnershipApplications
+        var application = await _context.OwnershipApplications
             .Include(a => a.User)
             .Where(a => a.Id == id && !a.IsDeleted)
-            .ProjectTo<OwnershipApplicationResponseDto>(_mapper.ConfigurationProvider)
             .FirstOrDefaultAsync();
+
+        if (application == null)
+            return null;
+
+        return new OwnershipApplicationResponseDto
+        {
+            Id = application.Id,
+            UserId = application.UserId,
+            BusinessName = application.BusinessName,
+            BusinessDescription = application.BusinessDescription,
+            BusinessAddress = application.BusinessAddress,
+            BusinessPhone = application.BusinessPhone,
+            BusinessEmail = application.BusinessEmail,
+            Category = application.Category,
+            AdditionalNotes = application.AdditionalNotes,
+            Status = application.Status.ToString(),
+            ApplicationDate = application.ApplicationDate,
+            ReviewedBy = application.ReviewedBy,
+            ReviewedAt = application.ReviewedAt,
+            RejectionReason = application.RejectionReason,
+            CreatedAt = application.CreatedAt,
+            CreatedBy = application.CreatedBy,
+            UpdatedAt = application.UpdatedAt,
+            UpdatedBy = application.UpdatedBy,
+            User = new UserBasicInfoDto
+            {
+                FirstName = application.User.FirstName,
+                LastName = application.User.LastName
+            }
+        };
     }
 
     public async Task<IEnumerable<OwnershipApplicationResponseDto>> GetPendingApplicationsAsync()
@@ -31,7 +60,34 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
             .OrderBy(a => a.ApplicationDate)
             .ToListAsync();
 
-        return _mapper.Map<IEnumerable<OwnershipApplicationResponseDto>>(applications);
+        var result = applications.Select(a => new OwnershipApplicationResponseDto
+        {
+            Id = a.Id,
+            UserId = a.UserId,
+            BusinessName = a.BusinessName,
+            BusinessDescription = a.BusinessDescription,
+            BusinessAddress = a.BusinessAddress,
+            BusinessPhone = a.BusinessPhone,
+            BusinessEmail = a.BusinessEmail,
+            Category = a.Category,
+            AdditionalNotes = a.AdditionalNotes,
+            Status = a.Status.ToString(),
+            ApplicationDate = a.ApplicationDate,
+            ReviewedBy = a.ReviewedBy,
+            ReviewedAt = a.ReviewedAt,
+            RejectionReason = a.RejectionReason,
+            CreatedAt = a.CreatedAt,
+            CreatedBy = a.CreatedBy,
+            UpdatedAt = a.UpdatedAt,
+            UpdatedBy = a.UpdatedBy,
+            User = new UserBasicInfoDto
+            {
+                FirstName = a.User.FirstName,
+                LastName = a.User.LastName
+            }
+        }).ToList();
+
+        return result;
     }
 
     public async Task<IEnumerable<OwnershipApplication>> GetApplicationsByUserIdAsync(string userId)
@@ -59,10 +115,10 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         
         if (user == null)
             throw new Exception("User not found");
-
-   
+        
         var currentRoles = await _userManager.GetRolesAsync(user);
         
+      
         if (currentRoles.Any())
         {
             var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
@@ -73,12 +129,27 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
             }
         }
         
+       
         var addResult = await _userManager.AddToRoleAsync(user, "RestaurantOwner");
         if (!addResult.Succeeded)
         {
             var errors = string.Join(", ", addResult.Errors.Select(e => e.Description));
             throw new Exception($"Failed to add RestaurantOwner role: {errors}");
         }
+        
+        var restaurant = new Restaurant
+        {
+            Name = application.BusinessName,
+            Description = application.BusinessDescription,
+            Address = application.BusinessAddress,
+            PhoneNumber = application.BusinessPhone,
+            Email = application.BusinessEmail,
+            OwnerId = application.UserId,
+            Rate = 0,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Restaurants.Add(restaurant);
         
         await _context.SaveChangesAsync();
     }

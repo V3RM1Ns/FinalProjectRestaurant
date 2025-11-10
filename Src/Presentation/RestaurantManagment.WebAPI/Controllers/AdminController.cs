@@ -149,8 +149,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while rejecting the application.", error = ex.Message });
             }
         }
-
-        // User management endpoints
+        
         [HttpPost("users/{userId}/toggle-status")]
         public async Task<IActionResult> ToggleUserStatus(string userId)
         {
@@ -220,8 +219,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while removing role.", error = ex.Message });
             }
         }
-
-        // Restaurant management endpoints
+        
         [HttpPost("restaurants/{restaurantId}/toggle-status")]
         public async Task<IActionResult> ToggleRestaurantStatus(string restaurantId)
         {

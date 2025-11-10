@@ -18,16 +18,17 @@ namespace RestaurantManagment.Infrastructure.Services;
 
 public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<AppUser> userManager): IOwnerService
 {
-    public async Task<IEnumerable<Restaurant>> GetOwnerRestaurantsAsync(string ownerId)
+    public async Task<IEnumerable<OwnerRestaurantDto>> GetOwnerRestaurantsAsync(string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
             
         var restaurants = await context.Restaurants
+            .Include(r => r.Owner)
             .Where(r => r.OwnerId == ownerId && !r.IsDeleted)
             .ToListAsync();
         
-        return restaurants;
+        return mapper.Map<IEnumerable<OwnerRestaurantDto>>(restaurants);
     }
 
     public async Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId)

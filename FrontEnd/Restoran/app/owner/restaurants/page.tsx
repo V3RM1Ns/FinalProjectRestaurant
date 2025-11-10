@@ -7,15 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Plus, Store, Users, Calendar, TrendingUp } from 'lucide-react'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+
 interface Restaurant {
   id: string
   name: string
   address: string
-  phone: string
-  category: string
+  phoneNumber: string
+  email?: string
+  website?: string
   description: string
-  isActive: boolean
+  ownerId: string
+  ownerName: string
+  rate: number
+  isDeleted: boolean
   createdAt: string
+  updatedAt?: string
 }
 
 export default function OwnerRestaurantsPage() {
@@ -30,9 +37,13 @@ export default function OwnerRestaurantsPage() {
   const fetchRestaurants = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('auth_token') // Doğru key: 'auth_token'
+      console.log('API_BASE_URL:', API_BASE_URL)
+      console.log('Token:', token ? 'exists' : 'missing')
+      console.log('Full URL:', `${API_BASE_URL}/api/Owner/restaurants`)
+      
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/Owner/restaurants`,
+        `${API_BASE_URL}/api/Owner/restaurants`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -40,11 +51,18 @@ export default function OwnerRestaurantsPage() {
         }
       )
 
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
+
       if (response.ok) {
         const data = await response.json()
+        console.log('Restaurants data:', data)
         setRestaurants(data)
       } else if (response.status === 401) {
+        console.error('Unauthorized - redirecting to login')
         router.push('/login')
+      } else {
+        console.error('Error response:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error fetching restaurants:', error)
@@ -93,21 +111,24 @@ export default function OwnerRestaurantsPage() {
                       {restaurant.description}
                     </CardDescription>
                   </div>
-                  <Badge variant={restaurant.isActive ? 'default' : 'secondary'}>
-                    {restaurant.isActive ? 'Active' : 'Inactive'}
+                  <Badge variant={restaurant.isDeleted ? 'secondary' : 'default'}>
+                    {restaurant.isDeleted ? 'Inactive' : 'Active'}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Badge variant="outline">{restaurant.category}</Badge>
-                  </div>
                   <div className="text-muted-foreground">{restaurant.address}</div>
-                  <div className="text-muted-foreground">{restaurant.phone}</div>
+                  <div className="text-muted-foreground">{restaurant.phoneNumber}</div>
+                  {restaurant.email && (
+                    <div className="text-muted-foreground">{restaurant.email}</div>
+                  )}
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <Calendar className="w-3 h-3" />
                     Created {new Date(restaurant.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Badge variant="outline">Rating: {restaurant.rate.toFixed(1)}</Badge>
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -158,4 +179,3 @@ export default function OwnerRestaurantsPage() {
     </div>
   )
 }
-
