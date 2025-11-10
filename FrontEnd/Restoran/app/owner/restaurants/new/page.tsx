@@ -19,11 +19,10 @@ export default function NewRestaurantPage() {
     name: '',
     description: '',
     phoneNumber: '',
-    phone: '',
+    address: '',
     website: '',
+    email: '',
     category: '',
-    openingTime: '',
-    closingTime: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,42 +30,89 @@ export default function NewRestaurantPage() {
     setLoading(true)
 
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/Owner/restaurants`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(formData),
-        }
-      )
+      const token = localStorage.getItem('auth_token') // 'token' yerine 'auth_token'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const fullUrl = `${apiUrl}/api/Owner/restaurants`
+      
+      console.log('=== RESTORAN OLUŞTURMA DEBUG ===')
+      console.log('API URL:', apiUrl)
+      console.log('Full URL:', fullUrl)
+      console.log('Token:', token ? 'Mevcut (İlk 20 karakter: ' + token.substring(0, 20) + '...)' : 'YOK!')
+      console.log('Form Data:', JSON.stringify(formData, null, 2))
+      
+      if (!token) {
+        toast({
+          title: 'Hata',
+          description: 'Oturum bulunamadı. Lütfen tekrar giriş yapın.',
+          variant: 'destructive',
+        })
+        console.error('TOKEN BULUNAMADI!')
+        router.push('/login') // Login sayfasına yönlendir
+        return
+      }
+
+      console.log('İstek gönderiliyor...')
+      
+      const response = await fetch(fullUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(formData),
+      })
+
+      console.log('Response Status:', response.status)
+      console.log('Response Status Text:', response.statusText)
+      console.log('Response Headers:', Object.fromEntries(response.headers.entries()))
 
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ BAŞARILI! Response Data:', data)
         toast({
-        router.push(`/owner/restaurants`)
-        router.refresh()
+          title: 'Başarılı',
+          description: 'Restoran başarıyla oluşturuldu',
         })
         router.push(`/owner/restaurants/${data.id}/dashboard`)
       } else {
-        const error = await response.json()
+        const errorText = await response.text()
+        console.error('❌ HATA Response Text:', errorText)
+        
+        let errorMessage = 'Restoran oluşturulamadı'
+        try {
+          const errorJson = JSON.parse(errorText)
+          console.error('❌ HATA JSON:', errorJson)
+          errorMessage = errorJson.message || errorJson.title || errorMessage
+          
+          // Validation errors varsa göster
+          if (errorJson.errors) {
+            console.error('Validation Errors:', errorJson.errors)
+            errorMessage += '\n' + JSON.stringify(errorJson.errors, null, 2)
+          }
+        } catch (parseError) {
+          console.error('Error response parse edilemedi:', parseError)
+        }
+        
         toast({
-          title: 'Error',
-          description: error.message || 'Failed to create restaurant',
+          title: 'Hata',
+          description: errorMessage,
           variant: 'destructive',
         })
       }
     } catch (error) {
+      console.error('❌ EXCEPTION:', error)
+      console.error('Error Type:', error instanceof Error ? error.constructor.name : typeof error)
+      console.error('Error Message:', error instanceof Error ? error.message : String(error))
+      console.error('Error Stack:', error instanceof Error ? error.stack : 'No stack trace')
+      
       toast({
-        title: 'Error',
-        description: 'An error occurred while creating the restaurant',
+        title: 'Hata',
+        description: `Bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`,
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
+      console.log('=== İŞLEM TAMAMLANDI ===')
     }
   }
 
@@ -121,13 +167,10 @@ export default function NewRestaurantPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Turkish">Turkish</SelectItem>
-                <Label htmlFor="phoneNumber">Phone *</Label>
+                  <SelectItem value="Italian">Italian</SelectItem>
                   <SelectItem value="Japanese">Japanese</SelectItem>
-                  id="phoneNumber"
                   <SelectItem value="American">American</SelectItem>
                   <SelectItem value="Mexican">Mexican</SelectItem>
-                  value={formData.phoneNumber}
-                  onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                   <SelectItem value="Fast Food">Fast Food</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
@@ -143,6 +186,30 @@ export default function NewRestaurantPage() {
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 placeholder="Street address, city, postal code"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="phoneNumber">Phone *</Label>
+              <Input
+                id="phoneNumber"
+                required
+                value={formData.phoneNumber}
+                onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                placeholder="+90 XXX XXX XX XX"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="restaurant@example.com"
+              />
+            </div>
+
             <div>
               <Label htmlFor="website">Website (Optional)</Label>
               <Input
@@ -152,44 +219,6 @@ export default function NewRestaurantPage() {
                 onChange={(e) => setFormData({ ...formData, website: e.target.value })}
                 placeholder="https://www.example.com"
               />
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+90 XXX XXX XX XX"
-                />
-              </div>
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="restaurant@example.com"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="openingTime">Opening Time *</Label>
-                <Input
-                  id="openingTime"
-                  required
-                  type="time"
-                  value={formData.openingTime}
-                  onChange={(e) => setFormData({ ...formData, openingTime: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="closingTime">Closing Time *</Label>
-                <Input
-                  id="closingTime"
-                  required
-                  type="time"
-                  value={formData.closingTime}
-                  onChange={(e) => setFormData({ ...formData, closingTime: e.target.value })}
-                />
-              </div>
             </div>
 
             <div className="flex gap-4 pt-4">
@@ -211,4 +240,3 @@ export default function NewRestaurantPage() {
     </div>
   )
 }
-

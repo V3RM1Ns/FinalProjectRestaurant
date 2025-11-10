@@ -163,16 +163,34 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         var totalRevenue = orders.Sum(o => o.TotalAmount);
         var totalOrders = orders.Count;
         var avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+ 
+        var totalCustomers = await context.Orders
+            .Where(o => o.RestaurantId == restaurantId && !o.IsDeleted)
+            .Select(o => o.CustomerId)
+            .Distinct()
+            .CountAsync();
+
+        
+        var totalTables = await context.Tables
+            .Where(t => t.RestaurantId == restaurantId && !t.IsDeleted)
+            .CountAsync();
+
+        var totalReviews = await context.Reviews
+            .Where(r => r.RestaurantId == restaurantId && !r.IsDeleted)
+            .CountAsync();
 
         return new OwnerStatisticsDto
         {
+            TotalCustomers = totalCustomers,
             TotalOrders = totalOrders,
             TotalRevenue = totalRevenue,
             TotalEmployees = await GetEmployeeCountAsync(restaurantId, ownerId),
-            TotalMenuItems = await GetMenuItemsCountAsync(restaurantId, ownerId),
+            TotalTables = totalTables,
             AvailableTables = await GetAvailableTablesCountAsync(restaurantId, ownerId),
+            TotalMenuItems = await GetMenuItemsCountAsync(restaurantId, ownerId),
             AverageOrderValue = (double)avgOrderValue,
-            AverageRating = await GetAverageRatingAsync(restaurantId)
+            AverageRating = await GetAverageRatingAsync(restaurantId),
+            TotalReviews = totalReviews
         };
     }
 

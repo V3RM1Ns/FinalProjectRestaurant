@@ -8,7 +8,7 @@ export interface CreateRestaurantDto {
   email?: string
   website?: string
   description: string
-  ownerId: string
+  category?: string
 }
 
 export interface UpdateRestaurantDto {
@@ -169,7 +169,7 @@ export interface PaginatedResponse<T> {
 }
 
 // Owner API Service - Base implementation
-const ownerApi = {
+export const ownerApi = {
   // Restaurant Management
   restaurants: {
     getMyRestaurants: () => 
@@ -497,6 +497,10 @@ export class OwnerApi {
 
   static async deleteEmployee(restaurantId: string, employeeId: string) {
     return ownerApi.employees.delete(restaurantId, employeeId)
+  }
+
+  static async getEmployeeCount(restaurantId: string) {
+    return ownerApi.employees.getCount(restaurantId)
   }
 
   // Job Applications
