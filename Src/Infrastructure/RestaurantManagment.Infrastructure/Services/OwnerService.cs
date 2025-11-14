@@ -13,6 +13,7 @@ using RestaurantManagment.Domain.Models;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using RestaurantManagment.Application.Common.DTOs.Reward;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
@@ -1727,4 +1728,190 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         return categorySales;
     }
+
+    #region Reward Management
+
+    public async Task<PaginatedResult<RewardDto>> GetRestaurantRewardsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        if (pageNumber < 1)
+            throw new ArgumentException("Page number must be greater than 0.", nameof(pageNumber));
+
+        if (pageSize < 1 || pageSize > 100)
+            throw new ArgumentException("Page size must be between 1 and 100.", nameof(pageSize));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        var query = context.Rewards
+            .Include(r => r.Restaurant)
+            .Where(r => r.RestaurantId == restaurantId && !r.IsDeleted)
+            .OrderByDescending(r => r.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var items = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var rewardDtos = mapper.Map<List<RewardDto>>(items);
+
+        return new PaginatedResult<RewardDto>
+        {
+            Items = rewardDtos,
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalCount = totalCount
+        };
+    }
+
+    public async Task<RewardDto?> GetRewardByIdAsync(string rewardId, string ownerId)
+    {
+        if (string.IsNullOrEmpty(rewardId))
+            throw new ArgumentException("Reward ID cannot be null or empty.", nameof(rewardId));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var reward = await context.Rewards
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == rewardId && !r.IsDeleted);
+
+        if (reward == null)
+            return null;
+
+        var isOwner = await IsRestaurantOwnerAsync(reward.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this reward.");
+
+        return mapper.Map<RewardDto>(reward);
+    }
+
+    public async Task<RewardDto> CreateRewardAsync(string restaurantId, CreateRewardDto dto, string ownerId)
+    {
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var isOwner = await IsRestaurantOwnerAsync(restaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this restaurant.");
+
+        if (dto.PointsRequired <= 0)
+            throw new ArgumentException("Points required must be greater than 0.");
+
+        if (dto.DiscountAmount.HasValue && dto.DiscountAmount <= 0)
+            throw new ArgumentException("Discount amount must be greater than 0.");
+
+        if (dto.DiscountPercentage.HasValue && (dto.DiscountPercentage <= 0 || dto.DiscountPercentage > 100))
+            throw new ArgumentException("Discount percentage must be between 1 and 100.");
+
+        var reward = mapper.Map<Reward>(dto);
+        reward.Id = Guid.NewGuid().ToString();
+        reward.RestaurantId = restaurantId;
+        reward.IsActive = true;
+        reward.CurrentRedemptions = 0;
+        reward.IsDeleted = false;
+        reward.CreatedAt = DateTime.UtcNow;
+
+        context.Rewards.Add(reward);
+        await context.SaveChangesAsync();
+
+        return await GetRewardByIdAsync(reward.Id, ownerId) 
+               ?? throw new InvalidOperationException("Failed to retrieve created reward.");
+    }
+
+    public async Task<RewardDto> UpdateRewardAsync(string rewardId, UpdateRewardDto dto, string ownerId)
+    {
+        if (string.IsNullOrEmpty(rewardId))
+            throw new ArgumentException("Reward ID cannot be null or empty.", nameof(rewardId));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        if (dto == null)
+            throw new ArgumentNullException(nameof(dto));
+
+        var reward = await context.Rewards
+            .FirstOrDefaultAsync(r => r.Id == rewardId && !r.IsDeleted);
+
+        if (reward == null)
+            throw new InvalidOperationException("Reward not found.");
+
+        var isOwner = await IsRestaurantOwnerAsync(reward.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this reward.");
+
+        if (dto.PointsRequired <= 0)
+            throw new ArgumentException("Points required must be greater than 0.");
+
+        if (dto.DiscountAmount.HasValue && dto.DiscountAmount <= 0)
+            throw new ArgumentException("Discount amount must be greater than 0.");
+
+        if (dto.DiscountPercentage.HasValue && (dto.DiscountPercentage <= 0 || dto.DiscountPercentage > 100))
+            throw new ArgumentException("Discount percentage must be between 1 and 100.");
+
+        mapper.Map(dto, reward);
+        reward.UpdatedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return await GetRewardByIdAsync(rewardId, ownerId) 
+               ?? throw new InvalidOperationException("Failed to retrieve updated reward.");
+    }
+
+    public async Task DeleteRewardAsync(string rewardId, string ownerId)
+    {
+        if (string.IsNullOrEmpty(rewardId))
+            throw new ArgumentException("Reward ID cannot be null or empty.", nameof(rewardId));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var reward = await context.Rewards
+            .FirstOrDefaultAsync(r => r.Id == rewardId && !r.IsDeleted);
+
+        if (reward == null)
+            throw new InvalidOperationException("Reward not found.");
+
+        var isOwner = await IsRestaurantOwnerAsync(reward.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this reward.");
+
+        reward.IsDeleted = true;
+        reward.UpdatedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+    }
+
+    public async Task ToggleRewardActiveStatusAsync(string rewardId, string ownerId)
+    {
+        if (string.IsNullOrEmpty(rewardId))
+            throw new ArgumentException("Reward ID cannot be null or empty.", nameof(rewardId));
+
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        var reward = await context.Rewards
+            .FirstOrDefaultAsync(r => r.Id == rewardId && !r.IsDeleted);
+
+        if (reward == null)
+            throw new InvalidOperationException("Reward not found.");
+
+        var isOwner = await IsRestaurantOwnerAsync(reward.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this reward.");
+
+        reward.IsActive = !reward.IsActive;
+        reward.UpdatedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+    }
+
+    #endregion
 }

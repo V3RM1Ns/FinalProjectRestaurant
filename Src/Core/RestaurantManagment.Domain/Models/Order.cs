@@ -63,7 +63,7 @@ public enum OrderStatus
     Ready,
     Served,
     Completed,
-    Cancelled
+    Cancelled,
 }
 
 public enum OrderType

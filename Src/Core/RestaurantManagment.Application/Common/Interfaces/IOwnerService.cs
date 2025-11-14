@@ -10,6 +10,7 @@ using MenuItemDto = RestaurantManagment.Application.Common.DTOs.MenuItem.MenuIte
 using CreateMenuItemDto = RestaurantManagment.Application.Common.DTOs.MenuItem.CreateMenuItemDto;
 using UpdateMenuItemDto = RestaurantManagment.Application.Common.DTOs.MenuItem.UpdateMenuItemDto;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
+using RestaurantManagment.Application.Common.DTOs.Reward;
 using RestaurantManagment.Domain.Models;
 using CreateMenuDto = RestaurantManagment.Application.Common.DTOs.Menu.CreateMenuDto;
 using UpdateMenuDto = RestaurantManagment.Application.Common.DTOs.Menu.UpdateMenuDto;
@@ -105,4 +106,11 @@ public interface IOwnerService
     Task<SalesReportDto> GetSalesReportAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId);
     Task<IEnumerable<OrderDto>> GetOrdersByDateRangeAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId);
     Task<IEnumerable<CategorySalesDto>> GetCategorySalesAsync(string restaurantId, DateTime startDate, DateTime endDate, string ownerId);
+    
+    Task<PaginatedResult<RewardDto>> GetRestaurantRewardsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
+    Task<RewardDto?> GetRewardByIdAsync(string rewardId, string ownerId);
+    Task<RewardDto> CreateRewardAsync(string restaurantId, CreateRewardDto dto, string ownerId);
+    Task<RewardDto> UpdateRewardAsync(string rewardId, UpdateRewardDto dto, string ownerId);
+    Task DeleteRewardAsync(string rewardId, string ownerId);
+    Task ToggleRewardActiveStatusAsync(string rewardId, string ownerId);
 }

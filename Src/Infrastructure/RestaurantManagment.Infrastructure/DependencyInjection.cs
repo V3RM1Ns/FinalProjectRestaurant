@@ -13,6 +13,8 @@ public static class DependencyInjection
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IAdminService, AdminService>();
         services.AddScoped<IOwnerService, OwnerService>();
+        services.AddScoped<ICustomerService, CustomerService>();
+        services.AddScoped<ILoyaltyService, LoyaltyService>();
         
         return services;
     }

@@ -17,6 +17,11 @@ public interface IAppDbContext
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<FavoriteRestaurant> FavoriteRestaurants { get; set; }
+    public DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
+    public DbSet<Reward> Rewards { get; set; }
+    public DbSet<RewardRedemption> RewardRedemptions { get; set; }
+    public DbSet<LoyaltyCode> LoyaltyCodes { get; set; }
     
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

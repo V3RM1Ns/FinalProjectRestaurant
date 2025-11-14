@@ -393,14 +393,14 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task ToggleRestaurantActiveStatusAsync(string restaurantId)
     {
-      
+
         var restaurant = await _context.Restaurants.IgnoreQueryFilters()
             .FirstOrDefaultAsync(r => r.Id == restaurantId);
             
         if (restaurant == null)
             throw new Exception("Restaurant not found");
 
-      
+
         restaurant.IsDeleted = !restaurant.IsDeleted;
         
         if (restaurant.IsDeleted)
@@ -415,3 +415,4 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         await _context.SaveChangesAsync();
     }
 }
+

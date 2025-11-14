@@ -21,8 +21,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
     public DbSet<JobPosting> JobPostings { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
-
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<FavoriteRestaurant> FavoriteRestaurants { get; set; }
+    public DbSet<LoyaltyPoint> LoyaltyPoints { get; set; }
+    public DbSet<Reward> Rewards { get; set; }
+    public DbSet<RewardRedemption> RewardRedemptions { get; set; }
+    public DbSet<LoyaltyCode> LoyaltyCodes { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

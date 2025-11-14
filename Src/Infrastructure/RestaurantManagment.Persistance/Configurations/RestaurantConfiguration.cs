@@ -32,6 +32,15 @@ public class RestaurantConfiguration : IEntityTypeConfiguration<Restaurant>
             .IsRequired()
             .HasMaxLength(2000);
 
+        builder.Property(r => r.Category)
+            .HasMaxLength(100);
+
+        builder.Property(r => r.Latitude)
+            .HasColumnType("float");
+
+        builder.Property(r => r.Longitude)
+            .HasColumnType("float");
+
         // Relationships
         builder.HasOne(r => r.Owner)
             .WithMany(u => u.OwnedRestaurants)
@@ -51,4 +60,3 @@ public class RestaurantConfiguration : IEntityTypeConfiguration<Restaurant>
         builder.HasQueryFilter(r => !r.IsDeleted);
     }
 }
-

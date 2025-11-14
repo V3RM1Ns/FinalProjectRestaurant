@@ -99,9 +99,6 @@ export const restaurantApi = {
 export const menuApi = {
   getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/Menu/restaurant/${restaurantId}`),
   getById: (id: string) => ApiClient.get<any>(`/Menu/${id}`),
-  create: (data: any) => ApiClient.post<any>("/Menu", data),
-  update: (id: string, data: any) => ApiClient.put<any>(`/Menu/${id}`, data),
-  delete: (id: string) => ApiClient.delete<any>(`/Menu/${id}`),
 }
 
 // Order API
@@ -156,6 +153,36 @@ export const tableApi = {
   create: (data: any) => ApiClient.post<any>("/Table", data),
   update: (id: string, data: any) => ApiClient.put<any>(`/Table/${id}`, data),
   delete: (id: string) => ApiClient.delete<any>(`/Table/${id}`),
+}
+
+// Loyalty API
+export const loyaltyApi = {
+  // Admin endpoints
+  admin: {
+    generateCode: (data: { pointValue: number; description?: string; maxUses?: number; expiryDate?: string; restaurantId?: string }) =>
+      ApiClient.post<any>('/Loyalty/admin/codes', data),
+    getAllCodes: () => ApiClient.get<any[]>('/Loyalty/admin/codes'),
+    getCodeById: (codeId: string) => ApiClient.get<any>(`/Loyalty/admin/codes/${codeId}`),
+    deactivateCode: (codeId: string) => ApiClient.patch<any>(`/Loyalty/admin/codes/${codeId}/deactivate`, {}),
+  },
+  // Customer endpoints
+  customer: {
+    redeemCode: (code: string) => ApiClient.post<any>('/Loyalty/customer/redeem-code', { code }),
+    getBalance: () => ApiClient.get<any[]>('/Loyalty/customer/balance'),
+    getHistory: (restaurantId?: string) => ApiClient.get<any[]>(`/Loyalty/customer/history${restaurantId ? `?restaurantId=${restaurantId}` : ''}`),
+    redeemReward: (rewardId: string) => ApiClient.post<any>('/Loyalty/customer/redeem-reward', { rewardId }),
+    getRedemptions: () => ApiClient.get<any[]>('/Loyalty/customer/redemptions'),
+    getRedemptionById: (redemptionId: string) => ApiClient.get<any>(`/Loyalty/customer/redemptions/${redemptionId}`),
+  },
+  // Owner endpoints
+  owner: {
+    createReward: (data: any) => ApiClient.post<any>('/Loyalty/owner/rewards', data),
+    updateReward: (rewardId: string, data: any) => ApiClient.put<any>(`/Loyalty/owner/rewards/${rewardId}`, data),
+    deleteReward: (rewardId: string) => ApiClient.delete<any>(`/Loyalty/owner/rewards/${rewardId}`),
+  },
+  // Public endpoints
+  getRestaurantRewards: (restaurantId: string) => ApiClient.get<any[]>(`/Loyalty/restaurants/${restaurantId}/rewards`),
+  getRewardById: (rewardId: string) => ApiClient.get<any>(`/Loyalty/rewards/${rewardId}`),
 }
 
 // Generic API client export for direct usage

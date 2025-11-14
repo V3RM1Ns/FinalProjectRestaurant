@@ -30,6 +30,12 @@ public class Restaurant : BaseEntity
     [MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
     
+    [MaxLength(100)]
+    public string? Category { get; set; }
+    
+    public double? Latitude { get; set; }
+    
+    public double? Longitude { get; set; }
     
     [Required]
     public string OwnerId { get; set; } = string.Empty;
