@@ -1,4 +1,5 @@
 ﻿using RestaurantManagment.Application.Common.DTOs.Loyalty;
+
 namespace RestaurantManagment.Application.Common.Interfaces;
 
 public interface ILoyaltyService

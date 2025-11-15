@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using RestaurantManagment.Application.Common.DTOs.Loyalty;
-
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 
@@ -179,7 +178,7 @@ public class LoyaltyService : ILoyaltyService
 
         foreach (var group in grouped)
         {
-            var restaurant = await _context.Restaurants.FindAsync(group.Key);
+            var restaurant = group.First().Restaurant;
             var totalEarned = group.Where(p => p.Type == LoyaltyPointType.Earned || p.Type == LoyaltyPointType.Bonus).Sum(p => p.Points);
             var redeemed = group.Where(p => p.Type == LoyaltyPointType.Redeemed).Sum(p => Math.Abs(p.Points));
             var available = totalEarned - redeemed;
@@ -188,7 +187,7 @@ public class LoyaltyService : ILoyaltyService
             {
                 CustomerId = customerId,
                 RestaurantId = group.Key,
-                RestaurantName = restaurant?.Name ?? "General",
+                RestaurantName = restaurant.Name,
                 TotalPoints = totalEarned,
                 AvailablePoints = available,
                 RedeemedPoints = redeemed,
@@ -197,7 +196,7 @@ public class LoyaltyService : ILoyaltyService
                     Id = p.Id,
                     CustomerId = p.CustomerId,
                     RestaurantId = p.RestaurantId,
-                    RestaurantName = restaurant?.Name ?? "General",
+                    RestaurantName = restaurant.Name,
                     Points = p.Points,
                     Description = p.Description,
                     Type = p.Type.ToString(),
@@ -228,7 +227,7 @@ public class LoyaltyService : ILoyaltyService
             Id = p.Id,
             CustomerId = p.CustomerId,
             RestaurantId = p.RestaurantId,
-            RestaurantName = p.Restaurant?.Name ?? "General",
+            RestaurantName = p.Restaurant.Name,
             Points = p.Points,
             Description = p.Description,
             Type = p.Type.ToString(),
@@ -559,4 +558,3 @@ public class LoyaltyService : ILoyaltyService
         return $"CPT-{Guid.NewGuid().ToString().Substring(0, 10).ToUpper()}";
     }
 }
-

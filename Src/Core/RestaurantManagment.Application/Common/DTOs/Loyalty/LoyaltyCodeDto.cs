@@ -1,4 +1,6 @@
-﻿public class LoyaltyCodeDto
+﻿namespace RestaurantManagment.Application.Common.DTOs.Loyalty;
+
+public class LoyaltyCodeDto
 {
     public string Id { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
@@ -14,6 +16,7 @@
     public DateTime? UsedAt { get; set; }
     public string? RestaurantId { get; set; }
 }
+
 public class CreateLoyaltyCodeDto
 {
     public int PointValue { get; set; }
@@ -21,4 +24,17 @@ public class CreateLoyaltyCodeDto
     public int? MaxUses { get; set; }
     public DateTime? ExpiryDate { get; set; }
     public string? RestaurantId { get; set; }
+}
+
+public class RedeemLoyaltyCodeDto
+{
+    public string Code { get; set; } = string.Empty;
+}
+
+public class LoyaltyCodeResponseDto
+{
+    public string Code { get; set; } = string.Empty;
+    public int PointValue { get; set; }
+    public string? Description { get; set; }
+    public DateTime? ExpiryDate { get; set; }
 }
