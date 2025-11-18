@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RestaurantManagment.Domain.Models;
+using RestaurantManagment.Domain.Enums;
 
 namespace RestaurantManagment.Persistance.Configurations;
 
@@ -33,7 +34,7 @@ public class RestaurantConfiguration : IEntityTypeConfiguration<Restaurant>
             .HasMaxLength(2000);
 
         builder.Property(r => r.Category)
-            .HasMaxLength(100);
+            .HasConversion<int>();
 
         builder.Property(r => r.Latitude)
             .HasColumnType("float");

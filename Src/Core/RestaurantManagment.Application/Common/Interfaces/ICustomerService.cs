@@ -6,6 +6,7 @@ using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Menu;
 using RestaurantManagment.Application.Common.DTOs.MenuItem;
 using RestaurantManagment.Application.Common.DTOs.Owner;
+using RestaurantManagment.Domain.Enums;
 using CustomerDtos = RestaurantManagment.Application.Common.DTOs.Customer;
 
 namespace RestaurantManagment.Application.Common.Interfaces;
@@ -15,7 +16,7 @@ public interface ICustomerService
     Task<PaginatedResult<RestaurantDto>> GetRestaurantsAsync(int pageNumber = 1, int pageSize = 10);
     Task<RestaurantDto?> GetRestaurantByIdAsync(string restaurantId);
     Task<IEnumerable<RestaurantDto>> SearchRestaurantsAsync(string searchTerm);
-    Task<IEnumerable<RestaurantDto>> GetRestaurantsByCategoryAsync(string category);
+    Task<IEnumerable<RestaurantDto>> GetRestaurantsByCategoryAsync(RestaurantCategory category);
     Task<IEnumerable<RestaurantDto>> GetNearbyRestaurantsAsync(double latitude, double longitude, double radiusKm);
     Task<IEnumerable<RestaurantDto>> GetTopRatedRestaurantsAsync(int count = 10);
     

@@ -53,9 +53,8 @@ public interface IOwnerService
     Task<PaginatedResult<ReviewDto>> GetRestaurantReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(string restaurantId, string ownerId, int pageNumber = 1, int pageSize = 10);
     Task<ReviewDto?> GetReviewByIdAsync(string reviewId, string ownerId);
-    Task ApproveReviewAsync(string reviewId, string ownerId);
-    Task RejectReviewAsync(string reviewId, string ownerId);
     Task RespondToReviewAsync(string reviewId, string response, string ownerId);
+    Task ReportReviewAsync(string reviewId, string reason, string ownerId);
     Task<int> GetPendingReviewsCountAsync(string restaurantId, string ownerId);
     Task<double> GetAverageRatingAsync(string restaurantId);
     

@@ -22,6 +22,5 @@ public interface IAppDbContext
     public DbSet<Reward> Rewards { get; set; }
     public DbSet<RewardRedemption> RewardRedemptions { get; set; }
     public DbSet<LoyaltyCode> LoyaltyCodes { get; set; }
-    
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

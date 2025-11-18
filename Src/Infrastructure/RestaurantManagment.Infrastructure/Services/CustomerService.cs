@@ -10,6 +10,7 @@ using CustomerDtos = RestaurantManagment.Application.Common.DTOs.Customer;
 using RestaurantManagment.Application.Common.Interfaces;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
+using RestaurantManagment.Domain.Enums;
 using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Infrastructure.Services;
@@ -80,14 +81,11 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
         return mapper.Map<IEnumerable<RestaurantDto>>(restaurants);
     }
 
-    public async Task<IEnumerable<RestaurantDto>> GetRestaurantsByCategoryAsync(string category)
+    public async Task<IEnumerable<RestaurantDto>> GetRestaurantsByCategoryAsync(RestaurantCategory category)
     {
-        if (string.IsNullOrWhiteSpace(category))
-            throw new ArgumentException("Category cannot be null or empty.", nameof(category));
-
         var restaurants = await context.Restaurants
             .Include(r => r.Owner)
-            .Where(r => !r.IsDeleted && r.Category != null && r.Category == category)
+            .Where(r => !r.IsDeleted && r.Category == category)
             .OrderBy(r => r.Name)
             .ToListAsync();
 
@@ -377,8 +375,14 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
         if (string.IsNullOrEmpty(dto.RestaurantId))
             throw new ArgumentException("Restaurant ID cannot be null or empty.");
 
-        if (dto.Items == null || !dto.Items.Any())
+        if (dto.Items == null || !dto.Items.Any()) 
             throw new ArgumentException("Order must contain at least one item.");
+
+        foreach (var item in dto.Items)
+        {
+            if (item.Quantity < 1)
+                throw new ArgumentException("Item quantity must be at least 1.");
+        }
         
         var restaurant = await context.Restaurants
             .FirstOrDefaultAsync(r => r.Id == dto.RestaurantId && !r.IsDeleted);

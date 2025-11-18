@@ -8,6 +8,8 @@ using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using RestaurantManagment.Application.Common.DTOs.Review;
+using RestaurantManagment.Domain.Enums;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
@@ -328,8 +330,9 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         {
             user.DeletedAt = null;
         }
+        _context.Users.Update(user);
 
-        await _userManager.UpdateAsync(user);
+        await _context.SaveChangesAsync();
     }
 
     public async Task<List<string>> GetUserRolesAsync(string userId)
@@ -414,5 +417,169 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
         await _context.SaveChangesAsync();
     }
-}
 
+    // Restaurant Category Management
+    public async Task UpdateRestaurantCategoryAsync(string restaurantId, int categoryId)
+    {
+        var restaurant = await _context.Restaurants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.Id == restaurantId);
+            
+        if (restaurant == null)
+            throw new Exception("Restaurant not found");
+
+        if (!Enum.IsDefined(typeof(RestaurantCategory), categoryId))
+            throw new Exception("Invalid category");
+
+        restaurant.Category = (RestaurantCategory)categoryId;
+        restaurant.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<List<string>> GetAllRestaurantCategoriesAsync()
+    {
+        var categories = Enum.GetValues(typeof(RestaurantCategory))
+            .Cast<RestaurantCategory>()
+            .Select(c => new { Id = (int)c, Name = c.ToString() })
+            .Select(c => $"{c.Id}:{c.Name}")
+            .ToList();
+            
+        return await Task.FromResult(categories);
+    }
+
+    // Review Management Methods
+    public async Task<PaginatedResult<ReviewDto>> GetAllReviewsAsync(int pageNumber = 1, int pageSize = 10)
+    {
+        var query = _context.Reviews
+            .Include(r => r.Customer)
+            .Include(r => r.Restaurant)
+            .Where(r => !r.IsDeleted)
+            .OrderByDescending(r => r.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var reviews = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+
+        return new PaginatedResult<ReviewDto>
+        {
+            Items = reviewDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(int pageNumber = 1, int pageSize = 10)
+    {
+        var query = _context.Reviews
+            .Include(r => r.Customer)
+            .Include(r => r.Restaurant)
+            .Where(r => !r.IsDeleted && r.Status == "Pending")
+            .OrderByDescending(r => r.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var reviews = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+
+        return new PaginatedResult<ReviewDto>
+        {
+            Items = reviewDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<PaginatedResult<ReviewDto>> GetReportedReviewsAsync(int pageNumber = 1, int pageSize = 10)
+    {
+        var query = _context.Reviews
+            .Include(r => r.Customer)
+            .Include(r => r.Restaurant)
+            .Where(r => !r.IsDeleted && r.IsReported)
+            .OrderByDescending(r => r.ReportedAt);
+
+        var totalCount = await query.CountAsync();
+        var reviews = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+
+        return new PaginatedResult<ReviewDto>
+        {
+            Items = reviewDtos,
+            TotalCount = totalCount,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+    }
+
+    public async Task<ReviewDto?> GetReviewByIdAsync(string reviewId)
+    {
+        var review = await _context.Reviews
+            .Include(r => r.Customer)
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
+
+        if (review == null)
+            return null;
+
+        return _mapper.Map<ReviewDto>(review);
+    }
+
+    public async Task ApproveReviewAsync(string reviewId)
+    {
+        var review = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found");
+
+        review.Status = "Approved";
+        review.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task RejectReviewAsync(string reviewId, string? reason = null)
+    {
+        var review = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found");
+
+        review.Status = "Rejected";
+        review.UpdatedAt = DateTime.UtcNow;
+        
+        if (!string.IsNullOrEmpty(reason))
+        {
+            review.OwnerResponse = $"[Rejected by Admin: {reason}]";
+        }
+
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteReviewAsync(string reviewId)
+    {
+        var review = await _context.Reviews
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found");
+
+        review.IsDeleted = true;
+        review.UpdatedAt = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+}

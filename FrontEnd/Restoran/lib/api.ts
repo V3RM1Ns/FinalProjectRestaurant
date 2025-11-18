@@ -99,6 +99,9 @@ export const restaurantApi = {
 export const menuApi = {
   getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/Menu/restaurant/${restaurantId}`),
   getById: (id: string) => ApiClient.get<any>(`/Menu/${id}`),
+  create: (data: any) => ApiClient.post<any>("/Menu", data),
+  update: (id: string, data: any) => ApiClient.put<any>(`/Menu/${id}`, data),
+  delete: (id: string) => ApiClient.delete<any>(`/Menu/${id}`),
 }
 
 // Order API
@@ -144,6 +147,20 @@ export const reviewApi = {
   approve: (id: string) => ApiClient.patch<any>(`/Review/${id}/approve`, {}),
   reject: (id: string) => ApiClient.patch<any>(`/Review/${id}/reject`, {}),
   respond: (id: string, response: string) => ApiClient.patch<any>(`/Review/${id}/respond`, { response }),
+
+  // Admin endpoints
+  admin: {
+    getAll: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<any>(`/Admin/reviews?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+    getPending: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<any>(`/Admin/reviews/pending?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+    getReported: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<any>(`/Admin/reviews/reported?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+    getById: (reviewId: string) => ApiClient.get<any>(`/Admin/reviews/${reviewId}`),
+    approve: (reviewId: string) => ApiClient.post<any>(`/Admin/reviews/${reviewId}/approve`, {}),
+    reject: (reviewId: string, reason?: string) => ApiClient.post<any>(`/Admin/reviews/${reviewId}/reject`, { reason }),
+    delete: (reviewId: string) => ApiClient.delete<any>(`/Admin/reviews/${reviewId}`),
+  },
 }
 
 // Table API
@@ -152,7 +169,6 @@ export const tableApi = {
   getById: (id: string) => ApiClient.get<any>(`/Table/${id}`),
   create: (data: any) => ApiClient.post<any>("/Table", data),
   update: (id: string, data: any) => ApiClient.put<any>(`/Table/${id}`, data),
-  delete: (id: string) => ApiClient.delete<any>(`/Table/${id}`),
 }
 
 // Loyalty API
@@ -185,5 +201,32 @@ export const loyaltyApi = {
   getRewardById: (rewardId: string) => ApiClient.get<any>(`/Loyalty/rewards/${rewardId}`),
 }
 
-// Generic API client export for direct usage
+// Default export of ApiClient as 'api' for convenience
 export const api = ApiClient
+
+// Admin API
+export const adminApi = {
+  // User Management
+  getUsers: (pageNumber: number = 1, pageSize: number = 10) =>
+    ApiClient.get<any>(`/Admin/users?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+  toggleUserStatus: (userId: string) =>
+    ApiClient.post<any>(`/Admin/users/${userId}/toggle-status`, {}),
+  getUserRoles: (userId: string) =>
+    ApiClient.get<{ roles: string[] }>(`/Admin/users/${userId}/roles`),
+  getAllRoles: () =>
+    ApiClient.get<{ roles: string[] }>(`/Admin/roles`),
+  addRoleToUser: (userId: string, role: string) =>
+    ApiClient.post<any>(`/Admin/users/${userId}/roles`, { role }),
+  removeRoleFromUser: (userId: string, role: string) =>
+    ApiClient.delete<any>(`/Admin/users/${userId}/roles/${role}`),
+  
+  // Restaurant Management
+  getRestaurants: (pageNumber: number = 1, pageSize: number = 10) =>
+    ApiClient.get<any>(`/Admin/restaurants?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+  toggleRestaurantStatus: (restaurantId: string) =>
+    ApiClient.post<any>(`/Admin/restaurants/${restaurantId}/toggle-status`, {}),
+  getAllRestaurantCategories: () =>
+    ApiClient.get<{ categories: string[] }>(`/Admin/restaurants/categories`),
+  updateRestaurantCategory: (restaurantId: string, categoryId: number) =>
+    ApiClient.post<any>(`/Admin/restaurants/${restaurantId}/category`, { categoryId }),
+}

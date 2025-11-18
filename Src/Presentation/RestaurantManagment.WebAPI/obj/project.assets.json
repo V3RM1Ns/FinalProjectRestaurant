@@ -3017,7 +3017,10 @@
         },
         "runtime": {
           "bin/placeholder/RestaurantManagment.Application.dll": {}
-        }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
       },
       "RestaurantManagment.Domain/1.0.0": {
         "type": "project",
@@ -3049,7 +3052,10 @@
         },
         "runtime": {
           "bin/placeholder/RestaurantManagment.Infrastructure.dll": {}
-        }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
       },
       "RestaurantManagment.Persistance/1.0.0": {
         "type": "project",

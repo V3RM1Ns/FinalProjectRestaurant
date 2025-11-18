@@ -31,13 +31,13 @@ export default function AdminDashboardPage() {
     const fetchDashboardStats = async () => {
         try {
             setLoading(true)
-            const response = await api.get("/admin/dashboard")
+            const response = await api.get<DashboardStats>("/Admin/dashboard")
             setStats(response)
         } catch (error) {
             console.error("Dashboard fetch error:", error)
             toast({
-                title: "Hata",
-                description: "Dashboard verileri yüklenemedi",
+                title: "Error",
+                description: "Failed to load dashboard data",
                 variant: "destructive",
             })
         } finally {

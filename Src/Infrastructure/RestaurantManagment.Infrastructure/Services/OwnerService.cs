@@ -653,59 +653,13 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         return mapper.Map<ReviewDto>(review);
     }
 
-    public async Task ApproveReviewAsync(string reviewId, string ownerId)
-    {
-        if (string.IsNullOrEmpty(ownerId))
-            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
-
-        var review = await context.Reviews
-            .Include(r => r.Restaurant)
-            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
-
-        if (review == null)
-            throw new Exception("Review not found.");
-        
-        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
-        if (!isOwner)
-            throw new Exception("You don't have access to this review.");
-
-        review.Status = "Approved";
-        review.UpdatedAt = DateTime.UtcNow;
-        review.UpdatedBy = ownerId;
-
-        await context.SaveChangesAsync();
-    }
-
-    public async Task RejectReviewAsync(string reviewId, string ownerId)
-    {
-        if (string.IsNullOrEmpty(ownerId))
-            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
-
-        var review = await context.Reviews
-            .Include(r => r.Restaurant)
-            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
-
-        if (review == null)
-            throw new Exception("Review not found.");
-        
-        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
-        if (!isOwner)
-            throw new Exception("You don't have access to this review.");
-
-        review.Status = "Rejected";
-        review.UpdatedAt = DateTime.UtcNow;
-        review.UpdatedBy = ownerId;
-
-        await context.SaveChangesAsync();
-    }
-
     public async Task RespondToReviewAsync(string reviewId, string response, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))
             throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
 
-        if (string.IsNullOrEmpty(response))
-            throw new ArgumentException("Response cannot be null or empty.", nameof(response));
+        if (string.IsNullOrWhiteSpace(response))
+            throw new ArgumentException("Response cannot be empty.", nameof(response));
 
         var review = await context.Reviews
             .Include(r => r.Restaurant)
@@ -719,7 +673,35 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             throw new Exception("You don't have access to this review.");
 
         review.OwnerResponse = response;
-        review.RespondedAt = DateTime.UtcNow;
+        review.UpdatedAt = DateTime.UtcNow;
+        review.UpdatedBy = ownerId;
+
+        await context.SaveChangesAsync();
+    }
+
+    public async Task ReportReviewAsync(string reviewId, string reason, string ownerId)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ArgumentException("Report reason cannot be empty.", nameof(reason));
+
+        var review = await context.Reviews
+            .Include(r => r.Restaurant)
+            .FirstOrDefaultAsync(r => r.Id == reviewId && !r.IsDeleted);
+
+        if (review == null)
+            throw new Exception("Review not found.");
+        
+        var isOwner = await IsRestaurantOwnerAsync(review.RestaurantId, ownerId);
+        if (!isOwner)
+            throw new Exception("You don't have access to this review.");
+        
+        review.IsReported = true;
+        review.ReportReason = reason;
+        review.ReportedAt = DateTime.UtcNow;
+        review.ReportedByOwnerId = ownerId;
         review.UpdatedAt = DateTime.UtcNow;
         review.UpdatedBy = ownerId;
 
@@ -1809,7 +1791,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             throw new ArgumentException("Discount amount must be greater than 0.");
 
         if (dto.DiscountPercentage.HasValue && (dto.DiscountPercentage <= 0 || dto.DiscountPercentage > 100))
-            throw new ArgumentException("Discount percentage must be between 1 and 100.");
+            throw new ArgumentException("Discount percentage must be between 1 and 100.", nameof(dto.DiscountPercentage));
 
         var reward = mapper.Map<Reward>(dto);
         reward.Id = Guid.NewGuid().ToString();
@@ -1854,7 +1836,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             throw new ArgumentException("Discount amount must be greater than 0.");
 
         if (dto.DiscountPercentage.HasValue && (dto.DiscountPercentage <= 0 || dto.DiscountPercentage > 100))
-            throw new ArgumentException("Discount percentage must be between 1 and 100.");
+            throw new ArgumentException("Discount percentage must be between 1 and 100.", nameof(dto.DiscountPercentage));
 
         mapper.Map(dto, reward);
         reward.UpdatedAt = DateTime.UtcNow;

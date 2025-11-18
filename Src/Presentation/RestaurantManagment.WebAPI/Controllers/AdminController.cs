@@ -233,6 +233,136 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while updating restaurant status.", error = ex.Message });
             }
         }
+
+        [HttpGet("restaurants/categories")]
+        public async Task<IActionResult> GetAllRestaurantCategories()
+        {
+            try
+            {
+                var categories = await _adminService.GetAllRestaurantCategoriesAsync();
+                return Ok(new { categories });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while fetching categories.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("restaurants/{restaurantId}/category")]
+        public async Task<IActionResult> UpdateRestaurantCategory(string restaurantId, [FromBody] UpdateCategoryRequest request)
+        {
+            try
+            {
+                await _adminService.UpdateRestaurantCategoryAsync(restaurantId, request.CategoryId);
+                return Ok(new { message = "Restaurant category updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating restaurant category.", error = ex.Message });
+            }
+        }
+
+        // Review Management
+        [HttpGet("reviews")]
+        public async Task<IActionResult> GetAllReviews([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _adminService.GetAllReviewsAsync(pageNumber, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading reviews.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("reviews/pending")]
+        public async Task<IActionResult> GetPendingReviews([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _adminService.GetPendingReviewsAsync(pageNumber, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading pending reviews.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("reviews/reported")]
+        public async Task<IActionResult> GetReportedReviews([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var result = await _adminService.GetReportedReviewsAsync(pageNumber, pageSize);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading reported reviews.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("reviews/{reviewId}")]
+        public async Task<IActionResult> GetReviewById(string reviewId)
+        {
+            try
+            {
+                var review = await _adminService.GetReviewByIdAsync(reviewId);
+                if (review == null)
+                    return NotFound(new { message = "Review not found." });
+
+                return Ok(review);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading the review.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("reviews/{reviewId}/approve")]
+        public async Task<IActionResult> ApproveReview(string reviewId)
+        {
+            try
+            {
+                await _adminService.ApproveReviewAsync(reviewId);
+                return Ok(new { message = "Review approved successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while approving the review.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("reviews/{reviewId}/reject")]
+        public async Task<IActionResult> RejectReview(string reviewId, [FromBody] RejectReviewRequest request)
+        {
+            try
+            {
+                await _adminService.RejectReviewAsync(reviewId, request.Reason);
+                return Ok(new { message = "Review rejected successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while rejecting the review.", error = ex.Message });
+            }
+        }
+
+        [HttpDelete("reviews/{reviewId}")]
+        public async Task<IActionResult> DeleteReview(string reviewId)
+        {
+            try
+            {
+                await _adminService.DeleteReviewAsync(reviewId);
+                return Ok(new { message = "Review deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the review.", error = ex.Message });
+            }
+        }
     }
 
     public class RejectApplicationRequest
@@ -243,5 +373,15 @@ namespace RestaurantManagment.WebAPI.Controllers
     public class RoleRequest
     {
         public string Role { get; set; } = string.Empty;
+    }
+
+    public class RejectReviewRequest
+    {
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    public class UpdateCategoryRequest
+    {
+        public int CategoryId { get; set; }
     }
 }

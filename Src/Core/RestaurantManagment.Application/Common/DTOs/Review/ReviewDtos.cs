@@ -14,6 +14,11 @@ public class ReviewDto
     public string? OwnerResponse { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? RespondedAt { get; set; }
+    
+    public bool IsReported { get; set; }
+    public string? ReportReason { get; set; }
+    public DateTime? ReportedAt { get; set; }
+    public string? AdminNote { get; set; }
 }
 
 public class CreateReviewDto
@@ -32,4 +37,14 @@ public class UpdateReviewDto
 public class ReviewResponseDto
 {
     public string Response { get; set; } = string.Empty;
+}
+
+public class ReportReviewDto
+{
+    public string Reason { get; set; } = string.Empty;
+}
+
+public class AdminReviewActionDto
+{
+    public string? Note { get; set; }
 }

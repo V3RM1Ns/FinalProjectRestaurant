@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using RestaurantManagment.Domain.Enums;
 using RestaurantManagment.Domain.Models.Common;
 
 namespace RestaurantManagment.Domain.Models;
@@ -30,14 +31,17 @@ public class Restaurant : BaseEntity
     [MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
     
-    [MaxLength(100)]
-    public string? Category { get; set; }
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
+    
+    public RestaurantCategory? Category { get; set; }
     
     public double? Latitude { get; set; }
     
     public double? Longitude { get; set; }
     
     [Required]
+    [MaxLength(450)]
     public string OwnerId { get; set; } = string.Empty;
     public AppUser Owner { get; set; } = null!;
     

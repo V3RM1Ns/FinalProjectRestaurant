@@ -29,17 +29,24 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
+        // Restaurant mappings
+        CreateMap<Restaurant, RestaurantDto>()
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName))
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
+            .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => (double?)src.Rate));
       
         CreateMap<Restaurant, RestaurantResponseDto>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.FullName : string.Empty));
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName));
         
         CreateMap<Restaurant, OwnerRestaurantDto>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner != null ? src.Owner.FullName : string.Empty));
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName));
         
         CreateMap<Restaurant, RestaurantAdminListDto>()
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName ?? src.Owner.UserName ?? string.Empty))
             .ForMember(dest => dest.OwnerEmail, opt => opt.MapFrom(src => src.Owner.Email ?? string.Empty))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
-            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => "General"));
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.HasValue ? src.Category.ToString() : "General"));
         CreateMap<CreateRestaurantDto, Restaurant>();
         CreateMap<UpdateRestaurantDto, Restaurant>();
 

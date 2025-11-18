@@ -29,5 +29,16 @@ public class Review : BaseEntity
     public string? OwnerResponse { get; set; }
 
     public DateTime? RespondedAt { get; set; }
+  
+    public bool IsReported { get; set; } = false;
+    
+    [MaxLength(500)]
+    public string? ReportReason { get; set; }
+    
+    public DateTime? ReportedAt { get; set; }
+    
+    public string? ReportedByOwnerId { get; set; }
+    
+    [MaxLength(500)]
+    public string? AdminNote { get; set; }
 }
-

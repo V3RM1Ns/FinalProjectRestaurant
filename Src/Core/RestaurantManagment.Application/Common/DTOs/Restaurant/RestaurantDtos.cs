@@ -1,4 +1,6 @@
-﻿namespace RestaurantManagment.Application.Common.DTOs.Restaurant;
+﻿using RestaurantManagment.Domain.Enums;
+
+namespace RestaurantManagment.Application.Common.DTOs.Restaurant;
 
 public class RestaurantDto
 {
@@ -13,7 +15,7 @@ public class RestaurantDto
     public string OwnerName { get; set; } = string.Empty;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? Category { get; set; }
+    public RestaurantCategory? Category { get; set; }
     public double? Rating { get; set; }
     public string? ImageUrl { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -30,7 +32,7 @@ public class CreateRestaurantDto
     public string Description { get; set; } = string.Empty;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? Category { get; set; }
+    public RestaurantCategory? Category { get; set; }
     public string? ImageUrl { get; set; }
 }
 
@@ -44,6 +46,6 @@ public class UpdateRestaurantDto
     public string Description { get; set; } = string.Empty;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public string? Category { get; set; }
+    public RestaurantCategory? Category { get; set; }
     public string? ImageUrl { get; set; }
 }

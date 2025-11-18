@@ -154,6 +154,8 @@ app.UseSwaggerUI(c =>
 });
 app.MapOpenApi();
 
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

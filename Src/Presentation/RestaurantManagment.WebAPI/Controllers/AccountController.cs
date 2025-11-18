@@ -12,7 +12,8 @@ namespace RestaurantManagment.WebAPI.Controllers
     [ApiController]
     public class AccountController(
         UserManager<AppUser> userManager,
-        IAccountService accountService) : ControllerBase
+        IAccountService accountService,
+        IFileService fileService) : ControllerBase
     {
         [HttpPost("register")]
         public async Task<IActionResult> Register(UserRegisterDto userRegisterDto)
@@ -320,6 +321,35 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return BadRequest(new { Message = result.Message });
 
             return Ok(new { Message = result.Message });
+        }
+
+        /// <summary>
+        /// Upload profile image (Optional for all users)
+        /// </summary>
+        [HttpPost("profile/upload-image")]
+        [Authorize]
+        public async Task<IActionResult> UploadProfileImage([FromForm] IFormFile file)
+        {
+            var currentUser = await userManager.GetUserAsync(User);
+            if (currentUser == null)
+                return Unauthorized(new { Message = "User not found" });
+
+            try
+            {
+                if (file == null || file.Length == 0)
+                    return BadRequest(new { Message = "Profil resmi seçilmedi." });
+
+                var fileUrl = await fileService.UploadProfileImageAsync(file, currentUser.Id);
+                return Ok(new { imageUrl = fileUrl, message = "Profil resmi başarıyla yüklendi." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Profil resmi yüklenirken bir hata oluştu.", error = ex.Message });
+            }
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace RestaurantManagment.Application.Common.DTOs.Customer;
+﻿using RestaurantManagment.Domain.Enums;
+
+namespace RestaurantManagment.Application.Common.DTOs.Customer;
 
 public class CustomerStatisticsDto
 {
@@ -9,6 +11,5 @@ public class CustomerStatisticsDto
     public int FavoriteRestaurantsCount { get; set; }
     public double AverageRatingGiven { get; set; }
     public string? FavoriteRestaurantName { get; set; }
-    public string? FavoriteCuisine { get; set; }
+    public RestaurantCategory? FavoriteCuisine { get; set; }
 }
-

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
- using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagment.Application.Common.DTOs.Employee;
 using RestaurantManagment.Application.Common.DTOs.Menu;
@@ -16,7 +16,8 @@ namespace RestaurantManagment.WebAPI.Controllers;
 [Authorize(Roles = "RestaurantOwner")]
 public class OwnerController(
     IOwnerService ownerService,
-    UserManager<AppUser> userManager) : ControllerBase
+    UserManager<AppUser> userManager,
+    IFileService fileService) : ControllerBase
 {
     #region Restaurant Management
 
@@ -579,44 +580,9 @@ public class OwnerController(
         }
     }
 
-    [HttpPost("reviews/{reviewId}/approve")]
-    public async Task<IActionResult> ApproveReview(string reviewId)
-    {
-        var currentUser = await userManager.GetUserAsync(User);
-        if (currentUser == null)
-            return Unauthorized(new { Message = "User not found" });
-
-        try
-        {
-            await ownerService.ApproveReviewAsync(reviewId, currentUser.Id);
-            return Ok(new { Message = "Review approved successfully" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-    }
-
-    [HttpPost("reviews/{reviewId}/reject")]
-    public async Task<IActionResult> RejectReview(string reviewId)
-    {
-        var currentUser = await userManager.GetUserAsync(User);
-        if (currentUser == null)
-            return Unauthorized(new { Message = "User not found" });
-
-        try
-        {
-            await ownerService.RejectReviewAsync(reviewId, currentUser.Id);
-            return Ok(new { Message = "Review rejected successfully" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { Message = ex.Message });
-        }
-    }
-
+    // Owner artık sadece yanıt yazabilir - approve/reject kaldırıldı
     [HttpPost("reviews/{reviewId}/respond")]
-    public async Task<IActionResult> RespondToReview(string reviewId, [FromBody] string response)
+    public async Task<IActionResult> RespondToReview(string reviewId, [FromBody] RespondToReviewRequest request)
     {
         var currentUser = await userManager.GetUserAsync(User);
         if (currentUser == null)
@@ -624,8 +590,27 @@ public class OwnerController(
 
         try
         {
-            await ownerService.RespondToReviewAsync(reviewId, response, currentUser.Id);
+            await ownerService.RespondToReviewAsync(reviewId, request.Response, currentUser.Id);
             return Ok(new { Message = "Response submitted successfully" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    // Yeni endpoint: Owner yorumu şikayet edebilir
+    [HttpPost("reviews/{reviewId}/report")]
+    public async Task<IActionResult> ReportReview(string reviewId, [FromBody] ReportReviewRequest request)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            await ownerService.ReportReviewAsync(reviewId, request.Reason, currentUser.Id);
+            return Ok(new { Message = "Review reported to admin successfully" });
         }
         catch (Exception ex)
         {
@@ -1291,5 +1276,103 @@ public class OwnerController(
     }
 
     #endregion
+
+    #region Image Upload
+
+    /// <summary>
+    /// Upload restaurant image (Required after creating restaurant)
+    /// </summary>
+    [HttpPost("restaurants/{restaurantId}/upload-image")]
+    public async Task<IActionResult> UploadRestaurantImage(string restaurantId, [FromForm] IFormFile file)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { Message = "Restoran resmi zorunludur." });
+
+            var fileUrl = await fileService.UploadRestaurantImageAsync(file, restaurantId);
+            return Ok(new { imageUrl = fileUrl, message = "Restoran resmi başarıyla yüklendi." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Restoran resmi yüklenirken bir hata oluştu.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Upload menu item image (Required after creating menu item)
+    /// </summary>
+    [HttpPost("menu-items/{menuItemId}/upload-image")]
+    public async Task<IActionResult> UploadMenuItemImage(string menuItemId, [FromForm] IFormFile file)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { Message = "Menü öğesi resmi zorunludur." });
+
+            var fileUrl = await fileService.UploadMenuItemImageAsync(file, menuItemId);
+            return Ok(new { imageUrl = fileUrl, message = "Menü öğesi resmi başarıyla yüklendi." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Menü öğesi resmi yüklenirken bir hata oluştu.", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Upload reward image (Required after creating reward)
+    /// </summary>
+    [HttpPost("rewards/{rewardId}/upload-image")]
+    public async Task<IActionResult> UploadRewardImage(string rewardId, [FromForm] IFormFile file)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { Message = "Ödül resmi zorunludur." });
+
+            var fileUrl = await fileService.UploadRewardImageAsync(file, rewardId);
+            return Ok(new { imageUrl = fileUrl, message = "Ödül resmi başarıyla yüklendi." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Message = "Ödül resmi yüklenirken bir hata oluştu.", error = ex.Message });
+        }
+    }
+
+    #endregion
 }
 
+// Request DTOs
+public class RespondToReviewRequest
+{
+    public string Response { get; set; } = string.Empty;
+}
+
+public class ReportReviewRequest
+{
+    public string Reason { get; set; } = string.Empty;
+}

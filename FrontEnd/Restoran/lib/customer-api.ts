@@ -60,11 +60,20 @@ export interface CustomerStatisticsDto {
 
 export interface RewardDto {
   id: string
+  restaurantId: string
+  restaurantName: string
   name: string
   description: string
   pointsRequired: number
-  expiryDate: string
-  isRedeemed: boolean
+  discountAmount?: number
+  discountPercentage?: number
+  imageUrl?: string
+  isActive: boolean
+  startDate?: string
+  endDate?: string
+  maxRedemptions?: number
+  currentRedemptions: number
+  canRedeem: boolean
 }
 
 export interface PaginatedResponse<T> {
@@ -75,7 +84,7 @@ export interface PaginatedResponse<T> {
   totalCount: number
 }
 
-// Customer API Service - Base implementation
+// Customer API Service - Complete implementation
 export const customerApi = {
   // Restaurant Operations
   restaurants: {
@@ -91,167 +100,170 @@ export const customerApi = {
     getByCategory: (category: string) => 
       ApiClient.get<any[]>(`/Customer/restaurants/category/${category}`),
     
-    getNearby: (latitude: number, longitude: number, radiusKm: number) => 
+    getNearby: (latitude: number, longitude: number, radiusKm: number = 5) => 
       ApiClient.get<any[]>(`/Customer/restaurants/nearby?latitude=${latitude}&longitude=${longitude}&radiusKm=${radiusKm}`),
     
     getTopRated: (count: number = 10) => 
       ApiClient.get<any[]>(`/Customer/restaurants/top-rated?count=${count}`),
-  },
 
-  // Menu & Menu Items
-  menus: {
-    getRestaurantMenus: (restaurantId: string) => 
-      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/menus`),
-    
-    getById: (menuId: string) => 
-      ApiClient.get<any>(`/Customer/menus/${menuId}`),
-    
-    getMenuItems: (menuId: string, pageNumber: number = 1, pageSize: number = 20) => 
-      ApiClient.get<PaginatedResponse<any>>(`/Customer/menus/${menuId}/items?pageNumber=${pageNumber}&pageSize=${pageSize}`),
-    
-    getMenuItemById: (menuItemId: string) => 
-      ApiClient.get<any>(`/Customer/menu-items/${menuItemId}`),
-    
-    getAvailableItems: (restaurantId: string) => 
-      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/available-items`),
-    
-    searchMenuItems: (restaurantId: string, searchTerm: string) => 
-      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/menu-items/search?searchTerm=${searchTerm}`),
-  },
-
-  // Orders
-  orders: {
-    getMyOrders: (pageNumber: number = 1, pageSize: number = 10) => 
-      ApiClient.get<PaginatedResponse<any>>(`/Customer/orders?pageNumber=${pageNumber}&pageSize=${pageSize}`),
-    
-    getById: (orderId: string) => 
-      ApiClient.get<any>(`/Customer/orders/${orderId}`),
-    
-    create: (data: CreateOrderDto) => 
-      ApiClient.post<any>("/Customer/orders", data),
-    
-    update: (orderId: string, data: UpdateOrderDto) => 
-      ApiClient.put<any>(`/Customer/orders/${orderId}`, data),
-    
-    cancel: (orderId: string) => 
-      ApiClient.delete<any>(`/Customer/orders/${orderId}/cancel`),
-    
-    getActive: () => 
-      ApiClient.get<any[]>("/Customer/orders/active"),
-    
-    getHistory: () => 
-      ApiClient.get<any[]>("/Customer/orders/history"),
-    
-    getCurrent: () => 
-      ApiClient.get<any>("/Customer/orders/current"),
-    
-    getCount: () => 
-      ApiClient.get<{ count: number }>("/Customer/orders/count"),
-  },
-
-  // Reservations
-  reservations: {
-    getMyReservations: (pageNumber: number = 1, pageSize: number = 10) => 
-      ApiClient.get<PaginatedResponse<any>>(`/Customer/reservations?pageNumber=${pageNumber}&pageSize=${pageSize}`),
-    
-    getById: (reservationId: string) => 
-      ApiClient.get<any>(`/Customer/reservations/${reservationId}`),
-    
-    create: (data: CreateReservationDto) => 
-      ApiClient.post<any>("/Customer/reservations", data),
-    
-    update: (reservationId: string, data: UpdateReservationDto) => 
-      ApiClient.put<any>(`/Customer/reservations/${reservationId}`, data),
-    
-    cancel: (reservationId: string) => 
-      ApiClient.delete<any>(`/Customer/reservations/${reservationId}/cancel`),
-    
-    getUpcoming: () => 
-      ApiClient.get<any[]>("/Customer/reservations/upcoming"),
-    
-    getPast: () => 
-      ApiClient.get<any[]>("/Customer/reservations/past"),
-    
-    getAvailableTables: (restaurantId: string, date: string, partySize: number) => 
-      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/available-tables?date=${date}&partySize=${partySize}`),
-    
-    checkTableAvailability: (tableId: string, date: string) => 
-      ApiClient.get<{ available: boolean }>(`/Customer/tables/${tableId}/availability?date=${date}`),
-  },
-
-  // Reviews
-  reviews: {
-    getRestaurantReviews: (restaurantId: string, pageNumber: number = 1, pageSize: number = 10) => 
-      ApiClient.get<PaginatedResponse<any>>(`/Customer/restaurants/${restaurantId}/reviews?pageNumber=${pageNumber}&pageSize=${pageSize}`),
-    
-    getMyReviews: (pageNumber: number = 1, pageSize: number = 10) => 
-      ApiClient.get<PaginatedResponse<any>>(`/Customer/reviews?pageNumber=${pageNumber}&pageSize=${pageSize}`),
-    
-    getById: (reviewId: string) => 
-      ApiClient.get<any>(`/Customer/reviews/${reviewId}`),
-    
-    create: (data: CreateReviewDto) => 
-      ApiClient.post<any>("/Customer/reviews", data),
-    
-    update: (reviewId: string, data: UpdateReviewDto) => 
-      ApiClient.put<any>(`/Customer/reviews/${reviewId}`, data),
-    
-    delete: (reviewId: string) => 
-      ApiClient.delete<any>(`/Customer/reviews/${reviewId}`),
-    
-    canReview: (restaurantId: string) => 
-      ApiClient.get<{ canReview: boolean }>(`/Customer/restaurants/${restaurantId}/can-review`),
-    
-    getMyReviewForRestaurant: (restaurantId: string) => 
-      ApiClient.get<any>(`/Customer/restaurants/${restaurantId}/my-review`),
-    
-    getAverageRating: (restaurantId: string) => 
+    getAverageRating: (restaurantId: string) =>
       ApiClient.get<{ averageRating: number }>(`/Customer/restaurants/${restaurantId}/average-rating`),
   },
 
-  // Favorites
+  // Menu Operations
+  menus: {
+    getRestaurantMenus: (restaurantId: string) =>
+      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/menus`),
+
+    getById: (menuId: string) =>
+      ApiClient.get<any>(`/Customer/menus/${menuId}`),
+
+    getMenuItems: (menuId: string, pageNumber: number = 1, pageSize: number = 20) =>
+      ApiClient.get<PaginatedResponse<any>>(`/Customer/menus/${menuId}/items?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+  },
+
+  // Menu Items Operations
+  menuItems: {
+    getById: (menuItemId: string) =>
+      ApiClient.get<any>(`/Customer/menu-items/${menuItemId}`),
+
+    getAvailable: (restaurantId: string) =>
+      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/available-items`),
+
+    search: (restaurantId: string, searchTerm: string) =>
+      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/menu-items/search?searchTerm=${searchTerm}`),
+  },
+
+  // Order Operations
+  orders: {
+    getMyOrders: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<PaginatedResponse<any>>(`/Customer/orders?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+
+    getById: (orderId: string) =>
+      ApiClient.get<any>(`/Customer/orders/${orderId}`),
+
+    create: (dto: CreateOrderDto) =>
+      ApiClient.post<any>(`/Customer/orders`, dto),
+
+    update: (orderId: string, dto: UpdateOrderDto) =>
+      ApiClient.put<any>(`/Customer/orders/${orderId}`, dto),
+
+    cancel: (orderId: string) =>
+      ApiClient.post<{ message: string }>(`/Customer/orders/${orderId}/cancel`, {}),
+
+    getActive: () =>
+      ApiClient.get<any[]>(`/Customer/orders/active`),
+
+    getHistory: () =>
+      ApiClient.get<any[]>(`/Customer/orders/history`),
+
+    getCurrent: () =>
+      ApiClient.get<any>(`/Customer/orders/current`),
+
+    getCount: () =>
+      ApiClient.get<{ count: number }>(`/Customer/orders/count`),
+  },
+
+  // Reservation Operations
+  reservations: {
+    getMyReservations: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<PaginatedResponse<any>>(`/Customer/reservations?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+
+    getById: (reservationId: string) =>
+      ApiClient.get<any>(`/Customer/reservations/${reservationId}`),
+
+    create: (dto: CreateReservationDto) =>
+      ApiClient.post<any>(`/Customer/reservations`, dto),
+
+    update: (reservationId: string, dto: UpdateReservationDto) =>
+      ApiClient.put<any>(`/Customer/reservations/${reservationId}`, dto),
+
+    cancel: (reservationId: string) =>
+      ApiClient.post<{ message: string }>(`/Customer/reservations/${reservationId}/cancel`, {}),
+
+    getUpcoming: () =>
+      ApiClient.get<any[]>(`/Customer/reservations/upcoming`),
+
+    getPast: () =>
+      ApiClient.get<any[]>(`/Customer/reservations/past`),
+
+    getAvailableTables: (restaurantId: string, date: string, partySize: number) =>
+      ApiClient.get<any[]>(`/Customer/restaurants/${restaurantId}/available-tables?date=${date}&partySize=${partySize}`),
+
+    checkTableAvailability: (tableId: string, date: string) =>
+      ApiClient.get<{ isAvailable: boolean }>(`/Customer/tables/${tableId}/availability?date=${date}`),
+  },
+
+  // Review Operations
+  reviews: {
+    getRestaurantReviews: (restaurantId: string, pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<PaginatedResponse<any>>(`/Customer/restaurants/${restaurantId}/reviews?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+
+    getMyReviews: (pageNumber: number = 1, pageSize: number = 10) =>
+      ApiClient.get<PaginatedResponse<any>>(`/Customer/reviews?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+
+    getById: (reviewId: string) =>
+      ApiClient.get<any>(`/Customer/reviews/${reviewId}`),
+
+    create: (dto: CreateReviewDto) =>
+      ApiClient.post<any>(`/Customer/reviews`, dto),
+
+    update: (reviewId: string, dto: UpdateReviewDto) =>
+      ApiClient.put<any>(`/Customer/reviews/${reviewId}`, dto),
+
+    delete: (reviewId: string) =>
+      ApiClient.delete<{ message: string }>(`/Customer/reviews/${reviewId}`),
+
+    canReview: (restaurantId: string) =>
+      ApiClient.get<{ canReview: boolean }>(`/Customer/restaurants/${restaurantId}/can-review`),
+
+    getMyReviewForRestaurant: (restaurantId: string) =>
+      ApiClient.get<any>(`/Customer/restaurants/${restaurantId}/my-review`),
+  },
+
+  // Favorites Operations
   favorites: {
-    getAll: () => 
-      ApiClient.get<any[]>("/Customer/favorites"),
-    
-    add: (restaurantId: string) => 
-      ApiClient.post<any>(`/Customer/favorites/${restaurantId}`, {}),
-    
-    remove: (restaurantId: string) => 
-      ApiClient.delete<any>(`/Customer/favorites/${restaurantId}`),
-    
-    isFavorite: (restaurantId: string) => 
+    getAll: () =>
+      ApiClient.get<any[]>(`/Customer/favorites`),
+
+    add: (restaurantId: string) =>
+      ApiClient.post<{ message: string }>(`/Customer/favorites/${restaurantId}`, {}),
+
+    remove: (restaurantId: string) =>
+      ApiClient.delete<{ message: string }>(`/Customer/favorites/${restaurantId}`),
+
+    check: (restaurantId: string) =>
       ApiClient.get<{ isFavorite: boolean }>(`/Customer/favorites/${restaurantId}/check`),
   },
 
-  // Customer Profile & Stats
-  profile: {
-    getStatistics: () => 
-      ApiClient.get<CustomerStatisticsDto>("/Customer/statistics"),
-    
-    getRecommendedRestaurants: (count: number = 10) => 
-      ApiClient.get<any[]>(`/Customer/recommended-restaurants?count=${count}`),
-    
-    getTotalSpent: () => 
-      ApiClient.get<{ totalSpent: number }>("/Customer/total-spent"),
-    
-    getTotalOrders: () => 
-      ApiClient.get<{ totalOrders: number }>("/Customer/total-orders"),
-    
-    getTotalReservations: () => 
-      ApiClient.get<{ totalReservations: number }>("/Customer/total-reservations"),
+  // Statistics & Recommendations
+  statistics: {
+    get: () =>
+      ApiClient.get<CustomerStatisticsDto>(`/Customer/statistics`),
+
+    getRecommendations: (count: number = 10) =>
+      ApiClient.get<any[]>(`/Customer/recommendations?count=${count}`),
+
+    getTotalSpent: () =>
+      ApiClient.get<{ totalSpent: number }>(`/Customer/total-spent`),
+
+    getTotalOrders: () =>
+      ApiClient.get<{ totalOrders: number }>(`/Customer/total-orders`),
+
+    getTotalReservations: () =>
+      ApiClient.get<{ totalReservations: number }>(`/Customer/total-reservations`),
   },
 
-  // Loyalty & Rewards
+  // Loyalty & Rewards Operations
   loyalty: {
-    getPoints: (restaurantId: string) => 
-      ApiClient.get<{ points: number }>(`/Customer/restaurants/${restaurantId}/loyalty-points`),
-    
-    getAvailableRewards: (restaurantId: string) => 
-      ApiClient.get<RewardDto[]>(`/Customer/restaurants/${restaurantId}/rewards`),
-    
-    redeemReward: (rewardId: string) => 
-      ApiClient.post<any>(`/Customer/rewards/${rewardId}/redeem`, {}),
+    getPoints: (restaurantId: string) =>
+      ApiClient.get<{ points: number }>(`/Customer/loyalty/${restaurantId}/points`),
+
+    getRewards: (restaurantId: string) =>
+      ApiClient.get<RewardDto[]>(`/Customer/loyalty/${restaurantId}/rewards`),
+
+    redeemReward: (rewardId: string) =>
+      ApiClient.post<{ message: string }>(`/Customer/loyalty/rewards/${rewardId}/redeem`, {}),
   },
 }
 
@@ -293,18 +305,6 @@ export class CustomerApi {
 
   static async getMenuItems(menuId: string, pageNumber: number = 1, pageSize: number = 20) {
     return customerApi.menus.getMenuItems(menuId, pageNumber, pageSize)
-  }
-
-  static async getMenuItemById(menuItemId: string) {
-    return customerApi.menus.getMenuItemById(menuItemId)
-  }
-
-  static async getAvailableMenuItems(restaurantId: string) {
-    return customerApi.menus.getAvailableItems(restaurantId)
-  }
-
-  static async searchMenuItems(restaurantId: string, searchTerm: string) {
-    return customerApi.menus.searchMenuItems(restaurantId, searchTerm)
   }
 
   // Orders
@@ -410,10 +410,6 @@ export class CustomerApi {
     return customerApi.reviews.getMyReviewForRestaurant(restaurantId)
   }
 
-  static async getRestaurantAverageRating(restaurantId: string) {
-    return customerApi.reviews.getAverageRating(restaurantId)
-  }
-
   // Favorites
   static async getFavoriteRestaurants() {
     return customerApi.favorites.getAll()
@@ -428,28 +424,28 @@ export class CustomerApi {
   }
 
   static async isFavoriteRestaurant(restaurantId: string) {
-    return customerApi.favorites.isFavorite(restaurantId)
+    return customerApi.favorites.check(restaurantId)
   }
 
-  // Profile & Stats
+  // Statistics & Recommendations
   static async getStatistics() {
-    return customerApi.profile.getStatistics()
+    return customerApi.statistics.get()
   }
 
   static async getRecommendedRestaurants(count: number = 10) {
-    return customerApi.profile.getRecommendedRestaurants(count)
+    return customerApi.statistics.getRecommendations(count)
   }
 
   static async getTotalSpent() {
-    return customerApi.profile.getTotalSpent()
+    return customerApi.statistics.getTotalSpent()
   }
 
   static async getTotalOrders() {
-    return customerApi.profile.getTotalOrders()
+    return customerApi.statistics.getTotalOrders()
   }
 
   static async getTotalReservations() {
-    return customerApi.profile.getTotalReservations()
+    return customerApi.statistics.getTotalReservations()
   }
 
   // Loyalty & Rewards
@@ -458,11 +454,10 @@ export class CustomerApi {
   }
 
   static async getAvailableRewards(restaurantId: string) {
-    return customerApi.loyalty.getAvailableRewards(restaurantId)
+    return customerApi.loyalty.getRewards(restaurantId)
   }
 
   static async redeemReward(rewardId: string) {
     return customerApi.loyalty.redeemReward(rewardId)
   }
 }
-
