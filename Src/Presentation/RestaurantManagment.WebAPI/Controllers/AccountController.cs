@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagment.Application.Common.DTOs.Account;
@@ -21,49 +20,49 @@ namespace RestaurantManagment.WebAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={{0}}&token={{1}}";
+           
+            var result = await accountService.RegisterUserAsync(userRegisterDto, string.Empty);
             
-            var token = await userManager.GenerateEmailConfirmationTokenAsync(
-                await userManager.FindByEmailAsync(userRegisterDto.Email) ?? new AppUser());
-            
-            // Önce kullanıcıyı oluştur, sonra token'ı al
-            var tempResult = await accountService.RegisterUserAsync(userRegisterDto, "temp");
-            
-            if (tempResult.Success && !string.IsNullOrEmpty(tempResult.UserId))
+            if (!result.Success)
             {
-                var user = await userManager.FindByIdAsync(tempResult.UserId);
-                if (user != null)
-                {
-                    var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var actualVerificationLink = string.Format(verificationLink, user.Id, Uri.EscapeDataString(emailToken));
-            
-                }
-            }
-
-            if (!tempResult.Success)
-            {
-                foreach (var error in tempResult.Errors)
+                foreach (var error in result.Errors)
                 {
                     ModelState.AddModelError("", error);
                 }
                 return BadRequest(ModelState);
             }
 
-            if (tempResult.Errors.Any())
+          
+            if (!string.IsNullOrEmpty(result.UserId))
             {
-                return Ok(new
+                var user = await userManager.FindByIdAsync(result.UserId);
+                if (user != null)
                 {
-                    Message = tempResult.Message,
-                    UserId = tempResult.UserId,
-                    EmailSendError = string.Join(", ", tempResult.Errors)
-                });
+                    var emailToken = await userManager.GenerateEmailConfirmationTokenAsync(user);
+                    var verificationLink = $"{Request.Scheme}://{Request.Host}/api/Account/verify-email?userId={user.Id}&token={Uri.EscapeDataString(emailToken)}";
+                    
+                  
+                    var emailResult = await accountService.ResendVerificationEmailAsync(user.Email!, verificationLink);
+                    
+                    if (!emailResult.Success)
+                    {
+                       
+                        return Ok(new
+                        {
+                            Message = result.Message,
+                            UserId = result.UserId,
+                            Email = result.Email,
+                            EmailSendError = emailResult.Message
+                        });
+                    }
+                }
             }
 
             return Ok(new
             {
-                Message = tempResult.Message,
-                UserId = tempResult.UserId,
-                Email = tempResult.Email
+                Message = result.Message,
+                UserId = result.UserId,
+                Email = result.Email
             });
         }
 

@@ -418,7 +418,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         await _context.SaveChangesAsync();
     }
 
-    // Restaurant Category Management
+  
     public async Task UpdateRestaurantCategoryAsync(string restaurantId, int categoryId)
     {
         var restaurant = await _context.Restaurants.IgnoreQueryFilters()
@@ -434,7 +434,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         restaurant.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-    }
+    }   
 
     public async Task<List<string>> GetAllRestaurantCategoriesAsync()
     {
@@ -447,7 +447,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         return await Task.FromResult(categories);
     }
 
-    // Review Management Methods
+  
     public async Task<PaginatedResult<ReviewDto>> GetAllReviewsAsync(int pageNumber = 1, int pageSize = 10)
     {
         var query = _context.Reviews

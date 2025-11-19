@@ -52,7 +52,7 @@ public class EmailService : IEmailService
 
     public async Task SendEmailVerificationAsync(string to, string userName, string verificationLink)
     {
-        var subject = "E-posta Adresinizi Doğrulayın - Restaurant Management";
+        var subject = "🎉 Hoş Geldiniz! E-posta Adresinizi Doğrulayın";
         var body = $@"
 <!DOCTYPE html>
 <html>
@@ -60,140 +60,291 @@ public class EmailService : IEmailService
     <meta charset='utf-8'>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
+            color: #1f2937;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }}
+        .email-wrapper {{
+            max-width: 600px;
+            margin: 0 auto;
         }}
         .container {{
-            max-width: 600px;
-            margin: 40px auto;
             background: #ffffff;
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }}
         .header {{
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 40px 20px;
+            padding: 50px 30px;
             text-align: center;
-            color: white;
+            position: relative;
+        }}
+        .icon {{
+            font-size: 64px;
+            margin-bottom: 15px;
+            display: inline-block;
         }}
         .header h1 {{
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
             margin: 0;
-            font-size: 28px;
-            font-weight: 600;
+            position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }}
         .content {{
-            padding: 40px 30px;
+            padding: 50px 40px;
         }}
-        .welcome-text {{
-            font-size: 18px;
-            color: #333;
+        .welcome-badge {{
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
             margin-bottom: 20px;
         }}
+        .welcome-text {{
+            font-size: 24px;
+            color: #1f2937;
+            margin: 20px 0;
+            font-weight: 600;
+        }}
+        .username {{
+            color: #667eea;
+            font-weight: 700;
+        }}
         .message {{
-            color: #666;
-            font-size: 15px;
-            margin-bottom: 30px;
+            color: #6b7280;
+            font-size: 16px;
+            margin: 15px 0;
             line-height: 1.8;
         }}
         .button-container {{
             text-align: center;
-            margin: 35px 0;
+            margin: 40px 0;
         }}
         .verify-button {{
             display: inline-block;
-            padding: 16px 40px;
+            padding: 18px 50px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white !important;
-            text-decoration: none;
-            border-radius: 8px;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 18px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            border: none;
+            cursor: pointer;
+            mso-hide: all;
+        }}
+        .divider {{
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+            margin: 30px 0;
+        }}
+        .alternative-section {{
+            background: #f9fafb;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+        }}
+        .alternative-section p {{
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #6b7280;
             font-weight: 600;
-            font-size: 16px;
-            transition: transform 0.2s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }}
-        .verify-button:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-        }}
-        .alternative-link {{
-            margin-top: 25px;
-            padding: 20px;
-            background: #f8f9fa;
+        .link-box {{
+            background: white;
+            padding: 15px;
             border-radius: 8px;
-            font-size: 13px;
-            color: #666;
+            border: 2px dashed #e5e7eb;
             word-break: break-all;
+            font-size: 13px;
+            color: #667eea;
+            margin-top: 10px;
         }}
-        .alternative-link p {{
-            margin: 0 0 10px 0;
-            font-weight: 600;
-            color: #333;
-        }}
-        .alternative-link a {{
+        .link-box a {{
             color: #667eea;
             text-decoration: none;
         }}
+        .features {{
+            display: table;
+            width: 100%;
+            margin: 30px 0;
+        }}
+        .feature {{
+            display: table-row;
+        }}
+        .feature-icon {{
+            display: table-cell;
+            padding: 10px 15px 10px 0;
+            font-size: 24px;
+            vertical-align: top;
+        }}
+        .feature-text {{
+            display: table-cell;
+            padding: 10px 0;
+            color: #6b7280;
+            font-size: 15px;
+            vertical-align: top;
+        }}
+        .security-box {{
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+        }}
+        .security-box strong {{
+            color: #92400e;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }}
+        .security-box p {{
+            color: #78350f;
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+        }}
         .footer {{
-            padding: 30px;
+            background: #f9fafb;
+            padding: 40px 30px;
             text-align: center;
-            background: #f8f9fa;
-            color: #999;
-            font-size: 13px;
-            border-top: 1px solid #e9ecef;
+            border-top: 1px solid #e5e7eb;
         }}
-        .security-note {{
-            margin-top: 25px;
-            padding: 15px;
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            border-radius: 4px;
-            font-size: 13px;
-            color: #856404;
-        }}
-        .icon {{
-            font-size: 48px;
+        .footer-logo {{
+            font-size: 24px;
             margin-bottom: 15px;
+        }}
+        .footer p {{
+            color: #9ca3af;
+            font-size: 14px;
+            margin: 8px 0;
+        }}
+        @media only screen and (max-width: 600px) {{
+            .content {{
+                padding: 30px 20px;
+            }}
+            .header {{
+                padding: 40px 20px;
+            }}
+            .header h1 {{
+                font-size: 24px;
+            }}
+            .welcome-text {{
+                font-size: 20px;
+            }}
+            .verify-button {{
+                padding: 16px 40px;
+                font-size: 16px;
+            }}
         }}
     </style>
 </head>
 <body>
-    <div class='container'>
-        <div class='header'>
-            <div class='icon'>✉️</div>
-            <h1>E-posta Doğrulama</h1>
-        </div>
-        <div class='content'>
-            <div class='welcome-text'>
-                Merhaba <strong>{userName}</strong>! 👋
+    <div class='email-wrapper'>
+        <div class='container'>
+            <div class='header'>
+                <div class='icon'>🎉</div>
+                <h1>Hoş Geldiniz!</h1>
             </div>
-            <div class='message'>
-                Restaurant Management sistemine hoş geldiniz! Hesabınızı aktif hale getirmek için e-posta adresinizi doğrulamanız gerekmektedir.
+            <div class='content'>
+                <div class='welcome-badge'>✨ YENİ HESAP</div>
+                <div class='welcome-text'>
+                    Merhaba <span class='username'>{userName}</span>! 👋
+                </div>
+                <div class='message'>
+                    <strong>Restaurant Management</strong> ailesine katıldığınız için çok mutluyuz! 
+                    Hesabınızı aktif hale getirmek ve platformun tüm özelliklerinden yararlanabilmek için 
+                    e-posta adresinizi doğrulamanız gerekmektedir.
+                </div>
+                
+                <div class='features'>
+                    <div class='feature'>
+                        <div class='feature-icon'>🍽️</div>
+                        <div class='feature-text'><strong>Harika restoranları keşfedin</strong> ve favori yemeklerinizi sipariş edin</div>
+                    </div>
+                    <div class='feature'>
+                        <div class='feature-icon'>📅</div>
+                        <div class='feature-text'><strong>Kolay rezervasyon yapın</strong> ve masanızı garantileyin</div>
+                    </div>
+                    <div class='feature'>
+                        <div class='feature-icon'>⭐</div>
+                        <div class='feature-text'><strong>Deneyimlerinizi paylaşın</strong> ve puanlama yapın</div>
+                    </div>
+                </div>
+
+                <div class='divider'></div>
+
+                <div class='message' style='text-align: center; font-size: 18px; color: #1f2937;'>
+                    <strong>Hemen başlamak için e-posta adresinizi doğrulayın:</strong>
+                </div>
+
+                <!-- Button with multiple fallback methods -->
+                <table width='100%' cellpadding='0' cellspacing='0' border='0' style='margin: 40px 0;'>
+                    <tr>
+                        <td align='center'>
+                            <table cellpadding='0' cellspacing='0' border='0'>
+                                <tr>
+                                    <td align='center' style='border-radius: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);'>
+                                        <a href='{verificationLink}' target='_blank' style='display: inline-block; padding: 18px 50px; color: #ffffff; text-decoration: none; font-weight: 700; font-size: 18px; font-family: -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, Roboto, &quot;Helvetica Neue&quot;, Arial, sans-serif;'>
+                                            ✓ E-posta Adresimi Doğrula
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class='alternative-section'>
+                    <p>🔗 Buton çalışmıyorsa</p>
+                    <p style='font-weight: 400; margin-bottom: 8px;'>Aşağıdaki linki tarayıcınıza kopyalayıp yapıştırın:</p>
+                    <div class='link-box'>
+                        <a href='{verificationLink}' target='_blank' style='color: #667eea; text-decoration: none;'>{verificationLink}</a>
+                    </div>
+                </div>
+
+                <div class='security-box'>
+                    <strong>🔒 Güvenlik ve Gizlilik</strong>
+                    <p>
+                        Bu doğrulama linki sadece <strong>bir kez kullanılabilir</strong> ve <strong>24 saat</strong> geçerlidir. 
+                        Bu hesabı siz oluşturmadıysanız, bu e-postayı güvenle görmezden gelebilirsiniz. 
+                        Hesabınız otomatik olarak silinecektir.
+                    </p>
+                </div>
+
+                <div class='divider'></div>
+
+                <div class='message' style='text-align: center; font-size: 14px;'>
+                    Sorularınız mı var? Destek ekibimiz size yardımcı olmak için burada!<br>
+                    📧 <a href='mailto:support@restaurantmanagement.com' style='color: #667eea; text-decoration: none;'>support@restaurantmanagement.com</a>
+                </div>
             </div>
-            <div class='message'>
-                E-posta adresinizi doğrulamak için aşağıdaki butona tıklayın:
+            <div class='footer'>
+                <div class='footer-logo'>🍴</div>
+                <p style='font-weight: 600; color: #6b7280; font-size: 16px;'>Restaurant Management</p>
+                <p>Bu e-posta otomatik olarak gönderilmiştir. Lütfen yanıtlamayın.</p>
+                <div class='divider' style='margin: 20px 0;'></div>
+                <p>© 2025 Restaurant Management. Tüm hakları saklıdır.</p>
+                <p style='font-size: 12px; margin-top: 15px;'>
+                    Bu e-postayı almak istemiyor musunuz? 
+                    <a href='#' style='color: #667eea; text-decoration: none;'>Abonelikten çık</a>
+                </p>
             </div>
-            <div class='button-container'>
-                <a href='{verificationLink}' class='verify-button'>
-                    E-posta Adresimi Doğrula
-                </a>
-            </div>
-            <div class='alternative-link'>
-                <p>Buton çalışmıyorsa, aşağıdaki linki tarayıcınıza kopyalayın:</p>
-                <a href='{verificationLink}'>{verificationLink}</a>
-            </div>
-            <div class='security-note'>
-                🔒 <strong>Güvenlik Notu:</strong> Bu link sadece bir kez kullanılabilir ve 24 saat geçerlidir. Eğer bu hesabı siz oluşturmadıysanız, bu e-postayı görmezden gelebilirsiniz.
-            </div>
-        </div>
-        <div class='footer'>
-            <p>Bu e-posta Restaurant Management sistemi tarafından otomatik olarak gönderilmiştir.</p>
-            <p>© 2025 Restaurant Management. Tüm hakları saklıdır.</p>
         </div>
     </div>
 </body>

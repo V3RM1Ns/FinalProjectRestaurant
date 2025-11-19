@@ -25,7 +25,6 @@ public class AccountService(
     {
         var errors = new List<string>();
 
-        
         var existingUserByUsername = await _userManager.FindByNameAsync(userRegisterDto.Username);
         if (existingUserByUsername != null)
         {
@@ -55,16 +54,8 @@ public class AccountService(
         }
 
         await _userManager.AddToRoleAsync(user, "Customer");
-         
-        try
-        {
-            await _emailService.SendEmailVerificationAsync(user.Email!, user.UserName!, verificationLink);
-            return (true, "Registration successful! Please check your email and verify your account.", user.Id, user.Email, errors);
-        }
-        catch (Exception ex)
-        {
-            return (true, "Registration successful but verification email could not be sent.", user.Id, user.Email, new[] { ex.Message });
-        }
+        
+        return (true, "Registration successful! Please check your email and verify your account.", user.Id, user.Email, errors);
     }
 
     public async Task<(bool Success, string Message)> VerifyEmailAsync(string userId, string token)

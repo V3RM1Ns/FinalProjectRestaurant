@@ -29,11 +29,11 @@ public interface IAdminService
 
     Task ToggleRestaurantActiveStatusAsync(string restaurantId);
     
-    // Restaurant Category Management
+                                        
     Task UpdateRestaurantCategoryAsync(string restaurantId, int categoryId);
     Task<List<string>> GetAllRestaurantCategoriesAsync();
     
-    // Review Management
+  
     Task<PaginatedResult<ReviewDto>> GetAllReviewsAsync(int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(int pageNumber = 1, int pageSize = 10);
     Task<PaginatedResult<ReviewDto>> GetReportedReviewsAsync(int pageNumber = 1, int pageSize = 10);

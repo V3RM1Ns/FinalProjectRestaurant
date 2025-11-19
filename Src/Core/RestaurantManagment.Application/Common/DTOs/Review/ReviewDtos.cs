@@ -1,4 +1,6 @@
-﻿namespace RestaurantManagment.Application.Common.DTOs.Review;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace RestaurantManagment.Application.Common.DTOs.Review;
 
 public class ReviewDto
 {
@@ -41,7 +43,8 @@ public class ReviewResponseDto
 
 public class ReportReviewDto
 {
-    public string Reason { get; set; } = string.Empty;
+    [Required]
+    public string Reason { get; set; }
 }
 
 public class AdminReviewActionDto

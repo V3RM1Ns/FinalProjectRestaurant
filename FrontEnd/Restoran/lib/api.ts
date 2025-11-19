@@ -158,7 +158,7 @@ export const reviewApi = {
       ApiClient.get<any>(`/Admin/reviews/reported?pageNumber=${pageNumber}&pageSize=${pageSize}`),
     getById: (reviewId: string) => ApiClient.get<any>(`/Admin/reviews/${reviewId}`),
     approve: (reviewId: string) => ApiClient.post<any>(`/Admin/reviews/${reviewId}/approve`, {}),
-    reject: (reviewId: string, reason?: string) => ApiClient.post<any>(`/Admin/reviews/${reviewId}/reject`, { reason }),
+    reject: (reviewId: string, reason: string) => ApiClient.post<any>(`/Admin/reviews/${reviewId}/reject`, { reason }),
     delete: (reviewId: string) => ApiClient.delete<any>(`/Admin/reviews/${reviewId}`),
   },
 }

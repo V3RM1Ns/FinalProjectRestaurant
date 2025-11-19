@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagment.Application.Common.Interfaces;
+using System.ComponentModel.DataAnnotations;
 
 namespace RestaurantManagment.WebAPI.Controllers
 {
@@ -262,7 +263,7 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        // Review Management
+
         [HttpGet("reviews")]
         public async Task<IActionResult> GetAllReviews([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
@@ -377,6 +378,8 @@ namespace RestaurantManagment.WebAPI.Controllers
 
     public class RejectReviewRequest
     {
+        [Required(ErrorMessage = "Rejection reason is required.")]
+        [MinLength(10, ErrorMessage = "Rejection reason must be at least 10 characters.")]
         public string Reason { get; set; } = string.Empty;
     }
 

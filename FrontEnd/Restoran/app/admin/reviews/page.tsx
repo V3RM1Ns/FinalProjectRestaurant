@@ -75,6 +75,7 @@ export default function AdminReviewsPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [reviewToDelete, setReviewToDelete] = useState<string | null>(null)
+  const [rejectError, setRejectError] = useState("")
 
   useEffect(() => {
     loadPendingReviews()
@@ -153,14 +154,26 @@ export default function AdminReviewsPage() {
   const handleReject = async () => {
     if (!selectedReview) return
 
+    // Validation - reason is required
+    if (!rejectReason.trim()) {
+      setRejectError("Reddetme nedeni zorunludur")
+      return
+    }
+
+    if (rejectReason.trim().length < 10) {
+      setRejectError("Reddetme nedeni en az 10 karakter olmalıdır")
+      return
+    }
+
     try {
-      await reviewApi.admin.reject(selectedReview.id, rejectReason || undefined)
+      await reviewApi.admin.reject(selectedReview.id, rejectReason)
       toast({
         title: "Başarılı",
         description: "Yorum reddedildi",
       })
       setShowRejectDialog(false)
       setRejectReason("")
+      setRejectError("")
       setSelectedReview(null)
       // Reload all tabs
       loadPendingReviews()
@@ -447,27 +460,53 @@ export default function AdminReviewsPage() {
       </Tabs>
 
       {/* Reject Dialog */}
-      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+      <Dialog open={showRejectDialog} onOpenChange={(open) => {
+        setShowRejectDialog(open)
+        if (!open) {
+          setRejectReason("")
+          setRejectError("")
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Yorumu Reddet</DialogTitle>
             <DialogDescription>
-              Bu yorumu reddetmek istediğinize emin misiniz? İsteğe bağlı olarak bir neden belirtebilirsiniz.
+              Bu yorumu reddetmek için bir neden belirtmelisiniz (minimum 10 karakter).
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <Textarea
-              placeholder="Reddetme nedeni (opsiyonel)"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-              rows={3}
-            />
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Reddetme nedeni (zorunlu, min. 10 karakter) *"
+                value={rejectReason}
+                onChange={(e) => {
+                  setRejectReason(e.target.value)
+                  setRejectError("")
+                }}
+                rows={4}
+                className={rejectError ? "border-destructive" : ""}
+              />
+              {rejectError && (
+                <p className="text-sm text-destructive">{rejectError}</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                {rejectReason.length} / 10 karakter (minimum)
+              </p>
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowRejectDialog(false)
+              setRejectReason("")
+              setRejectError("")
+            }}>
               İptal
             </Button>
-            <Button variant="destructive" onClick={handleReject}>
+            <Button 
+              variant="destructive" 
+              onClick={handleReject}
+              disabled={!rejectReason.trim() || rejectReason.trim().length < 10}
+            >
               Reddet
             </Button>
           </DialogFooter>
