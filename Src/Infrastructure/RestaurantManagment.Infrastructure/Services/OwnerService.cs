@@ -87,6 +87,28 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         return restaurant;
     }
     
+    public async Task<Restaurant> UpdateRestaurantImageAsync(string restaurantId, string imageUrl, string ownerId)
+    {
+        if (string.IsNullOrEmpty(ownerId))
+            throw new ArgumentException("Owner ID cannot be null or empty.", nameof(ownerId));
+
+        if (string.IsNullOrEmpty(imageUrl))
+            throw new ArgumentException("Image URL cannot be null or empty.", nameof(imageUrl));
+
+        var restaurant = await context.Restaurants
+            .FirstOrDefaultAsync(r => r.Id == restaurantId && r.OwnerId == ownerId && !r.IsDeleted);
+
+        if (restaurant == null)
+            throw new Exception("Restaurant not found or you don't have access to this restaurant.");
+
+        restaurant.ImageUrl = imageUrl;
+        restaurant.UpdatedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync();
+
+        return restaurant;
+    }
+    
     public async Task DeleteRestaurantAsync(string restaurantId, string ownerId)
     {
         if (string.IsNullOrEmpty(ownerId))

@@ -95,6 +95,19 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ClockSkew = TimeSpan.Zero
     };
+    
+    // 401 hatası için JSON response döndür
+    options.Events = new JwtBearerEvents
+    {
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+            var result = System.Text.Json.JsonSerializer.Serialize(new { message = "Unauthorized. Please login again." });
+            return context.Response.WriteAsync(result);
+        }
+    };
 });
 
 builder.Services.AddAuthorization();

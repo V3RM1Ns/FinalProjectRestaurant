@@ -306,20 +306,52 @@ namespace RestaurantManagment.WebAPI.Controllers
 
         [HttpPost("restaurant-ownership-application")]
         [Authorize]
-        public async Task<IActionResult> ApplyForRestaurantOwnership([FromBody] OwnershipApplicationDto applicationDto)
+        public async Task<IActionResult> ApplyForRestaurantOwnership([FromForm] OwnershipApplicationDto applicationDto, [FromForm] IFormFile? restaurantImage)
         {
-            var currentUser = await userManager.GetUserAsync(User);
-            if (currentUser == null)
+            try
             {
-                return Unauthorized(new { Message = "User not found" });
+                var currentUser = await userManager.GetUserAsync(User);
+                if (currentUser == null)
+                {
+                    return Unauthorized(new { Message = "User not found. Please login again." });
+                }
+
+                if (restaurantImage == null || restaurantImage.Length == 0)
+                {
+                    return BadRequest(new { Message = "Restaurant image is required." });
+                }
+
+                // Dosyayı yükle ve URL'sini al
+                var imageUrl = await fileService.UploadRestaurantImageAsync(restaurantImage, currentUser.Id);
+                
+                // URL'yi DTO'ya ata
+                applicationDto.ImageUrl = imageUrl;
+
+                var result = await accountService.ApplyForRestaurantOwnershipAsync(currentUser.Id, applicationDto);
+
+                if (!result.Success)
+                {
+                    // Hata mesajını logla
+                    Console.WriteLine($"Application failed: {result.Message}");
+                    return BadRequest(new { Message = result.Message ?? "Application submission failed" });
+                }
+
+                return Ok(new { Message = result.Message, ImageUrl = imageUrl });
             }
-
-            var result = await accountService.ApplyForRestaurantOwnershipAsync(currentUser.Id, applicationDto);
-
-            if (!result.Success)
-                return BadRequest(new { Message = result.Message });
-
-            return Ok(new { Message = result.Message });
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"ArgumentException: {ex.Message}");
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception: {ex.Message} | Inner: {ex.InnerException?.Message}");
+                return StatusCode(500, new { 
+                    Message = "An error occurred while processing your application.", 
+                    Error = ex.Message,
+                    InnerError = ex.InnerException?.Message
+                });
+            }
         }
 
         /// <summary>

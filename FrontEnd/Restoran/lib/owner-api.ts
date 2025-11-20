@@ -186,6 +186,27 @@ export const ownerApi = {
     
     delete: (restaurantId: string) => 
       ApiClient.delete<any>(`/Owner/restaurants/${restaurantId}`),
+    
+    uploadImage: async (restaurantId: string, imageFile: File) => {
+      const formData = new FormData()
+      formData.append('image', imageFile)
+      
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/Owner/restaurants/${restaurantId}/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }))
+        throw new Error(errorData.message || errorData.Message || 'Fotoğraf yüklenemedi')
+      }
+      
+      return response.json()
+    },
   },
 
   // Dashboard & Statistics

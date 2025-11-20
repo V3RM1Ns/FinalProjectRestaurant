@@ -10,4 +10,5 @@ public class OwnershipApplicationDto
     public string? BusinessEmail { get; set; }
     public string Category { get; set; } = string.Empty;
     public string? AdditionalNotes { get; set; }
+    public string? ImageUrl { get; set; }
 }

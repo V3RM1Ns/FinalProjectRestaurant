@@ -201,7 +201,7 @@ export class AuthService {
         return "/delivery/orders"
       case UserRole.Customer:
       default:
-        return "/customer"
+        return "/customer/dashboard"
     }
   }
 }

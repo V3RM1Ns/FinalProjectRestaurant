@@ -24,6 +24,7 @@ public interface IOwnerService
     Task<Restaurant?> GetRestaurantByIdAsync(string restaurantId, string ownerId);
     Task<Restaurant> CreateRestaurantAsync(CreateRestaurantDto dto, string ownerId);
     Task<Restaurant> UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto, string ownerId);
+    Task<Restaurant> UpdateRestaurantImageAsync(string restaurantId, string imageUrl, string ownerId);
     Task DeleteRestaurantAsync(string restaurantId, string ownerId);
     Task<bool> IsRestaurantOwnerAsync(string restaurantId, string ownerId);
     

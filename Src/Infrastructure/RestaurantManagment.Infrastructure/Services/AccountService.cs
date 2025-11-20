@@ -16,8 +16,21 @@ public class AccountService(
 {
     public async Task CreateApplicationAsync(OwnershipApplication application)
     {
-        _context.OwnershipApplications.Add(application);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.OwnershipApplications.Add(application);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            // Hata mesajını logla
+            var detailedError = $"CreateApplicationAsync Error: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                detailedError += $" | Inner: {ex.InnerException.Message}";
+            }
+            throw new Exception(detailedError, ex);
+        }
     }
 
     public async Task<(bool Success, string Message, string? UserId, string? Email, IEnumerable<string> Errors)> RegisterUserAsync(
@@ -396,36 +409,50 @@ public class AccountService(
     public async Task<(bool Success, string Message)> ApplyForRestaurantOwnershipAsync(
         string userId, OwnershipApplicationDto applicationDto)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
+        try
         {
-            return (false, "User not found");
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return (false, "User not found");
+            }
+
+            var hasPendingApplication = await _context.OwnershipApplications
+                .AnyAsync(a => a.UserId == userId && a.Status == ApplicationStatus.Pending);
+
+            if (hasPendingApplication)
+            {
+                return (false, "You already have a pending application.");
+            }
+
+            if (string.IsNullOrEmpty(applicationDto.ImageUrl))
+            {
+                return (false, "Restaurant image is required.");
+            }
+
+            var application = new OwnershipApplication
+            {
+                UserId = userId,
+                BusinessName = applicationDto.BusinessName,
+                BusinessDescription = applicationDto.BusinessDescription,
+                BusinessAddress = applicationDto.BusinessAddress,
+                BusinessPhone = applicationDto.BusinessPhone,
+                BusinessEmail = applicationDto.BusinessEmail,
+                Category = applicationDto.Category,
+                AdditionalNotes = applicationDto.AdditionalNotes,
+                ImageUrl = applicationDto.ImageUrl,
+                ApplicationDate = DateTime.UtcNow,
+                Status = ApplicationStatus.Pending
+            };
+
+            await CreateApplicationAsync(application);
+
+            return (true, "Your restaurant ownership application has been received and will be reviewed.");
         }
-
-        var hasPendingApplication = await _context.OwnershipApplications
-            .AnyAsync(a => a.UserId == userId && a.Status == ApplicationStatus.Pending);
-
-        if (hasPendingApplication)
+        catch (Exception ex)
         {
-            return (false, "You already have a pending application.");
+            // Detaylı hata mesajı döndür
+            return (false, $"Error: {ex.Message} - Inner: {ex.InnerException?.Message}");
         }
-
-        var application = new OwnershipApplication
-        {
-            UserId = userId,
-            BusinessName = applicationDto.BusinessName,
-            BusinessDescription = applicationDto.BusinessDescription,
-            BusinessAddress = applicationDto.BusinessAddress,
-            BusinessPhone = applicationDto.BusinessPhone,
-            BusinessEmail = applicationDto.BusinessEmail,
-            Category = applicationDto.Category,
-            AdditionalNotes = applicationDto.AdditionalNotes,
-            ApplicationDate = DateTime.UtcNow,
-            Status = ApplicationStatus.Pending
-        };
-
-        await CreateApplicationAsync(application);
-
-        return (true, "Your restaurant ownership application has been received and will be reviewed.");
     }
 }

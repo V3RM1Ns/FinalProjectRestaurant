@@ -65,19 +65,18 @@ public static class DbInitializer
         string fullName,
         string role)
     {
-       
+
         var existingUser = userManager.Users.FirstOrDefault(u => u.Email == email);
 
         if (existingUser != null)
         {
-      
+
             if (existingUser.IsDeleted)
             {
                 existingUser.IsDeleted = false;
                 existingUser.EmailConfirmed = true;
                 await userManager.UpdateAsync(existingUser);
-
-                // Role kontrolü
+                
                 var roles = await userManager.GetRolesAsync(existingUser);
                 if (!roles.Contains(role))
                 {
@@ -87,7 +86,7 @@ public static class DbInitializer
             return existingUser;
         }
 
-        // Kullanıcı yoksa yeni oluştur
+
         var user = new AppUser
         {
             UserName = email,

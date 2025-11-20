@@ -37,7 +37,9 @@ public class OwnershipApplication : BaseEntity
     [MaxLength(2000)]
     public string? AdditionalNotes { get; set; }
 
-  
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
+
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Pending;
 
     public DateTime ApplicationDate { get; set; } = DateTime.UtcNow;
@@ -60,4 +62,3 @@ public enum ApplicationStatus
     Approved = 1,
     Rejected = 2
 }
-

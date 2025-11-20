@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RestaurantManagment.Domain.Enums;
 using RestaurantManagment.Domain.Models;
 using RestaurantManagment.Persistance.Data;
 
@@ -190,7 +191,11 @@ public static class DbSeeder
                 Email = "info@lezzetduragi.com",
                 Website = "www.lezzetduragi.com",
                 OwnerId = ownerId,
-                Rate = 4.5m
+                Rate = 4.5m,
+                ImageUrl = "/adana-kebab.jpg",
+                Category = RestaurantCategory.Turkish,
+                Latitude = 39.9208,
+                Longitude = 32.8541
             };
 
             var restaurant2 = new Restaurant
@@ -203,7 +208,11 @@ public static class DbSeeder
                 Email = "info@pizzapalace.com",
                 Website = "www.pizzapalace.com",
                 OwnerId = ownerId,
-                Rate = 4.3m
+                Rate = 4.3m,
+                ImageUrl = "/italian-pizza-restaurant.jpg",
+                Category = RestaurantCategory.Italian,
+                Latitude = 39.9109,
+                Longitude = 32.8597
             };
 
             var restaurant3 = new Restaurant
@@ -216,7 +225,11 @@ public static class DbSeeder
                 Email = "info@sushitokyo.com",
                 Website = "www.sushitokyo.com",
                 OwnerId = ownerId,
-                Rate = 4.7m
+                Rate = 4.7m,
+                ImageUrl = "/japanese-sushi-restaurant.png",
+                Category = RestaurantCategory.Japanese,
+                Latitude = 39.9189,
+                Longitude = 32.8536
             };
 
             var restaurant4 = new Restaurant
@@ -229,7 +242,11 @@ public static class DbSeeder
                 Email = "info@burgerhouse.com",
                 Website = "www.burgerhouse.com",
                 OwnerId = ownerId,
-                Rate = 4.2m
+                Rate = 4.2m,
+                ImageUrl = "/burger-meal.jpg",
+                Category = RestaurantCategory.FastFood,
+                Latitude = 39.9334,
+                Longitude = 32.7569
             };
 
             var restaurant5 = new Restaurant
@@ -242,7 +259,11 @@ public static class DbSeeder
                 Email = "info@vejetaryenkose.com",
                 Website = "www.vejetaryenkose.com",
                 OwnerId = ownerId,
-                Rate = 4.6m
+                Rate = 4.6m,
+                ImageUrl = "/pasta-dish.jpg",
+                Category = RestaurantCategory.Vegetarian,
+                Latitude = 39.9456,
+                Longitude = 32.7891
             };
 
             restaurants.Add(restaurant1);

@@ -72,6 +72,13 @@ public class FileService : IFileService
 
         var fileName = $"{entityId}_{Guid.NewGuid()}{extension}";
         var categoryFolder = Path.Combine(_uploadsFolder, category);
+        
+        // Klasör yoksa oluştur
+        if (!Directory.Exists(categoryFolder))
+        {
+            Directory.CreateDirectory(categoryFolder);
+        }
+        
         var filePath = Path.Combine(categoryFolder, fileName);
 
         using (var stream = new FileStream(filePath, FileMode.Create))

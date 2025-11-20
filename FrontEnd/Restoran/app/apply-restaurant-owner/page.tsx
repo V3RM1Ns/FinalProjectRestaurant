@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Loader2 } from "lucide-react";
+import { Building2, Loader2, Upload, X, Image as ImageIcon } from "lucide-react";
 
 export default function ApplyRestaurantOwnerPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     businessName: "",
     businessDescription: "",
@@ -24,8 +26,57 @@ export default function ApplyRestaurantOwnerPage() {
     additionalNotes: "",
   });
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Hata",
+          description: "Lütfen sadece resim dosyası seçin",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Hata",
+          description: "Resim boyutu en fazla 5MB olmalıdır",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!imageFile) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen restoran fotoğrafı yükleyin",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -40,13 +91,23 @@ export default function ApplyRestaurantOwnerPage() {
         return;
       }
 
+      // Create FormData for multipart/form-data
+      const submitData = new FormData();
+      submitData.append("businessName", formData.businessName);
+      submitData.append("businessDescription", formData.businessDescription);
+      submitData.append("businessAddress", formData.businessAddress);
+      submitData.append("businessPhone", formData.businessPhone);
+      submitData.append("businessEmail", formData.businessEmail);
+      submitData.append("category", formData.category);
+      submitData.append("additionalNotes", formData.additionalNotes);
+      submitData.append("image", imageFile);
+
       const response = await fetch("http://localhost:5272/api/Account/restaurant-ownership-application", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: submitData,
       });
 
       const data = await response.json();
@@ -201,6 +262,58 @@ export default function ApplyRestaurantOwnerPage() {
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="image">Restoran Fotoğrafı *</Label>
+              <div className="flex flex-col gap-2">
+                <input
+                  id="image"
+                  name="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  onClick={() => document.getElementById('image')?.click()}
+                  variant={imageFile ? "default" : "outline"}
+                  className="w-full justify-center"
+                >
+                  {imageFile ? (
+                    <div className="flex items-center gap-2">
+                      <ImageIcon className="h-5 w-5" />
+                      {imageFile.name}
+                      <Button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        variant="destructive"
+                        size="icon"
+                        className="p-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Upload className="h-5 w-5" />
+                      Fotoğraf Yükle
+                    </div>
+                  )}
+                </Button>
+                {imagePreview && (
+                  <div className="relative w-full h-48 rounded-lg overflow-hidden">
+                    <Image
+                      src={imagePreview}
+                      alt="Restoran Fotoğrafı"
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-lg"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="bg-muted p-4 rounded-lg">
               <p className="text-sm text-muted-foreground">
                 * işaretli alanlar zorunludur. Başvurunuz incelendikten sonra size geri dönüş yapılacaktır.
@@ -237,4 +350,3 @@ export default function ApplyRestaurantOwnerPage() {
     </div>
   );
 }
-

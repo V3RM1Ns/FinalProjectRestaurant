@@ -7,11 +7,43 @@ import { Button } from '@/components/ui/button'
 import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award } from 'lucide-react'
 import Link from 'next/link'
 
+interface Statistics {
+  totalOrders: number
+  totalReservations: number
+  totalSpent: number
+  favoriteRestaurantsCount: number
+}
+
+interface Restaurant {
+  id: string
+  name: string
+  cuisine: string
+  location: string
+  averageRating: number
+}
+
+interface Order {
+  id: string
+  restaurantName: string
+  orderNumber: string
+  status: string
+  totalAmount: number
+  createdAt: string
+}
+
+interface Reservation {
+  id: string
+  restaurantName: string
+  reservationDate: string
+  partySize: number
+  status: string
+}
+
 export default function CustomerDashboard() {
-  const [stats, setStats] = useState<any>(null)
-  const [recommendations, setRecommendations] = useState<any[]>([])
-  const [activeOrders, setActiveOrders] = useState<any[]>([])
-  const [upcomingReservations, setUpcomingReservations] = useState<any[]>([])
+  const [stats, setStats] = useState<Statistics | null>(null)
+  const [recommendations, setRecommendations] = useState<Restaurant[]>([])
+  const [activeOrders, setActiveOrders] = useState<Order[]>([])
+  const [upcomingReservations, setUpcomingReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -21,16 +53,27 @@ export default function CustomerDashboard() {
   const loadDashboardData = async () => {
     try {
       const [statsData, recsData, ordersData, reservationsData] = await Promise.all([
-        customerApi.statistics.get(),
+        customerApi.statistics.getCustomerStatistics(),
         customerApi.statistics.getRecommendations(6),
-        customerApi.orders.getActive(),
-        customerApi.reservations.getUpcoming(),
+        customerApi.orders.getActive(1, 5), // İlk sayfa, 5 öğe
+        customerApi.reservations.getUpcoming(1, 5), // İlk sayfa, 5 öğe
       ])
 
       setStats(statsData)
       setRecommendations(recsData)
-      setActiveOrders(ordersData)
-      setUpcomingReservations(reservationsData)
+      
+      // Backend pagination response'unu parse et
+      if (ordersData && ordersData.items) {
+        setActiveOrders(ordersData.items)
+      } else if (Array.isArray(ordersData)) {
+        setActiveOrders(ordersData.slice(0, 5))
+      }
+
+      if (reservationsData && reservationsData.items) {
+        setUpcomingReservations(reservationsData.items)
+      } else if (Array.isArray(reservationsData)) {
+        setUpcomingReservations(reservationsData.slice(0, 5))
+      }
     } catch (error) {
       console.error('Error loading dashboard:', error)
     } finally {
@@ -107,23 +150,38 @@ export default function CustomerDashboard() {
       {activeOrders && activeOrders.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Aktif Siparişler</CardTitle>
-            <CardDescription>Devam eden siparişleriniz</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Aktif Siparişler</CardTitle>
+                <CardDescription>Devam eden siparişleriniz (Son 5)</CardDescription>
+              </div>
+              <Link href="/customer/orders">
+                <Button variant="outline" size="sm">Tümünü Gör</Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activeOrders.map((order: any) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
+              {activeOrders.map((order) => (
+                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                  <div className="flex-1">
                     <p className="font-medium">{order.restaurantName}</p>
                     <p className="text-sm text-muted-foreground">
-                      Sipariş #{order.orderNumber} - {order.status}
+                      Sipariş #{order.orderNumber} - <span className="font-medium">{order.status}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {new Date(order.createdAt).toLocaleDateString('tr-TR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">₺{order.totalAmount?.toFixed(2)}</p>
+                    <p className="font-bold text-lg">₺{order.totalAmount?.toFixed(2)}</p>
                     <Link href={`/customer/orders/${order.id}`}>
-                      <Button variant="link" size="sm">Detaylar</Button>
+                      <Button variant="link" size="sm" className="h-auto p-0">Detaylar →</Button>
                     </Link>
                   </div>
                 </div>
@@ -137,14 +195,21 @@ export default function CustomerDashboard() {
       {upcomingReservations && upcomingReservations.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Yaklaşan Rezervasyonlar</CardTitle>
-            <CardDescription>Önümüzdeki rezervasyonlarınız</CardDescription>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle>Yaklaşan Rezervasyonlar</CardTitle>
+                <CardDescription>Önümüzdeki rezervasyonlarınız (Son 5)</CardDescription>
+              </div>
+              <Link href="/customer/reservations">
+                <Button variant="outline" size="sm">Tümünü Gör</Button>
+              </Link>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingReservations.map((reservation: any) => (
-                <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
+              {upcomingReservations.map((reservation) => (
+                <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+                  <div className="flex-1">
                     <p className="font-medium">{reservation.restaurantName}</p>
                     <p className="text-sm text-muted-foreground">
                       {new Date(reservation.reservationDate).toLocaleDateString('tr-TR', {
@@ -155,11 +220,13 @@ export default function CustomerDashboard() {
                         minute: '2-digit',
                       })}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      <span className="font-medium">{reservation.partySize} Kişi</span> • {reservation.status}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm">{reservation.partySize} Kişi</p>
                     <Link href={`/customer/reservations/${reservation.id}`}>
-                      <Button variant="link" size="sm">Detaylar</Button>
+                      <Button variant="link" size="sm" className="h-auto p-0">Detaylar →</Button>
                     </Link>
                   </div>
                 </div>
@@ -179,27 +246,31 @@ export default function CustomerDashboard() {
           <CardDescription>Tercihlerinize göre seçilmiş restoranlar</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {recommendations.map((restaurant: any) => (
-              <Link key={restaurant.id} href={`/restaurants/${restaurant.id}`}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{restaurant.name}</CardTitle>
-                    <CardDescription>{restaurant.cuisine}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{restaurant.averageRating?.toFixed(1)}</span>
+          {recommendations && recommendations.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {recommendations.map((restaurant) => (
+                <Link key={restaurant.id} href={`/restaurants/${restaurant.id}`}>
+                  <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{restaurant.name}</CardTitle>
+                      <CardDescription>{restaurant.cuisine}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span className="font-medium">{restaurant.averageRating?.toFixed(1)}</span>
+                        </div>
+                        <span className="text-sm text-muted-foreground">{restaurant.location}</span>
                       </div>
-                      <span className="text-sm text-muted-foreground">{restaurant.location}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-muted-foreground py-4">Henüz öneri bulunmuyor</p>
+          )}
         </CardContent>
       </Card>
 
@@ -217,7 +288,7 @@ export default function CustomerDashboard() {
           </Card>
         </Link>
 
-        <Link href="/customer/reservations/new">
+        <Link href="/customer/reservations">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

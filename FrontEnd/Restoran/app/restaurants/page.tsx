@@ -146,30 +146,62 @@ export default function RestaurantsPage() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredRestaurants.map((restaurant) => (
                 <Link key={restaurant.id} href={`/restaurants/${restaurant.id}`}>
-                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+ i                   <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
+                    {/* Restaurant Image */}
+                    {restaurant.imageUrl ? (
+                      <div className="relative w-full h-48 bg-muted">
+                        <img
+                          src={restaurant.imageUrl}
+                          alt={restaurant.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = '/placeholder.jpg';
+                          }}
+                        />
+                        {restaurant.rating && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="secondary" className="flex items-center gap-1 bg-white/90 backdrop-blur">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              {restaurant.rating.toFixed(1)}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="relative w-full h-48 bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                        <div className="text-center">
+                          <MapPin className="h-12 w-12 mx-auto text-orange-400 mb-2" />
+                          <p className="text-sm text-orange-600">Fotoğraf yok</p>
+                        </div>
+                        {restaurant.rating && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                              {restaurant.rating.toFixed(1)}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
                     <CardHeader>
                       <div className="flex justify-between items-start mb-2">
                         <CardTitle className="text-xl">{restaurant.name}</CardTitle>
-                        {restaurant.rating && (
-                          <Badge variant="secondary" className="flex items-center gap-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            {restaurant.rating.toFixed(1)}
-                          </Badge>
-                        )}
                       </div>
                       {restaurant.category && (
                         <Badge variant="outline">{restaurant.category}</Badge>
                       )}
                     </CardHeader>
                     <CardContent>
-                      <CardDescription className="mb-4">{restaurant.description}</CardDescription>
+                      <CardDescription className="mb-4 line-clamp-2">{restaurant.description}</CardDescription>
                       <div className="space-y-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{restaurant.address}</span>
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className="line-clamp-1">{restaurant.address}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
+                          <Clock className="h-4 w-4 flex-shrink-0" />
                           <span>{restaurant.isActive ? 'Açık' : 'Kapalı'}</span>
                         </div>
                       </div>

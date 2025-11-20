@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { User, Mail, Phone, MapPin, Lock, Store, FileText, Trash2 } from "lucide-react"
+import { User, Mail, Phone, MapPin, Lock, Store, FileText, Trash2, Upload, Image as ImageIcon } from "lucide-react"
 import { ApiClient } from "@/lib/api"
 import {
     AlertDialog,
@@ -23,7 +23,6 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export default function ProfilePage() {
     const { user } = useAuth()
@@ -49,9 +48,13 @@ export default function ProfilePage() {
         businessAddress: "",
         businessPhone: "",
         businessEmail: "",
-        category: "Türk Mutfağı",
+        category: "",
         additionalNotes: "",
     })
+    const [profileImage, setProfileImage] = useState<File | null>(null)
+    const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+    const [restaurantImage, setRestaurantImage] = useState<File | null>(null)
+    const [restaurantImagePreview, setRestaurantImagePreview] = useState<string | null>(null)
 
     // Profil bilgilerini API'den çek
     useEffect(() => {
@@ -142,24 +145,180 @@ export default function ProfilePage() {
         }
     }
 
-    const handleOwnershipApplication = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
+    const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setProfileImage(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                setProfileImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        }
+    }
 
-        try {
-            const data = await ApiClient.post<any>("/Account/restaurant-ownership-application", {
-                businessName: ownershipApplication.businessName,
-                businessDescription: ownershipApplication.businessDescription,
-                businessAddress: ownershipApplication.businessAddress,
-                businessPhone: ownershipApplication.businessPhone,
-                businessEmail: ownershipApplication.businessEmail,
-                category: ownershipApplication.category,
-                additionalNotes: ownershipApplication.additionalNotes,
+    const handleUploadProfileImage = async () => {
+        if (!profileImage) {
+            toast({
+                title: "Hata",
+                description: "Lütfen bir resim seçin.",
+                variant: "destructive",
             })
+            return
+        }
+
+        setLoading(true)
+        try {
+            const formData = new FormData()
+            formData.append("file", profileImage)
+
+            const token = localStorage.getItem("auth_token")
+            if (!token) {
+                throw new Error("Oturum açmanız gerekiyor. Lütfen tekrar giriş yapın.")
+            }
+
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL 
+                ? `${process.env.NEXT_PUBLIC_API_URL}/Account/profile/upload-image`
+                : "http://localhost:5000/api/Account/profile/upload-image"
+
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            })
+
+            if (response.status === 401) {
+                throw new Error("Yetkilendirme hatası. Lütfen tekrar giriş yapın.")
+            }
+
+            const contentType = response.headers.get("content-type")
+            let data
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json()
+            } else {
+                const text = await response.text()
+                data = { message: text }
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || data.Message || "Resim yüklenemedi")
+            }
 
             toast({
                 title: "Başarılı",
-                description: data.message || "Restoran sahipliği başvurunuz alındı ve incelenecektir.",
+                description: data.message || "Profil resmi başarıyla yüklendi.",
+            })
+
+            setProfileImage(null)
+            setProfileImagePreview(null)
+        } catch (error: any) {
+            toast({
+                title: "Hata",
+                description: error.message || "Resim yüklenemedi.",
+                variant: "destructive",
+            })
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleRestaurantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("🖼️ Restoran resmi seçildi")
+        const file = e.target.files?.[0]
+        console.log("📁 Seçilen dosya:", file ? file.name : "YOK")
+        
+        if (file) {
+            console.log("📁 Dosya detayları:", {
+                name: file.name,
+                size: file.size,
+                type: file.type
+            })
+            
+            setRestaurantImage(file)
+            const reader = new FileReader()
+            reader.onloadend = () => {
+                console.log("✅ Resim önizleme hazır")
+                setRestaurantImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+        } else {
+            console.log("❌ Dosya seçilmedi")
+        }
+    }
+
+    const handleOwnershipApplication = async (e: React.FormEvent) => {
+        e.preventDefault()
+        
+        if (!restaurantImage) {
+            toast({
+                title: "Hata",
+                description: "Lütfen restoran resmi yükleyin.",
+                variant: "destructive",
+            })
+            return
+        }
+
+        setLoading(true)
+
+        try {
+            const formData = new FormData()
+            formData.append("restaurantImage", restaurantImage)
+            formData.append("BusinessName", ownershipApplication.businessName)
+            formData.append("BusinessDescription", ownershipApplication.businessDescription)
+            formData.append("BusinessAddress", ownershipApplication.businessAddress)
+            formData.append("BusinessPhone", ownershipApplication.businessPhone)
+            formData.append("BusinessEmail", ownershipApplication.businessEmail)
+            formData.append("Category", ownershipApplication.category)
+            formData.append("AdditionalNotes", ownershipApplication.additionalNotes)
+
+            // Token'ı doğru key ile al
+            const token = localStorage.getItem("auth_token")
+            if (!token) {
+                throw new Error("Oturum açmanız gerekiyor. Lütfen tekrar giriş yapın.")
+            }
+
+            // API URL'sini direkt belirt - env hatası için geçici çözüm
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL 
+                ? `${process.env.NEXT_PUBLIC_API_URL}/Account/restaurant-ownership-application`
+                : "http://localhost:5000/api/Account/restaurant-ownership-application"
+            
+            console.log("🌐 API URL:", apiUrl)
+            console.log("🔑 Token var mı:", !!token)
+
+            const response = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            })
+
+            console.log("📡 Response status:", response.status)
+            
+            // 401 hatası için özel kontrol
+            if (response.status === 401) {
+                throw new Error("Yetkilendirme hatası. Lütfen tekrar giriş yapın.")
+            }
+
+            // Response'un JSON olup olmadığını kontrol et
+            const contentType = response.headers.get("content-type")
+            let data
+            if (contentType && contentType.includes("application/json")) {
+                data = await response.json()
+            } else {
+                const text = await response.text()
+                data = { message: text }
+            }
+
+            if (!response.ok) {
+                throw new Error(data.message || data.Message || "Başvuru gönderilemedi")
+            }
+
+            toast({
+                title: "Başarılı",
+                description: data.message || data.Message || "Restoran sahipliği başvurunuz alındı ve incelenecektir.",
             })
 
             setOwnershipApplication({
@@ -168,10 +327,13 @@ export default function ProfilePage() {
                 businessAddress: "",
                 businessPhone: "",
                 businessEmail: "",
-                category: "Türk Mutfağı",
+                category: "",
                 additionalNotes: "",
             })
+            setRestaurantImage(null)
+            setRestaurantImagePreview(null)
         } catch (error: any) {
+            console.log("💥 Hata:", error.message)
             toast({
                 title: "Hata",
                 description: error.message || "Başvuru gönderilemedi.",
@@ -316,6 +478,40 @@ export default function ProfilePage() {
                                             className="pl-10"
                                             placeholder="Ev veya iş adresiniz"
                                         />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>Profil Resmi</Label>
+                                    <div className="flex items-center gap-4">
+                                        {profileImagePreview ? (
+                                            <div className="relative w-24 h-24 rounded-full overflow-hidden">
+                                                <img src={profileImagePreview} alt="Profil Resmi" className="w-full h-full object-cover rounded-full" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+                                                <User className="h-12 w-12 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                        <label className="flex-1 cursor-pointer">
+                                            <div className="flex items-center justify-center gap-2 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md">
+                                                <Upload className="h-4 w-4" />
+                                                Resim Seç
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleProfileImageChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+                                        <Button
+                                            type="button"
+                                            onClick={handleUploadProfileImage}
+                                            disabled={loading || !profileImage}
+                                        >
+                                            {loading ? "Yükleniyor..." : "Yükle"}
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -476,16 +672,27 @@ export default function ProfilePage() {
                                         id="category"
                                         value={ownershipApplication.category}
                                         onChange={(e) => setOwnershipApplication({ ...ownershipApplication, category: e.target.value })}
-                                        className="w-full p-2 border rounded"
+                                        className="w-full p-2 border rounded-md"
                                         required
                                     >
-                                        <option value="Türk Mutfağı">Türk Mutfağı</option>
-                                        <option value="İtalyan Mutfağı">İtalyan Mutfağı</option>
-                                        <option value="Japon Mutfağı">Japon Mutfağı</option>
-                                        <option value="Çin Mutfağı">Çin Mutfağı</option>
-                                        <option value="Hint Mutfağı">Hint Mutfağı</option>
-                                        <option value="Meksika Mutfağı">Meksika Mutfağı</option>
-                                        <option value="Diğer">Diğer</option>
+                                        <option value="">Kategori Seçiniz</option>
+                                        <option value="Turkish">Türk Mutfağı</option>
+                                        <option value="Italian">İtalyan Mutfağı</option>
+                                        <option value="Japanese">Japon Mutfağı</option>
+                                        <option value="Chinese">Çin Mutfağı</option>
+                                        <option value="Mexican">Meksika Mutfağı</option>
+                                        <option value="Indian">Hint Mutfağı</option>
+                                        <option value="American">Amerikan Mutfağı</option>
+                                        <option value="French">Fransız Mutfağı</option>
+                                        <option value="Mediterranean">Akdeniz Mutfağı</option>
+                                        <option value="FastFood">Fast Food</option>
+                                        <option value="Seafood">Deniz Ürünleri</option>
+                                        <option value="Steakhouse">Steakhouse</option>
+                                        <option value="Vegetarian">Vejetaryen</option>
+                                        <option value="Vegan">Vegan</option>
+                                        <option value="Cafe">Kafe</option>
+                                        <option value="Dessert">Tatlı & Pasta</option>
+                                        <option value="Other">Diğer</option>
                                     </select>
                                 </div>
 
@@ -500,6 +707,33 @@ export default function ProfilePage() {
                                             className="pl-10"
                                             placeholder="Opsiyonel, eklemek istediğiniz notlar"
                                         />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label>Restoran Resmi</Label>
+                                    <div className="flex items-center gap-4">
+                                        {restaurantImagePreview ? (
+                                            <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                                                <img src={restaurantImagePreview} alt="Restoran Resmi" className="w-full h-full object-cover rounded-lg" />
+                                            </div>
+                                        ) : (
+                                            <div className="w-24 h-24 rounded-lg bg-muted flex items-center justify-center">
+                                                <ImageIcon className="h-12 w-12 text-muted-foreground" />
+                                            </div>
+                                        )}
+                                        <label className="flex-1 cursor-pointer">
+                                            <div className="flex items-center justify-center gap-2 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-md">
+                                                <Upload className="h-4 w-4" />
+                                                Restoran Resmi Seç
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleRestaurantImageChange}
+                                                className="hidden"
+                                            />
+                                        </label>
                                     </div>
                                 </div>
 
