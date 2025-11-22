@@ -33,7 +33,8 @@ public class MappingProfile : Profile
         CreateMap<Restaurant, RestaurantDto>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
-            .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => (double?)src.Rate));
+           .ForMember(dest => dest.Rating, opt => opt.MapFrom(src => (double?)src.Rate))
+            .ForMember(dest => dest.ImageUrl, opt => opt.MapFrom(src => src.ImageUrl));
       
         CreateMap<Restaurant, RestaurantResponseDto>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName));

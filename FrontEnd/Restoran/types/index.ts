@@ -24,6 +24,55 @@ export enum UserRole {
   Delivery = "Delivery",
 }
 
+export enum RestaurantCategory {
+  Turkish = 1,
+  Italian = 2,
+  Japanese = 3,
+  Chinese = 4,
+  Mexican = 5,
+  Indian = 6,
+  American = 7,
+  French = 8,
+  Mediterranean = 9,
+  FastFood = 10,
+  Seafood = 11,
+  Steakhouse = 12,
+  Vegetarian = 13,
+  Vegan = 14,
+  Cafe = 15,
+  Dessert = 16,
+  Other = 17
+}
+
+// Helper function to get category name in Turkish
+export function getCategoryName(category: string | number | undefined): string {
+  if (!category) return 'Kategori Yok';
+  
+  const categoryNum = typeof category === 'string' ? parseInt(category) : category;
+  
+  const categoryNames: Record<number, string> = {
+    1: 'Türk Mutfağı',
+    2: 'İtalyan Mutfağı',
+    3: 'Japon Mutfağı',
+    4: 'Çin Mutfağı',
+    5: 'Meksika Mutfağı',
+    6: 'Hint Mutfağı',
+    7: 'Amerikan Mutfağı',
+    8: 'Fransız Mutfağı',
+    9: 'Akdeniz Mutfağı',
+    10: 'Fast Food',
+    11: 'Deniz Ürünleri',
+    12: 'Steakhouse',
+    13: 'Vejetaryen',
+    14: 'Vegan',
+    15: 'Kafe',
+    16: 'Tatlı',
+    17: 'Diğer'
+  };
+  
+  return categoryNames[categoryNum] || category.toString();
+}
+
 export interface Restaurant extends BaseEntity {
   name: string
   address: string

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import type { Restaurant, Menu, MenuItem } from "@/types"
+import { getCategoryName } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -20,123 +21,8 @@ import {
 } from "@/components/ui/dialog"
 import { ChatButton } from "@/components/chat/chat-button"
 import { ReviewSection } from "@/components/reviews/review-section"
-
-// Mock data
-const mockRestaurant: Restaurant = {
-  id: "1",
-  name: "Lezzet Durağı",
-  description: "Geleneksel Türk mutfağının en lezzetli örnekleri. 1985 yılından beri hizmetinizdeyiz.",
-  address: "Kadıköy Moda Caddesi No: 123, İstanbul",
-  phoneNumber: "+90 555 123 4567",
-  email: "info@lezzetduragi.com",
-  rating: 4.5,
-  isActive: true,
-  ownerId: "1",
-  latitude: 40.9929,
-  longitude: 29.0261,
-  category: "Türk Mutfağı",
-  priceRange: "₺₺",
-  imageUrl: "/turkish-restaurant-interior.jpg",
-  openingHours: "09:00 - 23:00",
-}
-
-const mockMenus: Menu[] = [
-  {
-    id: "1",
-    name: "Ana Yemekler",
-    description: "Geleneksel Türk ana yemekleri",
-    restaurantId: "1",
-    menuItems: [
-      {
-        id: "1",
-        name: "İskender Kebap",
-        description: "Yoğurt ve tereyağlı pide üzerinde döner",
-        price: 180,
-        category: "Ana Yemek",
-        isAvailable: true,
-        menuId: "1",
-        imageUrl: "/steak-dinner.jpg",
-      },
-      {
-        id: "2",
-        name: "Adana Kebap",
-        description: "Acılı kıyma kebap, pilav ve salata ile",
-        price: 160,
-        category: "Ana Yemek",
-        isAvailable: true,
-        menuId: "1",
-        imageUrl: "/burger-meal.jpg",
-      },
-      {
-        id: "3",
-        name: "Kuzu Tandır",
-        description: "Fırında pişmiş kuzu eti, pilav ile",
-        price: 220,
-        category: "Ana Yemek",
-        isAvailable: true,
-        menuId: "1",
-        imageUrl: "/pasta-dish.jpg",
-      },
-    ],
-  },
-  {
-    id: "2",
-    name: "Başlangıçlar",
-    description: "Mezeler ve çorbalar",
-    restaurantId: "1",
-    menuItems: [
-      {
-        id: "4",
-        name: "Mercimek Çorbası",
-        description: "Geleneksel mercimek çorbası",
-        price: 35,
-        category: "Çorba",
-        isAvailable: true,
-        menuId: "2",
-        imageUrl: "/chef-cooking.jpg",
-      },
-      {
-        id: "5",
-        name: "Karışık Meze Tabağı",
-        description: "Humus, haydari, patlıcan salatası, cacık",
-        price: 120,
-        category: "Meze",
-        isAvailable: true,
-        menuId: "2",
-        imageUrl: "/restaurant-table.jpg",
-      },
-    ],
-  },
-  {
-    id: "3",
-    name: "İçecekler",
-    description: "Soğuk ve sıcak içecekler",
-    restaurantId: "1",
-    menuItems: [
-      {
-        id: "6",
-        name: "Ayran",
-        description: "Ev yapımı ayran",
-        price: 15,
-        category: "İçecek",
-        isAvailable: true,
-        menuId: "3",
-        imageUrl: "/food-delivery.jpg",
-      },
-      {
-        id: "7",
-        name: "Türk Kahvesi",
-        description: "Geleneksel Türk kahvesi",
-        price: 25,
-        category: "İçecek",
-        isAvailable: true,
-        menuId: "3",
-        imageUrl: "/restaurant-hero.jpg",
-      },
-    ],
-  },
-]
-
+import { customerApi } from "@/lib/customer-api"
+import { RestaurantLocationMap } from "@/components/maps/RestaurantLocationMap"
 export default function RestaurantDetailPage() {
   const params = useParams()
   const { addItem } = useCart()
@@ -150,30 +36,78 @@ export default function RestaurantDetailPage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true)
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setRestaurant(mockRestaurant)
-      setMenus(mockMenus)
-      setLoading(false)
+      try {
+        // Fetch restaurant details from API
+        const restaurantData = await customerApi.restaurants.getById(params.id as string)
+        
+        // Fix imageUrl to use full URL
+        if (restaurantData.imageUrl && !restaurantData.imageUrl.startsWith('http')) {
+          const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+          restaurantData.imageUrl = `${baseUrl}${restaurantData.imageUrl}`
+        }
+        
+        setRestaurant(restaurantData)
+        
+        // Fetch restaurant menus
+        const menusData = await customerApi.restaurants.getMenus(params.id as string)
+        
+        // Fix imageUrls in menu items
+        menusData.forEach(menu => {
+          menu.menuItems?.forEach(item => {
+            if (item.imageUrl && !item.imageUrl.startsWith('http')) {
+              const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+              item.imageUrl = `${baseUrl}${item.imageUrl}`
+            }
+          })
+        })
+        
+        setMenus(menusData)
+      } catch (error: any) {
+        console.error("Error fetching restaurant:", error)
+        toast({
+          title: "Hata",
+          description: "Restoran bilgileri yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchData()
-  }, [params.id])
+  }, [params.id, toast])
 
-  const handleAddToCart = (item: MenuItem) => {
-    if (!restaurant) return
-
-    for (let i = 0; i < quantity; i++) {
-      addItem(item, restaurant.id, restaurant.name)
-    }
-
-    toast({
-      title: "Sepete eklendi",
-      description: `${item.name} (${quantity} adet) sepetinize eklendi.`,
-    })
-
-    setSelectedItem(null)
+  const handleDialogOpen = (item: MenuItem) => {
+    setSelectedItem(item)
     setQuantity(1)
+  }
+
+  const handleAddToCart = async () => {
+    if (!restaurant || !selectedItem) return
+
+    // Tek seferde istenen miktarı ekle
+    const success = await addItem(selectedItem, restaurant.id, restaurant.name, quantity)
+
+    if (success) {
+      toast({
+        title: "Sepete eklendi",
+        description: `${selectedItem.name} (${quantity} adet) sepetinize eklendi.`,
+      })
+
+      // Dialog'u kapat - bu otomatik olarak handleDialogClose'u tetikleyecek
+      const closeButton = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement
+      closeButton?.click()
+    }
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      // Dialog kapandığında state'leri sıfırla
+      setTimeout(() => {
+        setSelectedItem(null)
+        setQuantity(1)
+      }, 100)
+    }
   }
 
   if (loading) {
@@ -219,8 +153,8 @@ export default function RestaurantDetailPage() {
                   <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
                   <span className="font-medium">{restaurant.rating}</span>
                 </div>
-                <Badge>{restaurant.category}</Badge>
-                <span>{restaurant.priceRange}</span>
+                <Badge>{getCategoryName(restaurant.category)}</Badge>
+                {restaurant.priceRange && <span>{restaurant.priceRange}</span>}
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -260,7 +194,7 @@ export default function RestaurantDetailPage() {
                   <Clock className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Çalışma Saatleri</p>
-                    <p className="text-sm text-muted-foreground">{restaurant.openingHours}</p>
+                    <p className="text-sm text-muted-foreground">09:00 - 23:00</p>
                   </div>
                 </div>
               </CardContent>
@@ -320,15 +254,15 @@ export default function RestaurantDetailPage() {
                         <CardDescription className="line-clamp-2">{item.description}</CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <Dialog>
+                        <Dialog 
+                          open={selectedItem?.id === item.id} 
+                          onOpenChange={(open) => handleDialogClose(open)}
+                        >
                           <DialogTrigger asChild>
                             <Button
                               className="w-full"
                               disabled={!item.isAvailable}
-                              onClick={() => {
-                                setSelectedItem(item)
-                                setQuantity(1)
-                              }}
+                              onClick={() => handleDialogOpen(item)}
                             >
                               Sepete Ekle
                             </Button>
@@ -338,34 +272,36 @@ export default function RestaurantDetailPage() {
                               <DialogTitle>{item.name}</DialogTitle>
                               <DialogDescription>{item.description}</DialogDescription>
                             </DialogHeader>
-                            <div className="space-y-4">
-                              <img
-                                src={item.imageUrl || "/placeholder.svg"}
-                                alt={item.name}
-                                className="w-full h-48 object-cover rounded-lg"
-                              />
+                            {selectedItem && (
+                              <div className="space-y-4">
+                                <img
+                                  src={selectedItem.imageUrl || "/placeholder.svg"}
+                                  alt={selectedItem.name}
+                                  className="w-full h-48 object-cover rounded-lg"
+                                />
 
-                              <div className="flex items-center justify-between">
-                                <span className="text-2xl font-bold">₺{item.price}</span>
-                                <div className="flex items-center gap-3">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                  >
-                                    <Minus className="h-4 w-4" />
-                                  </Button>
-                                  <span className="text-xl font-medium w-8 text-center">{quantity}</span>
-                                  <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}>
-                                    <Plus className="h-4 w-4" />
-                                  </Button>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-2xl font-bold">₺{selectedItem.price}</span>
+                                  <div className="flex items-center gap-3">
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                    >
+                                      <Minus className="h-4 w-4" />
+                                    </Button>
+                                    <span className="text-xl font-medium w-8 text-center">{quantity}</span>
+                                    <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}>
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
                                 </div>
-                              </div>
 
-                              <Button className="w-full" size="lg" onClick={() => handleAddToCart(item)}>
-                                Sepete Ekle - ₺{item.price * quantity}
-                              </Button>
-                            </div>
+                                <Button className="w-full" size="lg" onClick={handleAddToCart}>
+                                  Sepete Ekle - ₺{selectedItem.price * quantity}
+                                </Button>
+                              </div>
+                            )}
                           </DialogContent>
                         </Dialog>
                       </CardContent>
@@ -381,10 +317,29 @@ export default function RestaurantDetailPage() {
         <div className="mt-12">
           <ReviewSection restaurantId={restaurant.id} restaurantName={restaurant.name} />
         </div>
+
+        {/* Map Section */}
+        {restaurant.latitude && restaurant.longitude && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-4">Konum</h2>
+            <Card>
+              <CardContent className="p-4">
+                <div className="h-64 w-full">
+                  <RestaurantLocationMap
+                    latitude={restaurant.latitude}
+                    longitude={restaurant.longitude}
+                    restaurantName={restaurant.name}
+                    address={restaurant.address}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
 
       {/* Chat Button */}
-      <ChatButton restaurantId={restaurant.id} restaurantName={restaurant.name} />
+      <ChatButton restaurantId={restaurant.id} />
     </div>
   )
 }

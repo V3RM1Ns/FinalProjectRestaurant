@@ -3,6 +3,7 @@ using RestaurantManagment.Application.Common.DTOs.Admin;
 using RestaurantManagment.Application.Common.DTOs.Common;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Review;
+using RestaurantManagment.Application.DTOs.Restaurant;
 using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Application.Common.Interfaces;
@@ -28,8 +29,9 @@ public interface IAdminService
     Task<List<string>> GetAllRolesAsync();
 
     Task ToggleRestaurantActiveStatusAsync(string restaurantId);
+    Task<RestaurantResponseDto?> GetRestaurantByIdAsync(string restaurantId);
+    Task UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto);
     
-                                        
     Task UpdateRestaurantCategoryAsync(string restaurantId, int categoryId);
     Task<List<string>> GetAllRestaurantCategoriesAsync();
     

@@ -1,35 +1,17 @@
-using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
-namespace RestaurantManagment.Application.DTOs.Restaurant;
+namespace RestaurantManagment.Application.Common.DTOs.Restaurant;
 
 public class UpdateRestaurantDto
 {
-    [Required]
-    public string Id { get; set; } = string.Empty;
-
-    [Required]
-    [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
-
-    [Required]
-    [MaxLength(500)]
     public string Address { get; set; } = string.Empty;
-
-    [Required]
-    [Phone]
-    [MaxLength(20)]
     public string PhoneNumber { get; set; } = string.Empty;
-
-    [EmailAddress]
-    [MaxLength(100)]
     public string? Email { get; set; }
-
-    [Url]
-    [MaxLength(200)]
     public string? Website { get; set; }
-
-    [Required]
-    [MaxLength(2000)]
     public string Description { get; set; } = string.Empty;
+    public string? Category { get; set; }
+    public string? Latitude { get; set; }
+    public string? Longitude { get; set; }
+    public IFormFile? ImageFile { get; set; }
 }
-

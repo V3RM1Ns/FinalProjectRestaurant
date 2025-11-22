@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using RestaurantManagment.Application.Common.DTOs.Employee;
 using RestaurantManagment.Application.Common.DTOs.Menu;
 using RestaurantManagment.Application.Common.DTOs.MenuItem;
@@ -8,6 +9,7 @@ using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
+using RestaurantManagment.Persistance.Data;
 
 namespace RestaurantManagment.WebAPI.Controllers;
 
@@ -17,7 +19,8 @@ namespace RestaurantManagment.WebAPI.Controllers;
 public class OwnerController(
     IOwnerService ownerService,
     UserManager<AppUser> userManager,
-    IFileService fileService) : ControllerBase
+    IFileService fileService,
+    IAppDbContext context) : ControllerBase
 {
     #region Restaurant Management
 
@@ -1277,7 +1280,150 @@ public class OwnerController(
 
     #endregion
 
-   
+    #region Restaurant Applications
+
+    [HttpPost("restaurant-applications")]
+    public async Task<IActionResult> CreateRestaurantApplication([FromForm] CreateRestaurantApplicationDto dto, IFormFile? imageFile)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            // Upload image if provided
+            string? imageUrl = null;
+            if (imageFile != null)
+            {
+                imageUrl = await fileService.UploadFileAsync(imageFile, "restaurant-applications");
+            }
+
+            var application = new RestaurantApplication
+            {
+                Id = Guid.NewGuid().ToString(),
+                OwnerId = currentUser.Id,
+                RestaurantName = dto.RestaurantName,
+                Description = dto.Description,
+                Address = dto.Address,
+                PhoneNumber = dto.PhoneNumber,
+                Email = dto.Email,
+                Website = dto.Website,
+                Category = dto.Category,
+                AdditionalNotes = dto.AdditionalNotes,
+                ImageUrl = imageUrl,
+                Status = RestaurantApplicationStatus.Pending,
+                ApplicationDate = DateTime.UtcNow
+            };
+
+            context.RestaurantApplications.Add(application);
+            await context.SaveChangesAsync();
+
+            return Ok(new { Message = "Restaurant application submitted successfully. Waiting for admin approval.", ApplicationId = application.Id });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurant-applications")]
+    public async Task<IActionResult> GetMyRestaurantApplications()
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var applications = await context.RestaurantApplications
+                .Where(a => a.OwnerId == currentUser.Id && !a.IsDeleted)
+                .OrderByDescending(a => a.ApplicationDate)
+                .Select(a => new RestaurantApplicationDto
+                {
+                    Id = a.Id,
+                    OwnerId = a.OwnerId,
+                    OwnerName = a.Owner.FullName,
+                    OwnerEmail = a.Owner.Email!,
+                    RestaurantName = a.RestaurantName,
+                    Description = a.Description,
+                    Address = a.Address,
+                    PhoneNumber = a.PhoneNumber,
+                    Email = a.Email,
+                    Website = a.Website,
+                    Category = a.Category,
+                    ImageUrl = a.ImageUrl,
+                    AdditionalNotes = a.AdditionalNotes,
+                    Status = a.Status.ToString(),
+                    ApplicationDate = a.ApplicationDate,
+                    ReviewedAt = a.ReviewedAt,
+                    ReviewedBy = a.ReviewedBy,
+                    ReviewerName = a.Reviewer != null ? a.Reviewer.FullName : null,
+                    RejectionReason = a.RejectionReason,
+                    CreatedRestaurantId = a.CreatedRestaurantId
+                })
+                .ToListAsync();
+
+            return Ok(applications);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurant-applications/{applicationId}")]
+    public async Task<IActionResult> GetRestaurantApplicationById(string applicationId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+
+            var application = await context.RestaurantApplications
+                .Where(a => a.Id == applicationId && a.OwnerId == currentUser.Id && !a.IsDeleted)
+                .Select(a => new RestaurantApplicationDto
+                {
+                    Id = a.Id,
+                    OwnerId = a.OwnerId,
+                    OwnerName = a.Owner.FullName,
+                    OwnerEmail = a.Owner.Email!,
+                    RestaurantName = a.RestaurantName,
+                    Description = a.Description,
+                    Address = a.Address,
+                    PhoneNumber = a.PhoneNumber,
+                    Email = a.Email,
+                    Website = a.Website,
+                    Category = a.Category,
+                    ImageUrl = a.ImageUrl,
+                    AdditionalNotes = a.AdditionalNotes,
+                    Status = a.Status.ToString(),
+                    ApplicationDate = a.ApplicationDate,
+                    ReviewedAt = a.ReviewedAt,
+                    ReviewedBy = a.ReviewedBy,
+                    ReviewerName = a.Reviewer != null ? a.Reviewer.FullName : null,
+                    RejectionReason = a.RejectionReason,
+                    CreatedRestaurantId = a.CreatedRestaurantId
+                })
+                .FirstOrDefaultAsync();
+
+            if (application == null)
+                return NotFound(new { Message = "Application not found" });
+
+            return Ok(application);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    #endregion
+
 }
 
 // Request DTOs

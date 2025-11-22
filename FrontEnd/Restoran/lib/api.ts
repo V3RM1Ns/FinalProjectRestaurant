@@ -11,6 +11,13 @@ export class ApiClient {
     }
   }
 
+  private static getHeadersWithoutContentType(): HeadersInit {
+    const token = AuthService.getToken()
+    return {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    }
+  }
+
   private static async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }))
@@ -61,6 +68,16 @@ export class ApiClient {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
+    })
+
+    return this.handleResponse<T>(response)
+  }
+
+  static async putFormData<T>(endpoint: string, data: FormData): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "PUT",
+      headers: this.getHeadersWithoutContentType(),
+      body: data,
     })
 
     return this.handleResponse<T>(response)
@@ -216,13 +233,17 @@ export const adminApi = {
   getAllRoles: () =>
     ApiClient.get<{ roles: string[] }>(`/Admin/roles`),
   addRoleToUser: (userId: string, role: string) =>
-    ApiClient.post<any>(`/Admin/users/${userId}/roles`, { role }),
+    ApiClient.post<any>(`/Admin/users/${userId}/roles`, { Role: role }),
   removeRoleFromUser: (userId: string, role: string) =>
     ApiClient.delete<any>(`/Admin/users/${userId}/roles/${role}`),
   
   // Restaurant Management
   getRestaurants: (pageNumber: number = 1, pageSize: number = 10) =>
     ApiClient.get<any>(`/Admin/restaurants?pageNumber=${pageNumber}&pageSize=${pageSize}`),
+  getRestaurantById: (restaurantId: string) =>
+    ApiClient.get<any>(`/Admin/restaurants/${restaurantId}`),
+  updateRestaurant: (restaurantId: string, data: FormData) =>
+    ApiClient.putFormData<any>(`/Admin/restaurants/${restaurantId}`, data),
   toggleRestaurantStatus: (restaurantId: string) =>
     ApiClient.post<any>(`/Admin/restaurants/${restaurantId}/toggle-status`, {}),
   getAllRestaurantCategories: () =>

@@ -2,28 +2,22 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RestaurantManagment.Application.Common.Interfaces;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.EntityFrameworkCore;
+using RestaurantManagment.Application.Common.DTOs.Restaurant;
 
 namespace RestaurantManagment.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")] 
-    public class AdminController : ControllerBase
+    public class AdminController(IAdminService adminService) : ControllerBase
     {
-        private readonly IAdminService _adminService;
-
-        public AdminController(IAdminService adminService)
-        {
-            _adminService = adminService;
-        }
-
-       
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard()
         {
             try
             {
-                var dashboardData = await _adminService.GetAdminDashboardDataAsync();
+                var dashboardData = await adminService.GetAdminDashboardDataAsync();
                 return Ok(dashboardData);
             }
             catch (Exception ex)
@@ -38,7 +32,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetUsersAsync(pageNumber, pageSize);
+                var result = await adminService.GetUsersAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -53,7 +47,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetRestaurantsAsync(pageNumber, pageSize);
+                var result = await adminService.GetRestaurantsAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -68,7 +62,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetOwnershipApplicationsAsync(pageNumber, pageSize);
+                var result = await adminService.GetOwnershipApplicationsAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -83,7 +77,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var applications = await _adminService.GetPendingApplicationsAsync();
+                var applications = await adminService.GetPendingApplicationsAsync();
                 return Ok(applications);
             }
             catch (Exception ex)
@@ -98,7 +92,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var application = await _adminService.GetApplicationByIdAsync(id);
+                var application = await adminService.GetApplicationByIdAsync(id);
                 if (application == null)
                     return NotFound(new { message = "Application not found." });
 
@@ -120,7 +114,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 if (string.IsNullOrEmpty(userId))
                     return Unauthorized(new { message = "User ID not found." });
 
-                await _adminService.ApproveApplicationAsync(id, userId);
+                await adminService.ApproveApplicationAsync(id, userId);
                 return Ok(new { message = "Application approved." });
             }
             catch (Exception ex)
@@ -142,7 +136,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                 if (string.IsNullOrEmpty(request.Reason))
                     return BadRequest(new { message = "Rejection reason must be specified." });
 
-                await _adminService.RejectApplicationAsync(id, userId, request.Reason);
+                await adminService.RejectApplicationAsync(id, userId, request.Reason);
                 return Ok(new { message = "Application rejected." });
             }
             catch (Exception ex)
@@ -156,7 +150,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.ToggleUserActiveStatusAsync(userId);
+                await adminService.ToggleUserActiveStatusAsync(userId);
                 return Ok(new { message = "User status updated successfully." });
             }
             catch (Exception ex)
@@ -170,7 +164,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var roles = await _adminService.GetUserRolesAsync(userId);
+                var roles = await adminService.GetUserRolesAsync(userId);
                 return Ok(new { roles });
             }
             catch (Exception ex)
@@ -184,7 +178,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var roles = await _adminService.GetAllRolesAsync();
+                var roles = await adminService.GetAllRolesAsync();
                 return Ok(new { roles });
             }
             catch (Exception ex)
@@ -198,11 +192,12 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.AddRoleToUserAsync(userId, request.Role);
+                await adminService.AddRoleToUserAsync(userId, request.Role);
                 return Ok(new { message = $"Role '{request.Role}' added successfully." });
             }
             catch (Exception ex)
             {
+              
                 return StatusCode(500, new { message = "An error occurred while adding role.", error = ex.Message });
             }
         }
@@ -212,7 +207,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.RemoveRoleFromUserAsync(userId, role);
+                await adminService.RemoveRoleFromUserAsync(userId, role);
                 return Ok(new { message = $"Role '{role}' removed successfully." });
             }
             catch (Exception ex)
@@ -226,7 +221,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.ToggleRestaurantActiveStatusAsync(restaurantId);
+                await adminService.ToggleRestaurantActiveStatusAsync(restaurantId);
                 return Ok(new { message = "Restaurant status updated successfully." });
             }
             catch (Exception ex)
@@ -235,12 +230,43 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
+        [HttpGet("restaurants/{restaurantId}")]
+        public async Task<IActionResult> GetRestaurantById(string restaurantId)
+        {
+            try
+            {
+                var restaurant = await adminService.GetRestaurantByIdAsync(restaurantId);
+                if (restaurant == null)
+                    return NotFound(new { message = "Restaurant not found." });
+
+                return Ok(restaurant);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading the restaurant.", error = ex.Message });
+            }
+        }
+
+        [HttpPut("restaurants/{restaurantId}")]
+        public async Task<IActionResult> UpdateRestaurant(string restaurantId, [FromForm] UpdateRestaurantDto dto)
+        {
+            try
+            {
+                await adminService.UpdateRestaurantAsync(restaurantId, dto);
+                return Ok(new { message = "Restaurant updated successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating the restaurant.", error = ex.Message });
+            }
+        }
+
         [HttpGet("restaurants/categories")]
         public async Task<IActionResult> GetAllRestaurantCategories()
         {
             try
             {
-                var categories = await _adminService.GetAllRestaurantCategoriesAsync();
+                var categories = await adminService.GetAllRestaurantCategoriesAsync();
                 return Ok(new { categories });
             }
             catch (Exception ex)
@@ -254,7 +280,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.UpdateRestaurantCategoryAsync(restaurantId, request.CategoryId);
+                await adminService.UpdateRestaurantCategoryAsync(restaurantId, request.CategoryId);
                 return Ok(new { message = "Restaurant category updated successfully." });
             }
             catch (Exception ex)
@@ -269,7 +295,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetAllReviewsAsync(pageNumber, pageSize);
+                var result = await adminService.GetAllReviewsAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -283,7 +309,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetPendingReviewsAsync(pageNumber, pageSize);
+                var result = await adminService.GetPendingReviewsAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -297,7 +323,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var result = await _adminService.GetReportedReviewsAsync(pageNumber, pageSize);
+                var result = await adminService.GetReportedReviewsAsync(pageNumber, pageSize);
                 return Ok(result);
             }
             catch (Exception ex)
@@ -311,7 +337,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                var review = await _adminService.GetReviewByIdAsync(reviewId);
+                var review = await adminService.GetReviewByIdAsync(reviewId);
                 if (review == null)
                     return NotFound(new { message = "Review not found." });
 
@@ -328,7 +354,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.ApproveReviewAsync(reviewId);
+                await adminService.ApproveReviewAsync(reviewId);
                 return Ok(new { message = "Review approved successfully." });
             }
             catch (Exception ex)
@@ -342,7 +368,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.RejectReviewAsync(reviewId, request.Reason);
+                await adminService.RejectReviewAsync(reviewId, request.Reason);
                 return Ok(new { message = "Review rejected successfully." });
             }
             catch (Exception ex)
@@ -356,7 +382,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                await _adminService.DeleteReviewAsync(reviewId);
+                await adminService.DeleteReviewAsync(reviewId);
                 return Ok(new { message = "Review deleted successfully." });
             }
             catch (Exception ex)
@@ -364,6 +390,244 @@ namespace RestaurantManagment.WebAPI.Controllers
                 return StatusCode(500, new { message = "An error occurred while deleting the review.", error = ex.Message });
             }
         }
+ 
+        #region Restaurant Applications
+
+        [HttpGet("restaurant-applications")]
+        public async Task<IActionResult> GetRestaurantApplications([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
+        {
+            try
+            {
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context == null)
+                    return StatusCode(500, new { message = "Database context not available" });
+
+                var query = context.RestaurantApplications
+                    .Where(a => !a.IsDeleted)
+                    .OrderByDescending(a => a.ApplicationDate);
+
+                var totalCount = await query.CountAsync();
+                var applications = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.OwnerId,
+                        OwnerName = a.Owner.FullName,
+                        OwnerEmail = a.Owner.Email,
+                        a.RestaurantName,
+                        a.Description,
+                        a.Address,
+                        a.PhoneNumber,
+                        a.Email,
+                        a.Website,
+                        a.Category,
+                        a.ImageUrl,
+                        a.AdditionalNotes,
+                        Status = a.Status.ToString(),
+                        a.ApplicationDate,
+                        a.ReviewedAt,
+                        a.ReviewedBy,
+                        ReviewerName = a.Reviewer != null ? a.Reviewer.FullName : null,
+                        a.RejectionReason,
+                        a.CreatedRestaurantId
+                    })
+                    .ToListAsync();
+
+                return Ok(new { applications, totalCount, pageNumber, pageSize });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading restaurant applications.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("restaurant-applications/pending")]
+        public async Task<IActionResult> GetPendingRestaurantApplications()
+        {
+            try
+            {
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context == null)
+                    return StatusCode(500, new { message = "Database context not available" });
+
+                var applications = await context.RestaurantApplications
+                    .Where(a => a.Status == RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Pending && !a.IsDeleted)
+                    .OrderBy(a => a.ApplicationDate)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.OwnerId,
+                        OwnerName = a.Owner.FullName,
+                        OwnerEmail = a.Owner.Email,
+                        a.RestaurantName,
+                        a.Description,
+                        a.Address,
+                        a.PhoneNumber,
+                        a.Email,
+                        a.Website,
+                        a.Category,
+                        a.ImageUrl,
+                        a.AdditionalNotes,
+                        Status = a.Status.ToString(),
+                        a.ApplicationDate
+                    })
+                    .ToListAsync();
+
+                return Ok(applications);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading pending restaurant applications.", error = ex.Message });
+            }
+        }
+
+        [HttpGet("restaurant-applications/{id}")]
+        public async Task<IActionResult> GetRestaurantApplication(string id)
+        {
+            try
+            {
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context == null)
+                    return StatusCode(500, new { message = "Database context not available" });
+
+                var application = await context.RestaurantApplications
+                    .Where(a => a.Id == id && !a.IsDeleted)
+                    .Select(a => new
+                    {
+                        a.Id,
+                        a.OwnerId,
+                        OwnerName = a.Owner.FullName,
+                        OwnerEmail = a.Owner.Email,
+                        a.RestaurantName,
+                        a.Description,
+                        a.Address,
+                        a.PhoneNumber,
+                        a.Email,
+                        a.Website,
+                        a.Category,
+                        a.ImageUrl,
+                        a.AdditionalNotes,
+                        Status = a.Status.ToString(),
+                        a.ApplicationDate,
+                        a.ReviewedAt,
+                        a.ReviewedBy,
+                        ReviewerName = a.Reviewer != null ? a.Reviewer.FullName : null,
+                        a.RejectionReason,
+                        a.CreatedRestaurantId
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (application == null)
+                    return NotFound(new { message = "Restaurant application not found." });
+
+                return Ok(application);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while loading the restaurant application.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("restaurant-applications/{id}/approve")]
+        public async Task<IActionResult> ApproveRestaurantApplication(string id)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "User ID not found." });
+
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context == null)
+                    return StatusCode(500, new { message = "Database context not available" });
+
+                var application = await context.RestaurantApplications
+                    .Include(a => a.Owner)
+                    .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+                if (application == null)
+                    return NotFound(new { message = "Application not found." });
+
+                if (application.Status != RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Pending)
+                    return BadRequest(new { message = "Application has already been reviewed." });
+
+                // Create restaurant from application
+                var restaurant = new RestaurantManagment.Domain.Models.Restaurant
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = application.RestaurantName,
+                    Description = application.Description,
+                    Address = application.Address,
+                    PhoneNumber = application.PhoneNumber,
+                    Email = application.Email,
+                    Website = application.Website,
+                    Category = null, // Category enum olarak daha sonra ayarlanabilir
+                    ImageUrl = application.ImageUrl,
+                    OwnerId = application.OwnerId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                context.Restaurants.Add(restaurant);
+
+                // Update application status
+                application.Status = RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Approved;
+                application.ReviewedAt = DateTime.UtcNow;
+                application.ReviewedBy = userId;
+                application.CreatedRestaurantId = restaurant.Id;
+
+                await context.SaveChangesAsync();
+
+                return Ok(new { message = "Restaurant application approved and restaurant created successfully.", restaurantId = restaurant.Id });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while approving the restaurant application.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("restaurant-applications/{id}/reject")]
+        public async Task<IActionResult> RejectRestaurantApplication(string id, [FromBody] RejectApplicationRequest request)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized(new { message = "User ID not found." });
+
+                if (string.IsNullOrEmpty(request.Reason))
+                    return BadRequest(new { message = "Rejection reason must be specified." });
+
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context == null)
+                    return StatusCode(500, new { message = "Database context not available" });
+
+                var application = await context.RestaurantApplications
+                    .FirstOrDefaultAsync(a => a.Id == id && !a.IsDeleted);
+
+                if (application == null)
+                    return NotFound(new { message = "Application not found." });
+
+                if (application.Status != RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Pending)
+                    return BadRequest(new { message = "Application has already been reviewed." });
+
+                application.Status = RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Rejected;
+                application.ReviewedAt = DateTime.UtcNow;
+                application.ReviewedBy = userId;
+                application.RejectionReason = request.Reason;
+
+                await context.SaveChangesAsync();
+
+                return Ok(new { message = "Restaurant application rejected." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while rejecting the restaurant application.", error = ex.Message });
+            }
+        }
+
+        #endregion
     }
 
     public class RejectApplicationRequest

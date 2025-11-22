@@ -23,7 +23,6 @@ public class AccountService(
         }
         catch (Exception ex)
         {
-            // Hata mesajını logla
             var detailedError = $"CreateApplicationAsync Error: {ex.Message}";
             if (ex.InnerException != null)
             {

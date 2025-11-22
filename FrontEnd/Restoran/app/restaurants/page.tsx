@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import type { Restaurant } from "@/types"
+import { getCategoryName } from "@/types"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -117,7 +118,7 @@ export default function RestaurantsPage() {
           <SelectContent>
             {categories.map((category) => (
               <SelectItem key={category} value={category}>
-                {category === "all" ? "Tüm Kategoriler" : category}
+                {category === "all" ? "Tüm Kategoriler" : getCategoryName(category)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -146,7 +147,7 @@ export default function RestaurantsPage() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredRestaurants.map((restaurant) => (
                 <Link key={restaurant.id} href={`/restaurants/${restaurant.id}`}>
- i                   <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
+                  <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden">
                     {/* Restaurant Image */}
                     {restaurant.imageUrl ? (
                       <div className="relative w-full h-48 bg-muted">
@@ -190,7 +191,7 @@ export default function RestaurantsPage() {
                         <CardTitle className="text-xl">{restaurant.name}</CardTitle>
                       </div>
                       {restaurant.category && (
-                        <Badge variant="outline">{restaurant.category}</Badge>
+                        <Badge variant="outline">{getCategoryName(restaurant.category)}</Badge>
                       )}
                     </CardHeader>
                     <CardContent>

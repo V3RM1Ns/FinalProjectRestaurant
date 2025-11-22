@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Users, CreditCard } from "lucide-react"
+import { customerApi } from "@/lib/customer-api"
 
 interface Table {
   id: string
@@ -17,15 +18,6 @@ interface Table {
   capacity: number
   isAvailable: boolean
 }
-
-const mockTables: Table[] = [
-  { id: "1", number: "1", capacity: 2, isAvailable: true },
-  { id: "2", number: "2", capacity: 2, isAvailable: false },
-  { id: "3", number: "3", capacity: 4, isAvailable: true },
-  { id: "4", number: "4", capacity: 4, isAvailable: true },
-  { id: "5", number: "5", capacity: 6, isAvailable: true },
-  { id: "6", number: "6", capacity: 8, isAvailable: false },
-]
 
 const timeSlots = [
   "12:00",
@@ -55,8 +47,29 @@ export default function ReservationPage() {
   const [selectedTable, setSelectedTable] = useState<string>("")
   const [showTables, setShowTables] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [restaurant, setRestaurant] = useState<any>(null)
+  const [availableTables, setAvailableTables] = useState<Table[]>([])
 
-  const handleSearchTables = () => {
+  // Fetch restaurant details
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      try {
+        const restaurantData = await customerApi.restaurants.getById(params.id as string)
+        setRestaurant(restaurantData)
+      } catch (error: any) {
+        console.error("Error fetching restaurant:", error)
+        toast({
+          title: "Hata",
+          description: "Restoran bilgileri yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        })
+      }
+    }
+
+    fetchRestaurant()
+  }, [params.id, toast])
+
+  const handleSearchTables = async () => {
     if (!date || !time || !guestCount) {
       toast({
         title: "Eksik Bilgi",
@@ -65,7 +78,30 @@ export default function ReservationPage() {
       })
       return
     }
-    setShowTables(true)
+
+    setLoading(true)
+    try {
+      // Combine date and time for API call
+      const dateTimeString = `${date.toISOString().split('T')[0]}T${time}:00`
+      const tables = await customerApi.restaurants.getAvailableTables(
+        params.id as string,
+        dateTimeString,
+        Number.parseInt(guestCount)
+      )
+      setAvailableTables(tables)
+      setShowTables(true)
+    } catch (error: any) {
+      console.error("Error fetching tables:", error)
+      toast({
+        title: "Hata",
+        description: "Uygun masalar yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+      setAvailableTables([])
+      setShowTables(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleReserve = async () => {
@@ -79,26 +115,40 @@ export default function ReservationPage() {
     }
 
     setLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const dateTimeString = `${date?.toISOString().split('T')[0]}T${time}:00`
+      const reservationData = {
+        restaurantId: params.id as string,
+        tableId: selectedTable,
+        reservationDateTime: dateTimeString,
+        partySize: Number.parseInt(guestCount),
+        depositAmount: 50,
+      }
+      
+      await customerApi.reservations.create(reservationData)
 
-    toast({
-      title: "Rezervasyon Oluşturuldu!",
-      description: "Rezervasyonunuz başarıyla oluşturuldu.",
-    })
+      toast({
+        title: "Rezervasyon Oluşturuldu!",
+        description: "Rezervasyonunuz başarıyla oluşturuldu.",
+      })
 
-    setLoading(false)
-    router.push("/reservations")
+      router.push("/reservations")
+    } catch (error: any) {
+      console.error("Error creating reservation:", error)
+      toast({
+        title: "Hata",
+        description: error.message || "Rezervasyon oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
-
-  const availableTables = mockTables.filter(
-    (table) => table.isAvailable && table.capacity >= Number.parseInt(guestCount),
-  )
 
   return (
     <div className="container py-8 max-w-4xl">
       <h1 className="text-4xl font-bold mb-2">Rezervasyon Yap</h1>
-      <p className="text-muted-foreground mb-8">Lezzet Durağı</p>
+      <p className="text-muted-foreground mb-8">{restaurant?.name || "Yükleniyor..."}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Reservation Form */}

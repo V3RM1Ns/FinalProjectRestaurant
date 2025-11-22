@@ -78,7 +78,7 @@ export default function CustomerOrdersPage() {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle>{order.restaurantName}</CardTitle>
-            <CardDescription>Sipariş #{order.orderNumber}</CardDescription>
+            <CardDescription>Sipariş #{order.id?.substring(0, 8).toUpperCase()}</CardDescription>
           </div>
           {getStatusBadge(order.status)}
         </div>
@@ -87,12 +87,12 @@ export default function CustomerOrdersPage() {
         <div className="space-y-4">
           {/* Order Items */}
           <div className="space-y-2">
-            {order.items?.map((item: any, index: number) => (
+            {order.orderItems?.map((item: any, index: number) => (
               <div key={index} className="flex justify-between text-sm">
                 <span>
                   {item.quantity}x {item.menuItemName}
                 </span>
-                <span className="font-medium">₺{item.price?.toFixed(2)}</span>
+                <span className="font-medium">₺{item.subtotal?.toFixed(2)}</span>
               </div>
             ))}
           </div>
@@ -101,7 +101,7 @@ export default function CustomerOrdersPage() {
           <div className="pt-4 border-t space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Package className="h-4 w-4" />
-              <span>{order.orderType}</span>
+              <span>{order.type === 'Delivery' ? 'Teslimat' : order.type === 'Takeout' ? 'Gel-Al' : 'Restoranda'}</span>
             </div>
             {order.deliveryAddress && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -112,7 +112,7 @@ export default function CustomerOrdersPage() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>
-                {new Date(order.createdAt).toLocaleDateString('tr-TR', {
+                {new Date(order.orderDate).toLocaleDateString('tr-TR', {
                   day: 'numeric',
                   month: 'long',
                   hour: '2-digit',
@@ -120,6 +120,18 @@ export default function CustomerOrdersPage() {
                 })}
               </span>
             </div>
+            {order.paymentMethod && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium">Ödeme:</span>
+                <span>{order.paymentMethod}</span>
+              </div>
+            )}
+            {order.specialRequests && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium">Not:</span>
+                <span>{order.specialRequests}</span>
+              </div>
+            )}
           </div>
 
           {/* Total and Actions */}
@@ -209,4 +221,3 @@ export default function CustomerOrdersPage() {
     </div>
   )
 }
-

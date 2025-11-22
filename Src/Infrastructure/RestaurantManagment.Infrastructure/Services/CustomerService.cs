@@ -15,7 +15,7 @@ using RestaurantManagment.Domain.Models;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerService
+public class CustomerService(IAppDbContext context, IMapper mapper, IEmailService emailService) : ICustomerService
 {
     #region Restaurant Operations
 
@@ -390,6 +390,11 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
         if (restaurant == null)
             throw new InvalidOperationException("Restaurant not found.");
         
+   
+        var customer = await context.Users.FirstOrDefaultAsync(u => u.Id == customerId);
+        if (customer == null)
+            throw new InvalidOperationException("Customer not found.");
+        
         var order = new Order
         {
             Id = Guid.NewGuid().ToString(),
@@ -405,6 +410,8 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
         };
         
         decimal totalAmount = 0;
+        var orderItemsList = new List<(string itemName, int quantity, decimal price)>();
+        
         foreach (var itemDto in dto.Items)
         {
             var menuItem = await context.MenuItems
@@ -430,12 +437,30 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
             totalAmount += orderItem.Subtotal;
 
             order.OrderItems.Add(orderItem);
+            orderItemsList.Add((menuItem.Name, itemDto.Quantity, menuItem.Price));
         }
 
         order.TotalAmount = totalAmount;
 
         context.Orders.Add(order);
         await context.SaveChangesAsync();
+        
+        try
+        {
+            await emailService.SendOrderConfirmationEmailAsync(
+                to: customer.Email ?? "",
+                customerName: customer.FullName ?? customer.UserName ?? "Müşteri",
+                orderId: order.Id,
+                restaurantName: restaurant.Name,
+                totalAmount: totalAmount,
+                deliveryAddress: dto.DeliveryAddress ?? "Belirtilmedi",
+                items: orderItemsList
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to send order confirmation email: {ex.Message}");
+        }
 
         return await GetOrderByIdAsync(order.Id, customerId) 
                ?? throw new InvalidOperationException("Failed to retrieve created order.");
@@ -963,7 +988,30 @@ public class CustomerService(IAppDbContext context, IMapper mapper) : ICustomerS
             .Take(pageSize)
             .ToListAsync();
 
-        var reviewDtos = mapper.Map<List<ReviewDto>>(items);
+        // Manual mapping to avoid AutoMapper issues
+        var reviewDtos = new List<ReviewDto>();
+        foreach (var review in items)
+        {
+            reviewDtos.Add(new ReviewDto
+            {
+                Id = review.Id,
+                RestaurantId = review.RestaurantId,
+                RestaurantName = review.Restaurant?.Name ?? "Unknown Restaurant",
+                CustomerId = review.CustomerId,
+                CustomerName = review.Customer?.FullName ?? "Unknown Customer",
+                CustomerEmail = review.Customer?.Email,
+                Rating = review.Rating,
+                Comment = review.Comment,
+                Status = review.Status,
+                OwnerResponse = review.OwnerResponse,
+                CreatedAt = review.CreatedAt,
+                RespondedAt = review.RespondedAt,
+                IsReported = review.IsReported,
+                ReportReason = review.ReportReason,
+                ReportedAt = review.ReportedAt,
+                AdminNote = review.AdminNote
+            });
+        }
 
         return new PaginatedResult<ReviewDto>
         {

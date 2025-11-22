@@ -35,6 +35,12 @@ export function Navbar() {
               <Link href="/restaurants">
                 <Button variant="ghost">Restoranlar</Button>
               </Link>
+              <Link href="/restaurants/map">
+                <Button variant="ghost">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Harita
+                </Button>
+              </Link>
               <Link href="/reservations">
                 <Button variant="ghost">Rezervasyonlar</Button>
               </Link>
@@ -101,7 +107,7 @@ export function Navbar() {
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem asChild>
-                    <Link href="/orders">Siparişlerim</Link>
+                    <Link href="/customer/orders">Siparişlerim</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={logout} className="text-red-600">

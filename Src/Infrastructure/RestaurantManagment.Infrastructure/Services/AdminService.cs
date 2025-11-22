@@ -7,13 +7,13 @@ using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using RestaurantManagment.Application.Common.DTOs.Review;
 using RestaurantManagment.Domain.Enums;
+using RestaurantManagment.Application.DTOs.Restaurant;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, RoleManager<IdentityRole> _roleManager, IMapper _mapper) : IAdminService
+public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManager, RoleManager<IdentityRole> _roleManager, IMapper _mapper, IFileService _fileService) : IAdminService
 {
     
     public async Task<OwnershipApplicationResponseDto?> GetApplicationByIdAsync(string id)
@@ -139,16 +139,29 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
             throw new Exception($"Failed to add RestaurantOwner role: {errors}");
         }
         
+       
+        RestaurantCategory? category = null;
+        if (!string.IsNullOrEmpty(application.Category))
+        {
+            if (Enum.TryParse<RestaurantCategory>(application.Category, true, out var parsedCategory))
+            {
+                category = parsedCategory;
+            }
+        }
+        
         var restaurant = new Restaurant
         {
             Name = application.BusinessName,
             Description = application.BusinessDescription,
+            Category = category,
             Address = application.BusinessAddress,
             PhoneNumber = application.BusinessPhone,
+            ImageUrl = application.ImageUrl,
             Email = application.BusinessEmail,
             OwnerId = application.UserId,
             Rate = 0,
             CreatedAt = DateTime.UtcNow
+            
         };
 
         _context.Restaurants.Add(restaurant);
@@ -350,31 +363,53 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task AddRoleToUserAsync(string userId, string role)
     {
+        Console.WriteLine($"[DEBUG AdminService] AddRoleToUserAsync called - UserId: {userId}, Role: '{role}'");
+
+        // Use UserManager to find user instead of DbContext to avoid tracking conflicts
+        var user = await _userManager.FindByIdAsync(userId);
         
-        var user = await _context.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == userId);
+        Console.WriteLine($"[DEBUG AdminService] User found: {user != null}");
+        if (user != null)
+        {
+            Console.WriteLine($"[DEBUG AdminService] User details - Email: {user.Email}, FullName: {user.FullName}");
+        }
             
         if (user == null)
             throw new Exception("User not found");
 
+        Console.WriteLine($"[DEBUG AdminService] Checking if role exists: '{role}'");
         var roleExists = await _roleManager.RoleExistsAsync(role);
+        Console.WriteLine($"[DEBUG AdminService] Role exists: {roleExists}");
+        
         if (!roleExists)
             throw new Exception($"Role '{role}' does not exist");
 
+        Console.WriteLine($"[DEBUG AdminService] Checking if user is already in role");
         var isInRole = await _userManager.IsInRoleAsync(user, role);
+        Console.WriteLine($"[DEBUG AdminService] User is already in role: {isInRole}");
+        
         if (isInRole)
             throw new Exception($"User already has the '{role}' role");
 
+        Console.WriteLine($"[DEBUG AdminService] Adding role to user...");
         var result = await _userManager.AddToRoleAsync(user, role);
+        Console.WriteLine($"[DEBUG AdminService] AddToRoleAsync succeeded: {result.Succeeded}");
+        
         if (!result.Succeeded)
-            throw new Exception($"Failed to add role: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            Console.WriteLine($"[ERROR AdminService] Failed to add role. Errors: {errors}");
+            throw new Exception($"Failed to add role: {errors}");
+        }
+        
+        Console.WriteLine($"[DEBUG AdminService] Role added successfully");
     }
 
     public async Task RemoveRoleFromUserAsync(string userId, string role)
     {
-     
-        var user = await _context.Users.IgnoreQueryFilters()
-            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        // Use UserManager to find user instead of DbContext to avoid tracking conflicts
+        var user = await _userManager.FindByIdAsync(userId);
             
         if (user == null)
             throw new Exception("User not found");
@@ -418,7 +453,105 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         await _context.SaveChangesAsync();
     }
 
-  
+    public async Task<RestaurantResponseDto?> GetRestaurantByIdAsync(string restaurantId)
+    {
+        var restaurant = await _context.Restaurants
+            .IgnoreQueryFilters()
+            .Include(r => r.Owner)
+            .FirstOrDefaultAsync(r => r.Id == restaurantId);
+            
+        if (restaurant == null)
+            return null;
+
+        return new RestaurantResponseDto
+        {
+            Id = restaurant.Id,
+            Name = restaurant.Name,
+            Address = restaurant.Address,
+            PhoneNumber = restaurant.PhoneNumber,
+            Email = restaurant.Email,
+            Website = restaurant.Website,
+            Description = restaurant.Description,
+            ImageUrl = restaurant.ImageUrl,
+            Category = restaurant.Category?.ToString(),
+            Latitude = restaurant.Latitude,
+            Longitude = restaurant.Longitude,
+            OwnerId = restaurant.OwnerId,
+            OwnerName = restaurant.Owner.FullName,
+            CreatedAt = restaurant.CreatedAt,
+            UpdatedAt = restaurant.UpdatedAt
+        };
+    }
+
+    public async Task UpdateRestaurantAsync(string restaurantId, UpdateRestaurantDto dto)
+    {
+        var restaurant = await _context.Restaurants.IgnoreQueryFilters()
+            .FirstOrDefaultAsync(r => r.Id == restaurantId);
+            
+        if (restaurant == null)
+            throw new Exception("Restaurant not found");
+
+        restaurant.Name = dto.Name;
+        restaurant.Address = dto.Address;
+        restaurant.PhoneNumber = dto.PhoneNumber;
+        restaurant.Email = dto.Email;
+        restaurant.Website = dto.Website;
+        restaurant.Description = dto.Description;
+        
+        
+        if (!string.IsNullOrWhiteSpace(dto.Latitude))
+        {
+          
+            var latString = dto.Latitude.Replace(',', '.');
+            if (double.TryParse(latString, System.Globalization.NumberStyles.Any, 
+                System.Globalization.CultureInfo.InvariantCulture, out var lat))
+            {
+                restaurant.Latitude = lat;
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(dto.Longitude))
+        {
+            var lngString = dto.Longitude.Replace(',', '.');
+            if (double.TryParse(lngString, System.Globalization.NumberStyles.Any, 
+                System.Globalization.CultureInfo.InvariantCulture, out var lng))
+            {
+                restaurant.Longitude = lng;
+            }
+        }
+
+       
+        if (!string.IsNullOrEmpty(dto.Category))
+        {
+            if (Enum.TryParse<RestaurantCategory>(dto.Category, ignoreCase: true, out var category))
+            {
+                restaurant.Category = category;
+            }
+        }
+
+        
+        if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+        {
+            if (!string.IsNullOrEmpty(restaurant.ImageUrl))
+            {
+                try
+                {
+                    await _fileService.DeleteFileAsync(restaurant.ImageUrl);
+                }
+                catch
+                {
+                    // Ignore deletion errors
+                }
+            }
+
+            // Upload new image
+            restaurant.ImageUrl = await _fileService.UploadFileAsync(dto.ImageFile, "restaurants");
+        }
+
+        restaurant.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+    }
+
     public async Task UpdateRestaurantCategoryAsync(string restaurantId, int categoryId)
     {
         var restaurant = await _context.Restaurants.IgnoreQueryFilters()
@@ -434,7 +567,7 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
         restaurant.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-    }   
+    }
 
     public async Task<List<string>> GetAllRestaurantCategoriesAsync()
     {
@@ -475,19 +608,66 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task<PaginatedResult<ReviewDto>> GetPendingReviewsAsync(int pageNumber = 1, int pageSize = 10)
     {
+       
+        var allStatuses = await _context.Reviews
+            .Where(r => !r.IsDeleted)
+            .Select(r => r.Status)
+            .Distinct()
+            .ToListAsync();
+        
+        Console.WriteLine($"[DEBUG] All review statuses in DB: {string.Join(", ", allStatuses)}");
+        
+       
         var query = _context.Reviews
             .Include(r => r.Customer)
             .Include(r => r.Restaurant)
-            .Where(r => !r.IsDeleted && r.Status == "Pending")
+            .Where(r => !r.IsDeleted && (r.Status == "Pending" || r.Status == "pending" || r.Status == "PENDING"))
             .OrderByDescending(r => r.CreatedAt);
 
         var totalCount = await query.CountAsync();
+        Console.WriteLine($"[DEBUG] Total pending reviews found: {totalCount}");
+        
         var reviews = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
 
-        var reviewDtos = _mapper.Map<List<ReviewDto>>(reviews);
+        Console.WriteLine($"[DEBUG] Retrieved {reviews.Count} reviews from database for page {pageNumber}");
+
+      
+        var reviewDtos = new List<ReviewDto>();
+        foreach (var review in reviews)
+        {
+            try
+            {
+                var dto = new ReviewDto
+                {
+                    Id = review.Id,
+                    RestaurantId = review.RestaurantId,
+                    RestaurantName = review.Restaurant?.Name ?? "Unknown Restaurant",
+                    CustomerId = review.CustomerId,
+                    CustomerName = review.Customer?.FullName ?? "Unknown Customer",
+                    CustomerEmail = review.Customer?.Email,
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    Status = review.Status,
+                    OwnerResponse = review.OwnerResponse,
+                    CreatedAt = review.CreatedAt,
+                    RespondedAt = review.RespondedAt,
+                    IsReported = review.IsReported,
+                    ReportReason = review.ReportReason,
+                    ReportedAt = review.ReportedAt,
+                    AdminNote = review.AdminNote
+                };
+                reviewDtos.Add(dto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Error mapping review {review.Id}: {ex.Message}");
+            }
+        }
+
+        Console.WriteLine($"[DEBUG] Successfully mapped {reviewDtos.Count} review DTOs");
 
         return new PaginatedResult<ReviewDto>
         {

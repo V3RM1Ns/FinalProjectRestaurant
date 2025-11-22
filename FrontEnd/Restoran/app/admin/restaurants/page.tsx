@@ -267,6 +267,14 @@ export default function AdminRestaurantsPage() {
                             <Button
                               size="sm"
                               variant="outline"
+                                onClick={() => router.push(`/admin/restaurants/${restaurant.id}/edit`)}
+                            >
+                              <Store className="w-3 h-3 mr-1" />
+                              Düzenle
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => handleOpenCategoryDialog(restaurant)}
                             >
                               <Tag className="w-3 h-3 mr-1" />

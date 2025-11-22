@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Order> Orders { get; set; }
     public DbSet<OrderItem> OrderItems { get; set; }
     public DbSet<OwnershipApplication> OwnershipApplications { get; set; }
+    public DbSet<RestaurantApplication> RestaurantApplications { get; set; }
     public DbSet<JobPosting> JobPostings { get; set; }
     public DbSet<JobApplication> JobApplications { get; set; }
     public DbSet<Review> Reviews { get; set; }

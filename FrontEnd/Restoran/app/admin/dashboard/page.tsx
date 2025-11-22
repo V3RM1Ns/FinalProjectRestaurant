@@ -172,6 +172,42 @@ export default function AdminDashboardPage() {
                     </CardContent>
                 </Card>
 
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/restaurant-applications')}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Restoran Başvuruları</CardTitle>
+                            <Store className="w-8 h-8 text-orange-600" />
+                        </div>
+                        <CardDescription>Yeni restoran başvurularını inceleyin ve onaylayın</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" className="w-full" onClick={(e) => {
+                            e.stopPropagation()
+                            router.push('/admin/restaurant-applications')
+                        }}>
+                            Restoran Başvurularını Gör
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/restaurants-map')}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Restoran Haritası</CardTitle>
+                            <LayoutDashboard className="w-8 h-8 text-blue-600" />
+                        </div>
+                        <CardDescription>Tüm restoranları harita üzerinde görüntüleyin</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" className="w-full" onClick={(e) => {
+                            e.stopPropagation()
+                            router.push('/admin/restaurants-map')
+                        }}>
+                            Haritayı Görüntüle
+                        </Button>
+                    </CardContent>
+                </Card>
+
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/reviews')}>
                     <CardHeader>
                         <div className="flex items-center justify-between">

@@ -527,4 +527,292 @@ public class EmailService : IEmailService
 
         await SendEmailAsync(to, subject, body);
     }
+
+    public async Task SendOrderConfirmationEmailAsync(string to, string customerName, string orderId, string restaurantName, decimal totalAmount, string deliveryAddress, List<(string itemName, int quantity, decimal price)> items)
+    {
+        var subject = $"✅ Siparişiniz Alındı - #{orderId.Substring(0, 8).ToUpper()}";
+        
+        var itemsHtml = string.Join("", items.Select(item => $@"
+                    <tr>
+                        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb;'>
+                            <div style='font-weight: 600; color: #1f2937;'>{item.itemName}</div>
+                            <div style='font-size: 13px; color: #9ca3af;'>Adet: {item.quantity}</div>
+                        </td>
+                        <td style='padding: 12px 0; border-bottom: 1px solid #e5e7eb; text-align: right; font-weight: 600; color: #1f2937;'>
+                            ₺{(item.price * item.quantity):F2}
+                        </td>
+                    </tr>"));
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 20px;
+        }}
+        .email-wrapper {{
+            max-width: 600px;
+            margin: 0 auto;
+        }}
+        .container {{
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }}
+        .icon {{
+            font-size: 64px;
+            margin-bottom: 15px;
+            display: inline-block;
+        }}
+        .header h1 {{
+            color: white;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .order-id {{
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .greeting {{
+            font-size: 20px;
+            color: #1f2937;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }}
+        .message {{
+            color: #6b7280;
+            font-size: 15px;
+            margin: 15px 0;
+            line-height: 1.8;
+        }}
+        .info-box {{
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 25px 0;
+            border-left: 4px solid #10b981;
+        }}
+        .info-box strong {{
+            color: #1f2937;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }}
+        .info-box p {{
+            color: #6b7280;
+            margin: 0;
+            font-size: 15px;
+        }}
+        .order-details {{
+            margin: 30px 0;
+        }}
+        .order-details h3 {{
+            color: #1f2937;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e5e7eb;
+        }}
+        .items-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }}
+        .total-row {{
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }}
+        .total-row td {{
+            padding: 8px 0;
+            font-size: 16px;
+        }}
+        .total-row .total-label {{
+            font-weight: 600;
+            color: #1f2937;
+        }}
+        .total-row .total-amount {{
+            text-align: right;
+            font-weight: 700;
+            color: #059669;
+            font-size: 24px;
+        }}
+        .status-timeline {{
+            background: #f9fafb;
+            padding: 25px;
+            border-radius: 12px;
+            margin: 25px 0;
+        }}
+        .status-timeline h4 {{
+            color: #1f2937;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }}
+        .timeline-item {{
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            color: #6b7280;
+            font-size: 14px;
+        }}
+        .timeline-item.active {{
+            color: #059669;
+            font-weight: 600;
+        }}
+        .timeline-icon {{
+            width: 24px;
+            height: 24px;
+            background: #e5e7eb;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }}
+        .timeline-item.active .timeline-icon {{
+            background: #10b981;
+            color: white;
+        }}
+        .divider {{
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+            margin: 30px 0;
+        }}
+        .footer {{
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }}
+        .footer-logo {{
+            font-size: 24px;
+            margin-bottom: 10px;
+        }}
+        .footer p {{
+            color: #9ca3af;
+            font-size: 13px;
+            margin: 5px 0;
+        }}
+        @media only screen and (max-width: 600px) {{
+            .content {{
+                padding: 25px 20px;
+            }}
+            .header {{
+                padding: 30px 20px;
+            }}
+            .header h1 {{
+                font-size: 22px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class='email-wrapper'>
+        <div class='container'>
+            <div class='header'>
+                <div class='icon'>✅</div>
+                <h1>Siparişiniz Alındı!</h1>
+                <div class='order-id'>Sipariş No: #{orderId.Substring(0, 8).ToUpper()}</div>
+            </div>
+            <div class='content'>
+                <div class='greeting'>Merhaba {customerName}! 👋</div>
+                <div class='message'>
+                    <strong>{restaurantName}</strong> restoranından verdiğiniz sipariş başarıyla alındı. 
+                    Siparişiniz hazırlanmaya başlandı ve en kısa sürede adresinize teslim edilecek.
+                </div>
+
+                <div class='info-box'>
+                    <strong>📍 Teslimat Adresi</strong>
+                    <p>{deliveryAddress}</p>
+                </div>
+
+                <div class='order-details'>
+                    <h3>📋 Sipariş Detayları</h3>
+                    <table class='items-table'>
+                        <tbody>
+                            {itemsHtml}
+                        </tbody>
+                    </table>
+                    <div class='total-row'>
+                        <table style='width: 100%;'>
+                            <tr>
+                                <td class='total-label'>Toplam Tutar:</td>
+                                <td class='total-amount'>₺{totalAmount:F2}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class='status-timeline'>
+                    <h4>📦 Sipariş Durumu</h4>
+                    <div class='timeline-item active'>
+                        <div class='timeline-icon'>✓</div>
+                        <span>Sipariş Alındı</span>
+                    </div>
+                    <div class='timeline-item'>
+                        <div class='timeline-icon'>⏱</div>
+                        <span>Hazırlanıyor</span>
+                    </div>
+                    <div class='timeline-item'>
+                        <div class='timeline-icon'>🚚</div>
+                        <span>Yola Çıktı</span>
+                    </div>
+                    <div class='timeline-item'>
+                        <div class='timeline-icon'>🏠</div>
+                        <span>Teslim Edildi</span>
+                    </div>
+                </div>
+
+                <div class='divider'></div>
+
+                <div class='message' style='text-align: center; font-size: 14px;'>
+                    Siparişinizi takip etmek için hesabınıza giriş yapabilirsiniz.<br>
+                    Sorularınız için: <a href='mailto:support@restaurantmanagement.com' style='color: #10b981; text-decoration: none;'>support@restaurantmanagement.com</a>
+                </div>
+            </div>
+            <div class='footer'>
+                <div class='footer-logo'>🍴</div>
+                <p style='font-weight: 600; color: #6b7280; font-size: 15px;'>Restaurant Management</p>
+                <p>Afiyet olsun! 🎉</p>
+                <div class='divider' style='margin: 15px 0;'></div>
+                <p>© 2025 Restaurant Management. Tüm hakları saklıdır.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
 }

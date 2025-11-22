@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { CreditCard, Wallet } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
+import { customerApi } from "@/lib/customer-api"
 
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart()
@@ -34,20 +35,65 @@ export default function CheckoutPage() {
     e.preventDefault()
     setLoading(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // Validate address
+      if (!address.street || !address.city || !address.district) {
+        toast({
+          title: "Eksik Bilgi",
+          description: "Lütfen teslimat adresini eksiksiz doldurun.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
 
-    // Mock order creation
-    const orderId = Math.random().toString(36).substring(7)
+      // Get restaurant ID from cart items (all items should be from same restaurant)
+      const restaurantId = items[0]?.restaurantId
+      if (!restaurantId) {
+        toast({
+          title: "Hata",
+          description: "Sepetinizde ürün bulunamadı.",
+          variant: "destructive",
+        })
+        setLoading(false)
+        return
+      }
 
-    toast({
-      title: "Sipariş Oluşturuldu!",
-      description: `Sipariş numaranız: #${orderId}`,
-    })
+      // Prepare order data
+      const deliveryAddress = `${address.street}, ${address.district}, ${address.city}`
+      const orderData = {
+        restaurantId: restaurantId,
+        orderType: 2, // Delivery = 2
+        deliveryAddress: deliveryAddress,
+        deliveryInstructions: address.notes || "",
+        paymentMethod: paymentMethod === "card" ? "Kredi Kartı" : "Kapıda Nakit",
+        items: items.map(item => ({
+          menuItemId: item.menuItem.id,
+          quantity: item.quantity,
+          specialInstructions: item.notes || ""
+        }))
+      }
 
-    clearCart()
-    setLoading(false)
-    router.push(`/orders/${orderId}`)
+      // Create order via API
+      const response = await customerApi.orders.create(orderData)
+
+      toast({
+        title: "Sipariş Oluşturuldu! ✅",
+        description: `Sipariş numaranız: #${response.id.substring(0, 8).toUpperCase()}. Email adresinize onay maili gönderildi.`,
+      })
+
+      clearCart()
+      setLoading(false)
+      router.push(`/customer/orders`)
+    } catch (error: any) {
+      console.error("Order creation error:", error)
+      toast({
+        title: "Sipariş Oluşturulamadı",
+        description: error.response?.data?.message || error.message || "Bir hata oluştu. Lütfen tekrar deneyin.",
+        variant: "destructive",
+      })
+      setLoading(false)
+    }
   }
 
   if (items.length === 0) {

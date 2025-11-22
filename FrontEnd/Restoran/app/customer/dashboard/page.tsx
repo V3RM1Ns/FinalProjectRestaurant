@@ -4,8 +4,30 @@ import { useEffect, useState } from 'react'
 import { customerApi } from '@/lib/customer-api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award } from 'lucide-react'
+import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award, MessageSquare, Edit, Trash2, Loader2, ChevronLeftIcon, ChevronRightIcon, Package, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { useToast } from '@/hooks/use-toast'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination'
 
 interface Statistics {
   totalOrders: number
@@ -24,11 +46,13 @@ interface Restaurant {
 
 interface Order {
   id: string
-  restaurantName: string
-  orderNumber: string
+  restaurantName?: string
+  orderNumber?: string
   status: string
   totalAmount: number
   createdAt: string
+  orderDate?: string
+  restaurantId?: string
 }
 
 interface Reservation {
@@ -39,45 +63,208 @@ interface Reservation {
   status: string
 }
 
+interface Review {
+  id: string
+  restaurantId: string
+  restaurantName: string
+  customerId: string
+  customerName: string
+  rating: number
+  comment: string
+  status: string
+  ownerResponse?: string
+  respondedAt?: string
+  createdAt: string
+}
+
 export default function CustomerDashboard() {
+  const { toast } = useToast()
   const [stats, setStats] = useState<Statistics | null>(null)
   const [recommendations, setRecommendations] = useState<Restaurant[]>([])
   const [activeOrders, setActiveOrders] = useState<Order[]>([])
+  const [orderHistory, setOrderHistory] = useState<Order[]>([])
+  const [currentOrders, setCurrentOrders] = useState<Order[]>([])
+  const [allReservations, setAllReservations] = useState<Reservation[]>([])
   const [upcomingReservations, setUpcomingReservations] = useState<Reservation[]>([])
+  const [myReviews, setMyReviews] = useState<Review[]>([])
+  const [editingReview, setEditingReview] = useState<Review | null>(null)
+  const [editRating, setEditRating] = useState(0)
+  const [editComment, setEditComment] = useState('')
+  const [hoveredRating, setHoveredRating] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [loading, setLoading] = useState(true)
+  
+  // Pagination states for reviews
+  const [reviewsPage, setReviewsPage] = useState(1)
+  const [reviewsPageSize] = useState(5)
+  const [totalReviewsCount, setTotalReviewsCount] = useState(0)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
   }, [])
 
+  useEffect(() => {
+    loadReviews()
+  }, [reviewsPage])
+
   const loadDashboardData = async () => {
     try {
-      const [statsData, recsData, ordersData, reservationsData] = await Promise.all([
+      const [statsData, recsData, activeOrdersData, historyOrdersData, currentOrdersData, allReservationsData] = await Promise.all([
         customerApi.statistics.getCustomerStatistics(),
         customerApi.statistics.getRecommendations(6),
-        customerApi.orders.getActive(1, 5), // İlk sayfa, 5 öğe
-        customerApi.reservations.getUpcoming(1, 5), // İlk sayfa, 5 öğe
+        customerApi.orders.getActive(1, 10),
+        customerApi.orders.getHistory(1, 10),
+        customerApi.orders.getCurrent(),
+        customerApi.reservations.getAll(1, 20),
       ])
 
       setStats(statsData)
       setRecommendations(recsData)
       
-      // Backend pagination response'unu parse et
-      if (ordersData && ordersData.items) {
-        setActiveOrders(ordersData.items)
-      } else if (Array.isArray(ordersData)) {
-        setActiveOrders(ordersData.slice(0, 5))
+      // Parse active orders
+      if (activeOrdersData && activeOrdersData.items) {
+        setActiveOrders(activeOrdersData.items)
+      } else if (Array.isArray(activeOrdersData)) {
+        setActiveOrders(activeOrdersData)
       }
 
-      if (reservationsData && reservationsData.items) {
-        setUpcomingReservations(reservationsData.items)
-      } else if (Array.isArray(reservationsData)) {
-        setUpcomingReservations(reservationsData.slice(0, 5))
+      // Parse order history
+      if (historyOrdersData && historyOrdersData.items) {
+        setOrderHistory(historyOrdersData.items)
+      } else if (Array.isArray(historyOrdersData)) {
+        setOrderHistory(historyOrdersData)
       }
+
+      // Parse current orders
+      if (Array.isArray(currentOrdersData)) {
+        setCurrentOrders(currentOrdersData)
+      }
+
+      // Parse all reservations
+      if (allReservationsData && allReservationsData.items) {
+        setAllReservations(allReservationsData.items)
+        // Filter upcoming reservations
+        const upcoming = allReservationsData.items.filter((r: Reservation) => 
+          new Date(r.reservationDate) >= new Date() && r.status !== 'Cancelled'
+        )
+        setUpcomingReservations(upcoming)
+      } else if (Array.isArray(allReservationsData)) {
+        setAllReservations(allReservationsData)
+        const upcoming = allReservationsData.filter((r: Reservation) => 
+          new Date(r.reservationDate) >= new Date() && r.status !== 'Cancelled'
+        )
+        setUpcomingReservations(upcoming)
+      }
+
+      // Load reviews
+      await loadReviews()
     } catch (error) {
       console.error('Error loading dashboard:', error)
+      toast({
+        title: 'Hata',
+        description: 'Dashboard verileri yüklenirken bir hata oluştu.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadReviews = async () => {
+    try {
+      setReviewsLoading(true)
+      const reviewsData = await customerApi.reviews.getAll(reviewsPage, reviewsPageSize)
+      
+      if (reviewsData && reviewsData.items) {
+        setMyReviews(reviewsData.items)
+        setTotalReviewsCount(reviewsData.totalCount || 0)
+      } else if (Array.isArray(reviewsData)) {
+        setMyReviews(reviewsData)
+        setTotalReviewsCount(reviewsData.length)
+      }
+    } catch (error) {
+      console.error('Error loading reviews:', error)
+      toast({
+        title: 'Hata',
+        description: 'Yorumlar yüklenirken bir hata oluştu.',
+        variant: 'destructive',
+      })
+    } finally {
+      setReviewsLoading(false)
+    }
+  }
+
+  const handleEditReview = (review: Review) => {
+    setEditingReview(review)
+    setEditRating(review.rating)
+    setEditComment(review.comment)
+  }
+
+  const handleUpdateReview = async () => {
+    if (!editingReview) return
+
+    if (editRating === 0) {
+      toast({
+        title: 'Puan seçin',
+        description: 'Lütfen bir puan seçin.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!editComment.trim()) {
+      toast({
+        title: 'Yorum yazın',
+        description: 'Lütfen bir yorum yazın.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      await customerApi.reviews.update(editingReview.id, {
+        rating: editRating,
+        comment: editComment.trim(),
+      })
+
+      toast({
+        title: 'Başarılı',
+        description: 'Yorumunuz güncellendi.',
+      })
+
+      setEditingReview(null)
+      setEditRating(0)
+      setEditComment('')
+      await loadDashboardData()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Yorum güncellenirken bir hata oluştu.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm('Bu yorumu silmek istediğinize emin misiniz?')) return
+
+    try {
+      await customerApi.reviews.delete(reviewId)
+      toast({
+        title: 'Başarılı',
+        description: 'Yorumunuz silindi.',
+      })
+      await loadDashboardData()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Yorum silinirken bir hata oluştu.',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -146,95 +333,252 @@ export default function CustomerDashboard() {
         </Card>
       </div>
 
-      {/* Active Orders */}
-      {activeOrders && activeOrders.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Aktif Siparişler</CardTitle>
-                <CardDescription>Devam eden siparişleriniz (Son 5)</CardDescription>
-              </div>
-              <Link href="/customer/orders">
-                <Button variant="outline" size="sm">Tümünü Gör</Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {activeOrders.map((order) => (
-                <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="font-medium">{order.restaurantName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Sipariş #{order.orderNumber} - <span className="font-medium">{order.status}</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(order.createdAt).toLocaleDateString('tr-TR', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">₺{order.totalAmount?.toFixed(2)}</p>
-                    <Link href={`/customer/orders/${order.id}`}>
-                      <Button variant="link" size="sm" className="h-auto p-0">Detaylar →</Button>
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Orders and Reservations Tabs */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Siparişler ve Rezervasyonlar
+          </CardTitle>
+          <CardDescription>Tüm siparişleriniz ve rezervasyonlarınız</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="active-orders" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="active-orders">
+                Aktif Siparişler
+                {activeOrders.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{activeOrders.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="order-history">
+                Geçmiş Siparişler
+                {orderHistory.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{orderHistory.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="current-orders">
+                Mevcut Siparişler
+                {currentOrders.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{currentOrders.length}</Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="reservations">
+                Rezervasyonlar
+                {allReservations.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">{allReservations.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-      {/* Upcoming Reservations */}
-      {upcomingReservations && upcomingReservations.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Yaklaşan Rezervasyonlar</CardTitle>
-                <CardDescription>Önümüzdeki rezervasyonlarınız (Son 5)</CardDescription>
-              </div>
-              <Link href="/customer/reservations">
-                <Button variant="outline" size="sm">Tümünü Gör</Button>
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingReservations.map((reservation) => (
-                <div key={reservation.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
-                  <div className="flex-1">
-                    <p className="font-medium">{reservation.restaurantName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(reservation.reservationDate).toLocaleDateString('tr-TR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      <span className="font-medium">{reservation.partySize} Kişi</span> • {reservation.status}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <Link href={`/customer/reservations/${reservation.id}`}>
-                      <Button variant="link" size="sm" className="h-auto p-0">Detaylar →</Button>
-                    </Link>
-                  </div>
+            {/* Active Orders Tab */}
+            <TabsContent value="active-orders" className="space-y-4">
+              {activeOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Aktif siparişiniz bulunmuyor</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              ) : (
+                <div className="space-y-4">
+                  {activeOrders.map((order) => (
+                    <Link key={order.id} href={`/customer/orders/${order.id}`}>
+                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{order.restaurantName || 'Restoran'}</p>
+                            <Badge variant="outline">{order.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Sipariş #{order.orderNumber || order.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {new Date(order.createdAt || order.orderDate || '').toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">₺{order.totalAmount?.toFixed(2)}</p>
+                          <Button variant="link" size="sm" className="h-auto p-0">
+                            Detaylar →
+                          </Button>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Order History Tab */}
+            <TabsContent value="order-history" className="space-y-4">
+              {orderHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Geçmiş siparişiniz bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {orderHistory.map((order) => (
+                    <Link key={order.id} href={`/customer/orders/${order.id}`}>
+                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{order.restaurantName || 'Restoran'}</p>
+                            <Badge 
+                              variant={
+                                order.status === 'Completed' ? 'default' : 
+                                order.status === 'Cancelled' ? 'destructive' : 
+                                'secondary'
+                              }
+                            >
+                              {order.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Sipariş #{order.orderNumber || order.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {new Date(order.createdAt || order.orderDate || '').toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">₺{order.totalAmount?.toFixed(2)}</p>
+                          <Button variant="link" size="sm" className="h-auto p-0">
+                            Detaylar →
+                          </Button>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Current Orders Tab */}
+            <TabsContent value="current-orders" className="space-y-4">
+              {currentOrders.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Mevcut siparişiniz bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {currentOrders.map((order) => (
+                    <Link key={order.id} href={`/customer/orders/${order.id}`}>
+                      <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium">{order.restaurantName || 'Restoran'}</p>
+                            <Badge variant="default">{order.status}</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Sipariş #{order.orderNumber || order.id.slice(0, 8)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {new Date(order.createdAt || order.orderDate || '').toLocaleDateString('tr-TR', {
+                              day: 'numeric',
+                              month: 'short',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-lg">₺{order.totalAmount?.toFixed(2)}</p>
+                          <Button variant="link" size="sm" className="h-auto p-0">
+                            Detaylar →
+                          </Button>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Reservations Tab */}
+            <TabsContent value="reservations" className="space-y-4">
+              {allReservations.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">Rezervasyonunuz bulunmuyor</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {allReservations.map((reservation) => {
+                    const isUpcoming = new Date(reservation.reservationDate) >= new Date()
+                    const isPast = new Date(reservation.reservationDate) < new Date()
+                    
+                    return (
+                      <Link key={reservation.id} href={`/customer/reservations/${reservation.id}`}>
+                        <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium">{reservation.restaurantName}</p>
+                              <Badge 
+                                variant={
+                                  reservation.status === 'Confirmed' ? 'default' : 
+                                  reservation.status === 'Cancelled' ? 'destructive' : 
+                                  'secondary'
+                                }
+                              >
+                                {reservation.status}
+                              </Badge>
+                              {isUpcoming && reservation.status === 'Confirmed' && (
+                                <Badge variant="outline">Yaklaşan</Badge>
+                              )}
+                              {isPast && reservation.status === 'Confirmed' && (
+                                <Badge variant="secondary">Geçmiş</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3 inline mr-1" />
+                              {new Date(reservation.reservationDate).toLocaleDateString('tr-TR', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              <span className="font-medium">{reservation.partySize} Kişi</span>
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <Button variant="link" size="sm" className="h-auto p-0">
+                              Detaylar →
+                            </Button>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Active Orders - Old Section - Remove this */}
+      {/* {activeOrders && activeOrders.length > 0 && (...)} */}
+
+      {/* Upcoming Reservations - Old Section - Remove this */}
+      {/* {upcomingReservations && upcomingReservations.length > 0 && (...)} */}
 
       {/* Recommended Restaurants */}
       <Card>
@@ -312,7 +656,295 @@ export default function CustomerDashboard() {
           </Card>
         </Link>
       </div>
+
+      {/* My Reviews */}
+      {myReviews && myReviews.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Yorumlarım
+                </CardTitle>
+                <CardDescription>
+                  Restoranlar hakkındaki yorumlarınız ({totalReviewsCount} toplam)
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {reviewsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4">
+                  {myReviews.map((review) => (
+                    <div key={review.id} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Link href={`/restaurants/${review.restaurantId}`}>
+                          <p className="font-medium hover:underline">{review.restaurantName}</p>
+                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={review.status === 'Approved' ? 'default' : review.status === 'Pending' ? 'secondary' : 'destructive'}>
+                            {review.status === 'Approved' ? 'Onaylandı' : review.status === 'Pending' ? 'Beklemede' : 'Reddedildi'}
+                          </Badge>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditReview(review)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteReview(review.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`h-4 w-4 ${
+                              star <= review.rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
+                            }`}
+                          />
+                        ))}
+                        <span className="text-sm text-muted-foreground ml-2">
+                          {new Date(review.createdAt).toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      
+                      <p className="text-sm text-muted-foreground">{review.comment}</p>
+                      
+                      {review.ownerResponse && (
+                        <div className="mt-3 p-3 bg-muted rounded-lg">
+                          <p className="text-sm font-medium mb-1">Restoran Yanıtı:</p>
+                          <p className="text-sm text-muted-foreground">{review.ownerResponse}</p>
+                          {review.respondedAt && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(review.respondedAt).toLocaleDateString('tr-TR')}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pagination Controls */}
+                {totalReviewsCount > reviewsPageSize && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <div className="text-sm text-muted-foreground">
+                      Sayfa {reviewsPage} / {Math.ceil(totalReviewsCount / reviewsPageSize)}
+                    </div>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setReviewsPage(Math.max(1, reviewsPage - 1))}
+                            disabled={reviewsPage === 1 || reviewsLoading}
+                          >
+                            <ChevronLeftIcon className="h-4 w-4 mr-1" />
+                            Önceki
+                          </Button>
+                        </PaginationItem>
+                        
+                        {(() => {
+                          const totalPages = Math.ceil(totalReviewsCount / reviewsPageSize)
+                          const pages = []
+                          
+                          if (totalPages <= 7) {
+                            // Show all pages if 7 or fewer
+                            for (let i = 1; i <= totalPages; i++) {
+                              pages.push(
+                                <PaginationItem key={i}>
+                                  <Button
+                                    variant={reviewsPage === i ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setReviewsPage(i)}
+                                    disabled={reviewsLoading}
+                                  >
+                                    {i}
+                                  </Button>
+                                </PaginationItem>
+                              )
+                            }
+                          } else {
+                            // Show first page
+                            pages.push(
+                              <PaginationItem key={1}>
+                                <Button
+                                  variant={reviewsPage === 1 ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setReviewsPage(1)}
+                                  disabled={reviewsLoading}
+                                >
+                                  1
+                                </Button>
+                              </PaginationItem>
+                            )
+                            
+                            // Show ellipsis if needed
+                            if (reviewsPage > 3) {
+                              pages.push(
+                                <PaginationItem key="ellipsis-1">
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )
+                            }
+                            
+                            // Show current page and neighbors
+                            const start = Math.max(2, reviewsPage - 1)
+                            const end = Math.min(totalPages - 1, reviewsPage + 1)
+                            
+                            for (let i = start; i <= end; i++) {
+                              pages.push(
+                                <PaginationItem key={i}>
+                                  <Button
+                                    variant={reviewsPage === i ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setReviewsPage(i)}
+                                    disabled={reviewsLoading}
+                                  >
+                                    {i}
+                                  </Button>
+                                </PaginationItem>
+                              )
+                            }
+                            
+                            // Show ellipsis if needed
+                            if (reviewsPage < totalPages - 2) {
+                              pages.push(
+                                <PaginationItem key="ellipsis-2">
+                                  <PaginationEllipsis />
+                                </PaginationItem>
+                              )
+                            }
+                            
+                            // Show last page
+                            pages.push(
+                              <PaginationItem key={totalPages}>
+                                <Button
+                                  variant={reviewsPage === totalPages ? 'default' : 'outline'}
+                                  size="sm"
+                                  onClick={() => setReviewsPage(totalPages)}
+                                  disabled={reviewsLoading}
+                                >
+                                  {totalPages}
+                                </Button>
+                              </PaginationItem>
+                            )
+                          }
+                          
+                          return pages
+                        })()}
+                        
+                        <PaginationItem>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setReviewsPage(Math.min(Math.ceil(totalReviewsCount / reviewsPageSize), reviewsPage + 1))}
+                            disabled={reviewsPage === Math.ceil(totalReviewsCount / reviewsPageSize) || reviewsLoading}
+                          >
+                            Sonraki
+                            <ChevronRightIcon className="h-4 w-4 ml-1" />
+                          </Button>
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Review Dialog */}
+      <Dialog open={!!editingReview} onOpenChange={(open) => !open && setEditingReview(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Yorumu Düzenle</DialogTitle>
+            <DialogDescription>
+              {editingReview?.restaurantName} restoranı için yorumunuzu düzenleyin
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Puanınız</label>
+              <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setEditRating(star)}
+                    onMouseEnter={() => setHoveredRating(star)}
+                    onMouseLeave={() => setHoveredRating(0)}
+                    className="transition-transform hover:scale-110"
+                    disabled={isSubmitting}
+                  >
+                    <Star
+                      className={`h-8 w-8 ${
+                        star <= (hoveredRating || editRating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Yorumunuz</label>
+              <Textarea
+                placeholder="Deneyiminizi anlatın..."
+                value={editComment}
+                onChange={(e) => setEditComment(e.target.value)}
+                rows={4}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditingReview(null)}
+              disabled={isSubmitting}
+            >
+              İptal
+            </Button>
+            <Button onClick={handleUpdateReview} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Güncelleniyor...
+                </>
+              ) : (
+                'Güncelle'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-

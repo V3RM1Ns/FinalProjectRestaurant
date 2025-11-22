@@ -9,9 +9,12 @@ public class RestaurantResponseDto
     public string? Email { get; set; }
     public string? Website { get; set; }
     public string Description { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public string? Category { get; set; }
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public string OwnerId { get; set; } = string.Empty;
     public string OwnerName { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
 }
-

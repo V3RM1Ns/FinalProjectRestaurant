@@ -40,25 +40,57 @@ public class FileService : IFileService
 
     public async Task<string> UploadProfileImageAsync(IFormFile file, string userId)
     {
-        return await UploadFileAsync(file, "profiles", userId);
+        return await UploadFileInternalAsync(file, "profiles", userId);
     }
 
     public async Task<string> UploadMenuItemImageAsync(IFormFile file, string menuItemId)
     {
-        return await UploadFileAsync(file, "menuitems", menuItemId);
+        return await UploadFileInternalAsync(file, "menuitems", menuItemId);
     }
 
     public async Task<string> UploadRewardImageAsync(IFormFile file, string rewardId)
     {
-        return await UploadFileAsync(file, "rewards", rewardId);
+        return await UploadFileInternalAsync(file, "rewards", rewardId);
     }
 
     public async Task<string> UploadRestaurantImageAsync(IFormFile file, string restaurantId)
     {
-        return await UploadFileAsync(file, "restaurants", restaurantId);
+        return await UploadFileInternalAsync(file, "restaurants", restaurantId);
     }
 
-    private async Task<string> UploadFileAsync(IFormFile file, string category, string entityId)
+
+    public async Task<string> UploadFileAsync(IFormFile file, string folder)
+    {
+        if (file == null || file.Length == 0)
+            throw new ArgumentException("File is empty");
+
+        if (file.Length > _maxFileSize)
+            throw new ArgumentException($"File size cannot exceed {_maxFileSize / 1024 / 1024}MB");
+
+        var extension = Path.GetExtension(file.FileName ?? "").ToLowerInvariant();
+        if (!_allowedExtensions.Contains(extension))
+            throw new ArgumentException($"File type {extension} is not allowed. Allowed types: {string.Join(", ", _allowedExtensions)}");
+
+        var fileName = $"{Guid.NewGuid()}{extension}";
+        var categoryFolder = Path.Combine(_uploadsFolder, folder);
+        
+        // Klasör yoksa oluştur
+        if (!Directory.Exists(categoryFolder))
+        {
+            Directory.CreateDirectory(categoryFolder);
+        }
+        
+        var filePath = Path.Combine(categoryFolder, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        return $"/uploads/{folder}/{fileName}";
+    }
+
+    private async Task<string> UploadFileInternalAsync(IFormFile file, string category, string entityId)
     {
         if (file == null || file.Length == 0)
             throw new ArgumentException("File is empty");

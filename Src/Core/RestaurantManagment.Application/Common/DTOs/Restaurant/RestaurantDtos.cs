@@ -35,17 +35,3 @@ public class CreateRestaurantDto
     public RestaurantCategory? Category { get; set; }
     public string? ImageUrl { get; set; }
 }
-
-public class UpdateRestaurantDto
-{
-    public string Name { get; set; } = string.Empty;
-    public string Address { get; set; } = string.Empty;
-    public string PhoneNumber { get; set; } = string.Empty;
-    public string? Email { get; set; }
-    public string? Website { get; set; }
-    public string Description { get; set; } = string.Empty;
-    public double? Latitude { get; set; }
-    public double? Longitude { get; set; }
-    public RestaurantCategory? Category { get; set; }
-    public string? ImageUrl { get; set; }
-}

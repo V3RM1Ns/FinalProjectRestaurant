@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { loyaltyApi } from '@/lib/api'
+import { customerApi } from '@/lib/customer-api'
 import { ArrowLeft, Gift, Star, Clock, Users } from 'lucide-react'
 import {
   Dialog,
@@ -50,7 +51,18 @@ export default function RestaurantRewardsPage() {
   useEffect(() => {
     fetchRewards()
     fetchUserPoints()
+    fetchRestaurantInfo()
   }, [restaurantId])
+
+  const fetchRestaurantInfo = async () => {
+    try {
+      const restaurantData = await customerApi.restaurants.getById(restaurantId)
+      // You can store restaurant data in state if needed
+      console.log('Restaurant data:', restaurantData)
+    } catch (error: any) {
+      console.error('Error fetching restaurant:', error)
+    }
+  }
 
   const fetchRewards = async () => {
     setLoading(true)
@@ -273,4 +285,3 @@ export default function RestaurantRewardsPage() {
     </div>
   )
 }
-

@@ -148,6 +148,7 @@ export default function AdminUsersPage() {
       await fetchUserRoles(selectedUser.id)
       await fetchUsers(currentPage) // Refresh user list
     } catch (error: any) {
+      console.error('Add role error:', error)
       toast({
         title: 'Hata',
         description: error.message || 'Rol eklenirken bir hata oluştu',
@@ -171,6 +172,7 @@ export default function AdminUsersPage() {
       await fetchUserRoles(selectedUser.id)
       await fetchUsers(currentPage) // Refresh user list
     } catch (error: any) {
+      console.error('Remove role error:', error)
       toast({
         title: 'Hata',
         description: error.message || 'Rol kaldırılırken bir hata oluştu',

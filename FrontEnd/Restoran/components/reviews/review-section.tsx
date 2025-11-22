@@ -1,72 +1,110 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Star } from "lucide-react"
+import { Star, Loader2 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import type { Review } from "@/types"
-import { ReviewStatus, UserRole } from "@/types"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { customerApi } from "@/lib/customer-api"
+
+interface Review {
+  id: string
+  restaurantId: string
+  customerId: string
+  customerName: string
+  customerEmail?: string
+  rating: number
+  comment: string
+  status: string
+  ownerResponse?: string
+  respondedAt?: string
+  createdAt: string
+  isReported?: boolean
+  reportReason?: string
+  reportedAt?: string
+}
 
 interface ReviewSectionProps {
   restaurantId: string
   restaurantName: string
 }
 
-// Mock reviews data
-const mockReviews: Review[] = [
-  {
-    id: "1",
-    restaurantId: "1",
-    customerId: "1",
-    customerName: "Ahmet Yılmaz",
-    rating: 5,
-    comment: "Harika bir deneyimdi! Yemekler çok lezzetliydi ve servis mükemmeldi.",
-    status: ReviewStatus.Approved,
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    isDeleted: false,
-  },
-  {
-    id: "2",
-    restaurantId: "1",
-    customerId: "2",
-    customerName: "Ayşe Demir",
-    rating: 4,
-    comment: "Güzel bir mekan, yemekler lezzetli. Sadece servis biraz yavaştı.",
-    status: ReviewStatus.Approved,
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    isDeleted: false,
-  },
-  {
-    id: "3",
-    restaurantId: "1",
-    customerId: "3",
-    customerName: "Mehmet Kaya",
-    rating: 5,
-    comment: "Kesinlikle tavsiye ederim. Özellikle İskender kebap muhteşemdi!",
-    status: ReviewStatus.Approved,
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    isDeleted: false,
-  },
-]
-
 export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [reviews, setReviews] = useState<Review[]>(mockReviews)
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [loading, setLoading] = useState(true)
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
   const [comment, setComment] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [canReview, setCanReview] = useState(false)
+  const [myReview, setMyReview] = useState<Review | null>(null)
+  const [averageRating, setAverageRating] = useState("0.0")
 
-  const isCustomer = user?.roles.includes(UserRole.Customer)
-  const approvedReviews = reviews.filter((r) => r.status === ReviewStatus.Approved)
+  useEffect(() => {
+    fetchReviews()
+    if (user) {
+      checkCanReview()
+      fetchMyReview()
+    }
+  }, [restaurantId, user])
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true)
+      const response = await customerApi.restaurants.getReviews(restaurantId, 1, 50)
+      
+      // Handle both paginated and non-paginated responses
+      const reviewsList = response.items || response.data || response || []
+      const allReviews = Array.isArray(reviewsList) ? reviewsList : []
+      setReviews(allReviews)
+      
+      // Calculate average rating from all approved reviews
+      const approved = allReviews.filter((r: Review) => r.status === "Approved")
+      if (approved.length > 0) {
+        const avg = approved.reduce((sum: number, r: Review) => sum + r.rating, 0) / approved.length
+        setAverageRating(avg.toFixed(1))
+      } else {
+        setAverageRating("0.0")
+      }
+    } catch (error: any) {
+      console.error('Error fetching reviews:', error)
+      setReviews([])
+      setAverageRating("0.0")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkCanReview = async () => {
+    try {
+      const canReviewResult = await customerApi.restaurants.canReview(restaurantId)
+      setCanReview(canReviewResult)
+    } catch (error) {
+      setCanReview(false)
+    }
+  }
+
+  const fetchMyReview = async () => {
+    try {
+      const review = await customerApi.restaurants.getMyReview(restaurantId)
+      setMyReview(review)
+      if (review) {
+        setRating(review.rating)
+        setComment(review.comment)
+      }
+    } catch (error) {
+      // No review found is ok
+      setMyReview(null)
+    }
+  }
 
   const handleSubmitReview = async () => {
-    if (!user || !isCustomer) {
+    if (!user) {
       toast({
         title: "Giriş gerekli",
         description: "Yorum yapmak için müşteri olarak giriş yapmalısınız.",
@@ -95,35 +133,58 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
 
     setIsSubmitting(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      if (myReview) {
+        // Update existing review
+        await customerApi.reviews.update(myReview.id, {
+          rating,
+          comment: comment.trim(),
+        })
+        toast({
+          title: "Yorum güncellendi",
+          description: "Yorumunuz başarıyla güncellendi.",
+        })
+      } else {
+        // Create new review
+        await customerApi.reviews.create({
+          restaurantId,
+          rating,
+          comment: comment.trim(),
+        })
+        toast({
+          title: "Yorum gönderildi",
+          description: "Yorumunuz admin onayından sonra yayınlanacaktır.",
+        })
+      }
 
-    const newReview: Review = {
-      id: Date.now().toString(),
-      restaurantId,
-      customerId: user.id,
-      customerName: user.fullName,
-      rating,
-      comment: comment.trim(),
-      status: ReviewStatus.Pending,
-      createdAt: new Date().toISOString(),
-      isDeleted: false,
+      // Refresh data
+      setRating(0)
+      setComment("")
+      await fetchReviews()
+      await fetchMyReview()
+      await checkCanReview()
+    } catch (error: any) {
+      console.error('Error submitting review:', error)
+      toast({
+        title: "Hata",
+        description: error.message || "Yorum gönderilirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setReviews([newReview, ...reviews])
-    setRating(0)
-    setComment("")
-    setIsSubmitting(false)
-
-    toast({
-      title: "Yorum gönderildi",
-      description: "Yorumunuz admin onayından sonra yayınlanacaktır.",
-    })
   }
 
-  const averageRating = approvedReviews.length
-    ? (approvedReviews.reduce((sum, r) => sum + r.rating, 0) / approvedReviews.length).toFixed(1)
-    : "0.0"
+  // Filter approved reviews
+  const approvedReviews = reviews.filter((r) => r.status === "Approved")
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -153,10 +214,10 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
       </Card>
 
       {/* Write Review */}
-      {isCustomer && (
+      {user && (canReview || myReview) && (
         <Card>
           <CardHeader>
-            <CardTitle>Değerlendirme Yaz</CardTitle>
+            <CardTitle>{myReview ? "Yorumunuzu Düzenleyin" : "Değerlendirme Yaz"}</CardTitle>
             <CardDescription>Deneyiminizi diğer müşterilerle paylaşın</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -193,7 +254,16 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
             </div>
 
             <Button onClick={handleSubmitReview} disabled={isSubmitting} className="w-full">
-              {isSubmitting ? "Gönderiliyor..." : "Yorum Gönder"}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gönderiliyor...
+                </>
+              ) : myReview ? (
+                "Yorumu Güncelle"
+              ) : (
+                "Yorum Gönder"
+              )}
             </Button>
           </CardContent>
         </Card>
@@ -240,10 +310,15 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
                       </div>
                     </div>
                     <p className="text-muted-foreground">{review.comment}</p>
-                    {review.adminResponse && (
+                    {review.ownerResponse && (
                       <div className="mt-3 p-3 bg-muted rounded-lg">
                         <p className="text-sm font-medium mb-1">Restoran Yanıtı:</p>
-                        <p className="text-sm text-muted-foreground">{review.adminResponse}</p>
+                        <p className="text-sm text-muted-foreground">{review.ownerResponse}</p>
+                        {review.respondedAt && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(review.respondedAt).toLocaleDateString("tr-TR")}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -256,3 +331,4 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
     </div>
   )
 }
+

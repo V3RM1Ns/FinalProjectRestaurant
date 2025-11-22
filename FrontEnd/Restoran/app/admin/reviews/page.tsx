@@ -92,9 +92,12 @@ export default function AdminReviewsPage() {
   const loadPendingReviews = async () => {
     try {
       setLoading(true)
+      console.log('Loading pending reviews, page:', pendingPage, 'pageSize:', pageSize)
       const data = await reviewApi.admin.getPending(pendingPage, pageSize)
+      console.log('Pending reviews response:', data)
       setPendingReviews(data)
     } catch (error: any) {
+      console.error('Error loading pending reviews:', error)
       toast({
         title: "Hata",
         description: error.message || "Bekleyen yorumlar yüklenirken bir hata oluştu",
