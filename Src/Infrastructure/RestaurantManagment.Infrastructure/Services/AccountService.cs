@@ -150,6 +150,8 @@ public class AccountService(
             user.Id,
             user.UserName,
             user.Email,
+            user.PhoneNumber,
+            user.EmployerRestaurantId,
             Roles = roles
         };
 

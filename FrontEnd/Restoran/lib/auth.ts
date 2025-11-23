@@ -39,14 +39,16 @@ export class AuthService {
 
       const data = await response.json()
 
-      // Backend'den gelen response yapısı: { message, token, user: { id, userName, email, firstName, lastName, roles } }
+      // Backend'den gelen response yapısı: { message, token, user: { id, userName, email, phoneNumber, employerRestaurantId, roles } }
       const user: AppUser = {
         id: data.user.id,
         fullName: data.user.userName || data.user.email,
         email: data.user.email,
         phoneNumber: data.user.phoneNumber || "",
+        employerRestaurantId: data.user.employerRestaurantId,
         roles: data.user.roles?.map((role: string) => role as UserRole) || [UserRole.Customer],
-        isActive: true,
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
       }
 
       const authResponse: AuthResponse = {
@@ -114,7 +116,8 @@ export class AuthService {
         email: data.user.email,
         phoneNumber: phoneNumber || "",
         roles: [UserRole.Customer], // Yeni kullanıcı default olarak Customer
-        isActive: true,
+        createdAt: new Date().toISOString(),
+        isDeleted: false,
       }
 
       const authResponse: AuthResponse = {

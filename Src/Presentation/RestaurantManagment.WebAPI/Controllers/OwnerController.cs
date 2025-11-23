@@ -7,6 +7,7 @@ using RestaurantManagment.Application.Common.DTOs.Menu;
 using RestaurantManagment.Application.Common.DTOs.MenuItem;
 using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
+using RestaurantManagment.Application.Common.DTOs.Reward;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using RestaurantManagment.Persistance.Data;
@@ -15,7 +16,7 @@ namespace RestaurantManagment.WebAPI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-[Authorize(Roles = "RestaurantOwner")]
+[Authorize(Roles = "RestaurantOwner,Employee")]
 public class OwnerController(
     IOwnerService ownerService,
     UserManager<AppUser> userManager,
@@ -761,6 +762,112 @@ public class OwnerController(
         {
             var count = await ownerService.GetTodayOrdersCountAsync(restaurantId, currentUser.Id);
             return Ok(new { TodayOrders = count });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    #endregion
+
+    #region Rewards
+
+    [HttpGet("restaurants/{restaurantId}/rewards")]
+    public async Task<IActionResult> GetRestaurantRewards(
+        string restaurantId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var rewards = await ownerService.GetRestaurantRewardsAsync(restaurantId, currentUser.Id, pageNumber, pageSize);
+            return Ok(rewards);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurants/{restaurantId}/rewards/{rewardId}")]
+    public async Task<IActionResult> GetRewardById(string restaurantId, string rewardId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var reward = await ownerService.GetRewardByIdAsync(rewardId, currentUser.Id);
+            if (reward == null)
+                return NotFound(new { Message = "Reward not found" });
+
+            return Ok(reward);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPost("restaurants/{restaurantId}/rewards")]
+    public async Task<IActionResult> CreateReward(string restaurantId, [FromBody] CreateRewardDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var reward = await ownerService.CreateRewardAsync(restaurantId, dto, currentUser.Id);
+            return CreatedAtAction(nameof(GetRewardById), new { restaurantId, rewardId = reward.Id }, reward);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPut("restaurants/{restaurantId}/rewards/{rewardId}")]
+    public async Task<IActionResult> UpdateReward(string restaurantId, string rewardId, [FromBody] UpdateRewardDto dto)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var reward = await ownerService.UpdateRewardAsync(rewardId, dto, currentUser.Id);
+            return Ok(reward);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpDelete("restaurants/{restaurantId}/rewards/{rewardId}")]
+    public async Task<IActionResult> DeleteReward(string restaurantId, string rewardId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            await ownerService.DeleteRewardAsync(rewardId, currentUser.Id);
+            return Ok(new { Message = "Reward deleted successfully" });
         }
         catch (Exception ex)
         {

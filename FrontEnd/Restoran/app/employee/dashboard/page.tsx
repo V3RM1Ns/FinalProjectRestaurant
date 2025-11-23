@@ -5,143 +5,96 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Package, Calendar, Users, MapPin } from "lucide-react"
+import { Clock, Package, Calendar, Users, MapPin, AlertCircle, UtensilsCrossed, Table as TableIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-
-interface Order {
-  id: string
-  customerName: string
-  items: Array<{ name: string; quantity: number }>
-  total: number
-  status: "Pending" | "Preparing" | "Ready" | "Delivered"
-  createdAt: string
-  address: string
-}
-
-interface Reservation {
-  id: string
-  customerName: string
-  date: string
-  time: string
-  guestCount: number
-  status: "Pending" | "Confirmed" | "Seated" | "Completed"
-  tableNumber: string
-}
-
-const mockOrders: Order[] = [
-  {
-    id: "ORD001",
-    customerName: "Ahmet Yılmaz",
-    items: [
-      { name: "İskender Kebap", quantity: 2 },
-      { name: "Ayran", quantity: 2 },
-    ],
-    total: 405,
-    status: "Pending",
-    createdAt: "2025-10-17T14:30:00",
-    address: "Kadıköy, İstanbul",
-  },
-  {
-    id: "ORD002",
-    customerName: "Zeynep Kaya",
-    items: [
-      { name: "Adana Kebap", quantity: 1 },
-      { name: "Mercimek Çorbası", quantity: 1 },
-    ],
-    total: 195,
-    status: "Preparing",
-    createdAt: "2025-10-17T14:45:00",
-    address: "Beşiktaş, İstanbul",
-  },
-  {
-    id: "ORD003",
-    customerName: "Mehmet Demir",
-    items: [{ name: "Kuzu Tandır", quantity: 1 }],
-    total: 235,
-    status: "Ready",
-    createdAt: "2025-10-17T15:00:00",
-    address: "Şişli, İstanbul",
-  },
-]
-
-const mockReservations: Reservation[] = [
-  {
-    id: "RES001",
-    customerName: "Ayşe Öztürk",
-    date: "2025-10-17",
-    time: "19:00",
-    guestCount: 4,
-    status: "Confirmed",
-    tableNumber: "12",
-  },
-  {
-    id: "RES002",
-    customerName: "Can Yıldız",
-    date: "2025-10-17",
-    time: "20:00",
-    guestCount: 2,
-    status: "Pending",
-    tableNumber: "5",
-  },
-  {
-    id: "RES003",
-    customerName: "Elif Arslan",
-    date: "2025-10-17",
-    time: "20:30",
-    guestCount: 6,
-    status: "Confirmed",
-    tableNumber: "8",
-  },
-]
-
-const orderStatusConfig = {
-  Pending: { label: "Onay Bekliyor", variant: "secondary" as const, next: "Preparing" },
-  Preparing: { label: "Hazırlanıyor", variant: "default" as const, next: "Ready" },
-  Ready: { label: "Hazır", variant: "default" as const, next: "Delivered" },
-  Delivered: { label: "Teslim Edildi", variant: "outline" as const, next: null },
-}
+import { useAuth } from "@/contexts/auth-context"
+import { employeeApi, type Reservation, type Menu, type Table } from "@/lib/employee-api"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const reservationStatusConfig = {
-  Pending: { label: "Onay Bekliyor", variant: "secondary" as const, next: "Confirmed" },
-  Confirmed: { label: "Onaylandı", variant: "default" as const, next: "Seated" },
-  Seated: { label: "Oturdu", variant: "default" as const, next: "Completed" },
-  Completed: { label: "Tamamlandı", variant: "outline" as const, next: null },
+  Pending: { label: "Onay Bekliyor", variant: "secondary" as const, color: "bg-yellow-100 text-yellow-800" },
+  Confirmed: { label: "Onaylandı", variant: "default" as const, color: "bg-blue-100 text-blue-800" },
+  Cancelled: { label: "İptal Edildi", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+  Completed: { label: "Tamamlandı", variant: "outline" as const, color: "bg-green-100 text-green-800" },
+  NoShow: { label: "Gelmedi", variant: "outline" as const, color: "bg-gray-100 text-gray-800" },
+}
+
+const tableStatusConfig = {
+  Available: { label: "Müsait", color: "bg-green-100 text-green-800" },
+  Occupied: { label: "Dolu", color: "bg-red-100 text-red-800" },
+  Reserved: { label: "Rezerve", color: "bg-blue-100 text-blue-800" },
+  OutOfService: { label: "Hizmet Dışı", color: "bg-gray-100 text-gray-800" },
 }
 
 export default function EmployeeDashboardPage() {
-  const [orders, setOrders] = useState<Order[]>([])
   const [reservations, setReservations] = useState<Reservation[]>([])
+  const [menus, setMenus] = useState<Menu[]>([])
+  const [tables, setTables] = useState<Table[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
+  const { user } = useAuth()
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user?.employerRestaurantId) {
+        setError("Restoran bilgisi bulunamadı. Lütfen bir restorana bağlı olduğunuzdan emin olun.")
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      setOrders(mockOrders)
-      setReservations(mockReservations)
-      setLoading(false)
+      setError(null)
+
+      try {
+        // Tüm verileri paralel olarak getir
+        const [reservationsResponse, menusResponse, tablesResponse] = await Promise.all([
+          employeeApi.reservations.getAll(user.employerRestaurantId, 1, 50),
+          employeeApi.menus.getAll(user.employerRestaurantId),
+          employeeApi.tables.getAll(user.employerRestaurantId),
+        ])
+
+        setReservations(reservationsResponse.items)
+        setMenus(menusResponse)
+        setTables(tablesResponse)
+      } catch (err: any) {
+        console.error("Veri yükleme hatası:", err)
+        setError(err.message || "Veriler yüklenirken bir hata oluştu.")
+        toast({
+          title: "Hata",
+          description: "Veriler yüklenirken bir hata oluştu.",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
     }
 
     fetchData()
-  }, [])
-
-  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    setOrders(
-      orders.map((order) => (order.id === orderId ? { ...order, status: newStatus as Order["status"] } : order)),
-    )
-    toast({ title: "Sipariş durumu güncellendi" })
-  }
+  }, [user?.employerRestaurantId, toast])
 
   const handleUpdateReservationStatus = async (reservationId: string, newStatus: string) => {
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    setReservations(
-      reservations.map((res) =>
-        res.id === reservationId ? { ...res, status: newStatus as Reservation["status"] } : res,
-      ),
-    )
-    toast({ title: "Rezervasyon durumu güncellendi" })
+    try {
+      await employeeApi.reservations.updateStatus(reservationId, newStatus)
+      
+      setReservations(
+        reservations.map((res) =>
+          res.id === reservationId ? { ...res, status: newStatus as Reservation["status"] } : res,
+        ),
+      )
+      
+      toast({ 
+        title: "Başarılı",
+        description: "Rezervasyon durumu güncellendi" 
+      })
+    } catch (err: any) {
+      console.error("Rezervasyon güncelleme hatası:", err)
+      toast({
+        title: "Hata",
+        description: "Rezervasyon durumu güncellenirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    }
   }
 
   if (loading) {
@@ -149,6 +102,11 @@ export default function EmployeeDashboardPage() {
       <div className="container py-8">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-muted rounded w-1/3" />
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-muted rounded" />
+            ))}
+          </div>
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-32 bg-muted rounded" />
@@ -159,173 +117,132 @@ export default function EmployeeDashboardPage() {
     )
   }
 
-  const todayOrders = orders.filter((order) => {
-    const orderDate = new Date(order.createdAt).toDateString()
-    const today = new Date().toDateString()
-    return orderDate === today
-  })
+  if (error) {
+    return (
+      <div className="container py-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
-  const todayReservations = reservations.filter((res) => {
-    const resDate = new Date(res.date).toDateString()
-    const today = new Date().toDateString()
-    return resDate === today
-  })
+  // İstatistikler
+  const pendingReservations = reservations.filter(r => r.status === "Pending").length
+  const confirmedReservations = reservations.filter(r => r.status === "Confirmed").length
+  const totalMenuItems = menus.reduce((acc, menu) => acc + (menu.menuItems?.length || 0), 0)
+  const availableTables = tables.filter(t => t.status === "Available").length
 
   return (
     <div className="container py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">Çalışan Paneli</h1>
-        <p className="text-muted-foreground">Bugünkü siparişler ve rezervasyonlar</p>
+        <p className="text-muted-foreground">Restoran yönetimi ve operasyonlar</p>
       </div>
 
-      {/* Stats */}
+      {/* İstatistik Kartları */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Bekleyen Siparişler</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Bekleyen Rezervasyonlar
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todayOrders.filter((o) => o.status === "Pending").length}</div>
+            <div className="text-2xl font-bold">{pendingReservations}</div>
+            <p className="text-xs text-muted-foreground mt-1">Onay bekliyor</p>
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hazırlanan Siparişler</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Onaylı Rezervasyonlar
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todayOrders.filter((o) => o.status === "Preparing").length}</div>
+            <div className="text-2xl font-bold">{confirmedReservations}</div>
+            <p className="text-xs text-muted-foreground mt-1">Aktif rezervasyonlar</p>
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Bekleyen Rezervasyonlar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <TableIcon className="h-4 w-4" />
+              Müsait Masalar
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todayReservations.filter((r) => r.status === "Pending").length}</div>
+            <div className="text-2xl font-bold">{availableTables} / {tables.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">Toplam masa sayısı</p>
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Onaylı Rezervasyonlar</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <UtensilsCrossed className="h-4 w-4" />
+              Menü Öğeleri
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{todayReservations.filter((r) => r.status === "Confirmed").length}</div>
+            <div className="text-2xl font-bold">{totalMenuItems}</div>
+            <p className="text-xs text-muted-foreground mt-1">{menus.length} menüde</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Orders and Reservations Tabs */}
-      <Tabs defaultValue="orders" className="w-full">
+      {/* Ana Tablar */}
+      <Tabs defaultValue="reservations" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="orders" className="gap-2">
-            <Package className="h-4 w-4" />
-            Siparişler ({todayOrders.length})
-          </TabsTrigger>
           <TabsTrigger value="reservations" className="gap-2">
             <Calendar className="h-4 w-4" />
-            Rezervasyonlar ({todayReservations.length})
+            Rezervasyonlar ({reservations.length})
+          </TabsTrigger>
+          <TabsTrigger value="tables" className="gap-2">
+            <TableIcon className="h-4 w-4" />
+            Masalar ({tables.length})
+          </TabsTrigger>
+          <TabsTrigger value="menus" className="gap-2">
+            <UtensilsCrossed className="h-4 w-4" />
+            Menüler ({menus.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="orders">
-          {todayOrders.length === 0 ? (
+        {/* Rezervasyonlar Tab */}
+        <TabsContent value="reservations">
+          {reservations.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Bugün sipariş yok</h3>
-                <p className="text-muted-foreground">Yeni siparişler burada görünecek</p>
+                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Rezervasyon yok</h3>
+                <p className="text-muted-foreground">Henüz rezervasyon bulunmuyor</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-4">
-              {todayOrders.map((order) => (
-                <Card key={order.id}>
+              {reservations.map((reservation) => (
+                <Card key={reservation.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Sipariş #{order.id}</CardTitle>
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">Rezervasyon #{reservation.id.substring(0, 8)}</CardTitle>
                         <CardDescription className="flex items-center gap-2 mt-1">
                           <Clock className="h-3 w-3" />
-                          {new Date(order.createdAt).toLocaleTimeString("tr-TR", {
+                          {new Date(reservation.reservationDate).toLocaleString("tr-TR", {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
                         </CardDescription>
                       </div>
-                      <Badge variant={orderStatusConfig[order.status].variant}>
-                        {orderStatusConfig[order.status].label}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <p className="text-sm font-medium mb-2">Müşteri: {order.customerName}</p>
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                        <span>{order.address}</span>
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium mb-2">Ürünler:</p>
-                      <ul className="space-y-1">
-                        {order.items.map((item, index) => (
-                          <li key={index} className="text-sm text-muted-foreground">
-                            • {item.name} x{item.quantity}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="font-bold">Toplam: ₺{order.total}</span>
-                      {orderStatusConfig[order.status].next && (
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => handleUpdateOrderStatus(order.id, value)}
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Onay Bekliyor</SelectItem>
-                            <SelectItem value="Preparing">Hazırlanıyor</SelectItem>
-                            <SelectItem value="Ready">Hazır</SelectItem>
-                            <SelectItem value="Delivered">Teslim Edildi</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="reservations">
-          {todayReservations.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Bugün rezervasyon yok</h3>
-                <p className="text-muted-foreground">Yeni rezervasyonlar burada görünecek</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {todayReservations.map((reservation) => (
-                <Card key={reservation.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Rezervasyon #{reservation.id}</CardTitle>
-                        <CardDescription className="flex items-center gap-2 mt-1">
-                          <Clock className="h-3 w-3" />
-                          {reservation.time}
-                        </CardDescription>
-                      </div>
-                      <Badge variant={reservationStatusConfig[reservation.status].variant}>
+                      <Badge className={reservationStatusConfig[reservation.status].color}>
                         {reservationStatusConfig[reservation.status].label}
                       </Badge>
                     </div>
@@ -335,6 +252,7 @@ export default function EmployeeDashboardPage() {
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Müşteri</p>
                         <p className="font-medium">{reservation.customerName}</p>
+                        <p className="text-xs text-muted-foreground">{reservation.customerEmail}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground mb-1">Masa</p>
@@ -344,37 +262,141 @@ export default function EmployeeDashboardPage() {
                         <p className="text-sm text-muted-foreground mb-1">Kişi Sayısı</p>
                         <div className="flex items-center gap-1">
                           <Users className="h-4 w-4" />
-                          <span className="font-medium">{reservation.guestCount} Kişi</span>
+                          <span className="font-medium">{reservation.numberOfGuests} Kişi</span>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Tarih</p>
-                        <p className="font-medium">
-                          {new Date(reservation.date).toLocaleDateString("tr-TR", {
-                            day: "numeric",
-                            month: "long",
-                          })}
-                        </p>
+                        <p className="text-sm text-muted-foreground mb-1">Durum</p>
+                        <p className="font-medium">{reservationStatusConfig[reservation.status].label}</p>
                       </div>
                     </div>
 
-                    {reservationStatusConfig[reservation.status].next && (
-                      <div className="pt-2 border-t">
-                        <Select
-                          value={reservation.status}
-                          onValueChange={(value) => handleUpdateReservationStatus(reservation.id, value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pending">Onay Bekliyor</SelectItem>
-                            <SelectItem value="Confirmed">Onaylandı</SelectItem>
-                            <SelectItem value="Seated">Oturdu</SelectItem>
-                            <SelectItem value="Completed">Tamamlandı</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    {reservation.specialRequests && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Özel İstekler</p>
+                        <p className="text-sm bg-muted p-2 rounded">{reservation.specialRequests}</p>
                       </div>
+                    )}
+
+                    <div className="pt-2 border-t">
+                      <Select
+                        value={reservation.status}
+                        onValueChange={(value) => handleUpdateReservationStatus(reservation.id, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Pending">Onay Bekliyor</SelectItem>
+                          <SelectItem value="Confirmed">Onaylandı</SelectItem>
+                          <SelectItem value="Cancelled">İptal Edildi</SelectItem>
+                          <SelectItem value="Completed">Tamamlandı</SelectItem>
+                          <SelectItem value="NoShow">Gelmedi</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Masalar Tab */}
+        <TabsContent value="tables">
+          {tables.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <TableIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Masa yok</h3>
+                <p className="text-muted-foreground">Henüz masa tanımlanmamış</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tables.map((table) => (
+                <Card key={table.id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <CardTitle className="text-lg">Masa {table.tableNumber}</CardTitle>
+                      <Badge className={tableStatusConfig[table.status].color}>
+                        {tableStatusConfig[table.status].label}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Kapasite</span>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span className="font-medium">{table.capacity} Kişi</span>
+                      </div>
+                    </div>
+                    {table.location && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Konum</span>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          <span className="font-medium">{table.location}</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Menüler Tab */}
+        <TabsContent value="menus">
+          {menus.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <UtensilsCrossed className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">Menü yok</h3>
+                <p className="text-muted-foreground">Henüz menü oluşturulmamış</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6">
+              {menus.map((menu) => (
+                <Card key={menu.id}>
+                  <CardHeader>
+                    <CardTitle className="text-xl">{menu.name}</CardTitle>
+                    {menu.description && (
+                      <CardDescription>{menu.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {menu.menuItems && menu.menuItems.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {menu.menuItems.map((item: any) => (
+                          <div key={item.id} className="flex items-start justify-between p-3 border rounded-lg">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-medium">{item.name}</h4>
+                                {!item.isAvailable && (
+                                  <Badge variant="secondary" className="text-xs">Tükendi</Badge>
+                                )}
+                              </div>
+                              {item.description && (
+                                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                              )}
+                              {item.category && (
+                                <p className="text-xs text-muted-foreground mt-1">{item.category}</p>
+                              )}
+                            </div>
+                            <div className="ml-4 font-bold text-lg whitespace-nowrap">
+                              ₺{item.price}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Bu menüde henüz ürün yok
+                      </p>
                     )}
                   </CardContent>
                 </Card>

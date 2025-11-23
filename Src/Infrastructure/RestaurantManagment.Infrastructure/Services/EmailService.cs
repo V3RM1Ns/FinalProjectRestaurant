@@ -815,4 +815,511 @@ public class EmailService : IEmailService
 
         await SendEmailAsync(to, subject, body);
     }
+
+
+    public async Task SendOrderStatusUpdateEmailAsync(string to, string customerName, string orderId, string restaurantName, string status, string? estimatedDeliveryTime = null)
+    {
+        var statusEmoji = status switch
+        {
+            "Preparing" => "👨‍🍳",
+            "Ready" => "✅",
+            "OnTheWay" => "🚚",
+            "Delivered" => "🎉",
+            _ => "📦"
+        };
+
+        var statusText = status switch
+        {
+            "Preparing" => "Hazırlanıyor",
+            "Ready" => "Hazır",
+            "OnTheWay" => "Yola Çıktı",
+            "Delivered" => "Teslim Edildi",
+            _ => status
+        };
+
+        var subject = $"{statusEmoji} Sipariş Durumu Güncellendi - #{orderId.Substring(0, 8).ToUpper()}";
+        
+        var deliveryInfo = !string.IsNullOrEmpty(estimatedDeliveryTime) 
+            ? $"<div class='info-box'><strong>🕐 Tahmini Teslimat</strong><p>{estimatedDeliveryTime}</p></div>"
+            : "";
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .status-badge {{ display: inline-block; background: #10b981; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 18px; font-weight: bold; margin: 20px 0; }}
+        .info-box {{ background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }}
+        .info-box strong {{ display: block; color: #065f46; margin-bottom: 5px; }}
+        .info-box p {{ margin: 0; color: #047857; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>{statusEmoji}</h1>
+            <h2 style='margin: 10px 0; color: #1f2937;'>Sipariş Durumu Güncellendi</h2>
+            <p style='color: #6b7280;'>Sipariş No: #{orderId.Substring(0, 8).ToUpper()}</p>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName},</h3>
+            <p><strong>{restaurantName}</strong> restoranından verdiğiniz siparişinizin durumu güncellendi:</p>
+            <div style='text-align: center;'>
+                <div class='status-badge'>{statusText}</div>
+            </div>
+            {deliveryInfo}
+            <p style='margin-top: 20px; color: #6b7280;'>Siparişinizi hesabınızdan takip edebilirsiniz.</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management - Afiyet olsun! 🍴</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendOrderCancelledEmailAsync(string to, string customerName, string orderId, string restaurantName, string? reason = null)
+    {
+        var subject = $"❌ Sipariş İptal Edildi - #{orderId.Substring(0, 8).ToUpper()}";
+        
+        var reasonHtml = !string.IsNullOrEmpty(reason)
+            ? $"<div class='warning'><strong>İptal Nedeni:</strong><p>{reason}</p></div>"
+            : "";
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .warning {{ background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0; border-radius: 4px; }}
+        .warning strong {{ color: #991b1b; display: block; margin-bottom: 5px; }}
+        .warning p {{ margin: 0; color: #dc2626; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>❌</h1>
+            <h2 style='margin: 10px 0; color: #dc2626;'>Sipariş İptal Edildi</h2>
+            <p style='color: #6b7280;'>Sipariş No: #{orderId.Substring(0, 8).ToUpper()}</p>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName},</h3>
+            <p><strong>{restaurantName}</strong> restoranından verdiğiniz sipariş iptal edildi.</p>
+            {reasonHtml}
+            <p style='margin-top: 20px; color: #6b7280;'>İade işlemi varsa, ödeme yönteminize göre 3-10 iş günü içinde hesabınıza yansıyacaktır.</p>
+            <p style='margin-top: 10px; color: #6b7280;'>Sorularınız için bizimle iletişime geçebilirsiniz.</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+
+    public async Task SendReservationConfirmationEmailAsync(string to, string customerName, string reservationId, string restaurantName, DateTime reservationDate, int numberOfGuests, string tableInfo)
+    {
+        var subject = $"✅ Rezervasyon Onaylandı - {restaurantName}";
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; color: white; }}
+        .header h1 {{ margin: 0; font-size: 32px; }}
+        .content {{ padding: 30px; }}
+        .info-grid {{ display: grid; gap: 15px; margin: 20px 0; }}
+        .info-item {{ background: #f9fafb; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea; }}
+        .info-item strong {{ display: block; color: #4338ca; font-size: 12px; margin-bottom: 5px; }}
+        .info-item p {{ margin: 0; color: #1f2937; font-size: 16px; font-weight: 600; }}
+        .qr-section {{ text-align: center; padding: 20px; background: #f9fafb; border-radius: 8px; margin: 20px 0; }}
+        .footer {{ background: #f9fafb; padding: 20px; text-align: center; font-size: 12px; color: #888; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin-bottom: 10px;'>🎉</h1>
+            <h1>Rezervasyon Onaylandı!</h1>
+            <p style='margin: 10px 0 0 0; opacity: 0.9;'>Rezervasyon No: #{reservationId.Substring(0, 8).ToUpper()}</p>
+        </div>
+        <div class='content'>
+            <h2 style='color: #1f2937; margin-top: 0;'>Merhaba {customerName}! 👋</h2>
+            <p style='color: #6b7280; line-height: 1.6;'>
+                <strong>{restaurantName}</strong> restoranındaki rezervasyonunuz başarıyla oluşturuldu ve onaylandı.
+            </p>
+            
+            <div class='info-grid'>
+                <div class='info-item'>
+                    <strong>📅 TARİH VE SAAT</strong>
+                    <p>{reservationDate:dd MMMM yyyy, dddd - HH:mm}</p>
+                </div>
+                <div class='info-item'>
+                    <strong>👥 KİŞİ SAYISI</strong>
+                    <p>{numberOfGuests} Kişi</p>
+                </div>
+                <div class='info-item'>
+                    <strong>🪑 MASA BİLGİSİ</strong>
+                    <p>{tableInfo}</p>
+                </div>
+                <div class='info-item'>
+                    <strong>🏪 RESTORAN</strong>
+                    <p>{restaurantName}</p>
+                </div>
+            </div>
+
+            <div class='qr-section'>
+                <p style='color: #6b7280; margin: 0 0 10px 0;'>📱 Rezervasyon kodunuz:</p>
+                <p style='font-family: monospace; font-size: 20px; font-weight: bold; color: #4338ca; margin: 0;'>
+                    #{reservationId.Substring(0, 8).ToUpper()}
+                </p>
+            </div>
+
+            <div style='background: #fef3c7; padding: 15px; border-radius: 8px; border-left: 4px solid #f59e0b; margin-top: 20px;'>
+                <p style='margin: 0; color: #92400e; font-size: 14px;'>
+                    <strong>⏰ Lütfen Not Edin:</strong> Rezervasyon saatinizden 15 dakika önce restoranda olmanızı rica ederiz.
+                </p>
+            </div>
+        </div>
+        <div class='footer'>
+            <p style='font-weight: 600; color: #4338ca; font-size: 14px;'>Restaurant Management</p>
+            <p>Keyifli bir yemek dileriz! 🍽️</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendReservationStatusUpdateEmailAsync(string to, string customerName, string reservationId, string restaurantName, DateTime reservationDate, string status, string? notes = null)
+    {
+        var statusEmoji = status switch
+        {
+            "Confirmed" => "✅",
+            "Pending" => "⏳",
+            "Cancelled" => "❌",
+            "Completed" => "🎉",
+            _ => "📋"
+        };
+
+        var statusText = status switch
+        {
+            "Confirmed" => "Onaylandı",
+            "Pending" => "Beklemede",
+            "Cancelled" => "İptal Edildi",
+            "Completed" => "Tamamlandı",
+            _ => status
+        };
+
+        var subject = $"{statusEmoji} Rezervasyon Durumu - {restaurantName}";
+        
+        var notesHtml = !string.IsNullOrEmpty(notes)
+            ? $"<div style='background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0;'><strong style='color: #1e40af;'>📝 Not:</strong><p style='margin: 5px 0 0 0; color: #1e3a8a;'>{notes}</p></div>"
+            : "";
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .status-badge {{ display: inline-block; background: #667eea; color: #fff; padding: 12px 24px; border-radius: 20px; font-size: 18px; font-weight: bold; margin: 20px 0; }}
+        .info-box {{ background: #f0fdf4; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }}
+        .info-box strong {{ display: block; color: #065f46; margin-bottom: 5px; }}
+        .info-box p {{ margin: 0; color: #047857; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>{statusEmoji}</h1>
+            <h2 style='margin: 10px 0; color: #1f2937;'>Rezervasyon Durumu Güncellendi</h2>
+            <p style='color: #6b7280;'>Rezervasyon No: #{reservationId.Substring(0, 8).ToUpper()}</p>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName},</h3>
+            <p><strong>{restaurantName}</strong> restoranındaki rezervasyonunuzun durumu güncellendi:</p>
+            <div style='text-align: center;'>
+                <div class='status-badge'>{statusText}</div>
+            </div>
+            {notesHtml}
+            <p style='margin-top: 20px; color: #6b7280;'>Rezervasyonunuzu hesabınızdan takip edebilirsiniz.</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management 🍴</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendReservationCancelledEmailAsync(string to, string customerName, string reservationId, string restaurantName, DateTime reservationDate, string? reason = null)
+    {
+        var subject = $"❌ Rezervasyon İptal Edildi - {restaurantName}";
+        
+        var reasonHtml = !string.IsNullOrEmpty(reason)
+            ? $"<div class='warning'><strong>İptal Nedeni:</strong><p>{reason}</p></div>"
+            : "";
+
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .warning {{ background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0; border-radius: 4px; }}
+        .warning strong {{ color: #991b1b; display: block; margin-bottom: 5px; }}
+        .warning p {{ margin: 0; color: #dc2626; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>❌</h1>
+            <h2 style='margin: 10px 0; color: #dc2626;'>Rezervasyon İptal Edildi</h2>
+            <p style='color: #6b7280;'>Rezervasyon No: #{reservationId.Substring(0, 8).ToUpper()}</p>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName},</h3>
+            <p><strong>{restaurantName}</strong> restoranındaki rezervasyonunuz iptal edildi.</p>
+            {reasonHtml}
+            <p style='margin-top: 20px; color: #6b7280;'>Yeni bir rezervasyon oluşturmak için sistemimizi kullanabilirsiniz.</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendReservationReminderEmailAsync(string to, string customerName, string restaurantName, DateTime reservationDate, int numberOfGuests, string tableInfo)
+    {
+        var subject = $"⏰ Rezervasyon Hatırlatması - {restaurantName}";
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .reminder-box {{ background: #fef3c7; padding: 20px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>⏰</h1>
+            <h2 style='margin: 10px 0; color: #1f2937;'>Rezervasyon Hatırlatması</h2>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName}! 👋</h3>
+            <p>Yaklaşan rezervasyonunuzu hatırlatmak isteriz:</p>
+            
+            <div class='reminder-box'>
+                <p style='margin: 0 0 10px 0; color: #92400e;'><strong>🏪 Restoran:</strong> {restaurantName}</p>
+                <p style='margin: 0 0 10px 0; color: #92400e;'><strong>📅 Tarih ve Saat:</strong> {reservationDate:dd MMMM yyyy, HH:mm}</p>
+                <p style='margin: 0 0 10px 0; color: #92400e;'><strong>👥 Kişi Sayısı:</strong> {numberOfGuests} Kişi</p>
+                <p style='margin: 0; color: #92400e;'><strong>🪑 Masa:</strong> {tableInfo}</p>
+            </div>
+
+            <div style='background: #dbeafe; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;'>
+                <p style='margin: 0; color: #1e3a8a;'>
+                    <strong>💡 Hatırlatma:</strong> Lütfen rezervasyon saatinizden 15 dakika önce restoranda olunuz.
+                </p>
+            </div>
+        </div>
+        <div class='footer'>
+            <p>Keyifli bir yemek dileriz! 🍽️</p>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendReviewApprovedEmailAsync(string to, string customerName, string restaurantName, int rating)
+    {
+        var subject = $"✅ Yorumunuz Yayınlandı - {restaurantName}";
+        var stars = new string('⭐', rating);
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .success-box {{ background: #f0fdf4; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 20px 0; text-align: center; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>✅</h1>
+            <h2 style='margin: 10px 0; color: #1f2937;'>Yorumunuz Yayınlandı!</h2>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName}! 👋</h3>
+            <p><strong>{restaurantName}</strong> hakkında yaptığınız yorum incelendi ve onaylandı.</p>
+            
+            <div class='success-box'>
+                <p style='font-size: 32px; margin: 10px 0;'>{stars}</p>
+                <p style='margin: 10px 0; color: #065f46;'><strong>Değerlendirmeniz:</strong> {rating}/5</p>
+                <p style='margin: 0; color: #047857; font-size: 14px;'>Yorumunuz artık diğer kullanıcılar tarafından görülebilir!</p>
+            </div>
+
+            <p style='color: #6b7280;'>Görüşlerinizi paylaştığınız için teşekkür ederiz. Yorumlarınız, diğer kullanıcıların doğru seçim yapmasına yardımcı oluyor! 💚</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendReviewRejectedEmailAsync(string to, string customerName, string restaurantName, string reason)
+    {
+        var subject = $"❌ Yorumunuz Hakkında - {restaurantName}";
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .warning {{ background: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; margin: 20px 0; border-radius: 4px; }}
+        .warning strong {{ color: #991b1b; display: block; margin-bottom: 8px; }}
+        .warning p {{ margin: 0; color: #dc2626; line-height: 1.6; }}
+        .info-box {{ background: #eff6ff; padding: 16px; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 20px 0; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>❌</h1>
+            <h2 style='margin: 10px 0; color: #dc2626;'>Yorum Onaylanmadı</h2>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {customerName},</h3>
+            <p><strong>{restaurantName}</strong> hakkında yaptığınız yorum incelendi ancak yayınlanması uygun görülmedi.</p>
+            
+            <div class='warning'>
+                <strong>❌ Red Nedeni:</strong>
+                <p>{reason}</p>
+            </div>
+
+            <div class='info-box'>
+                <p style='margin: 0; color: #1e40af; font-size: 14px;'>
+                    <strong>💡 İpucu:</strong> Yorumlarınızın yapıcı, saygılı ve topluluk kurallarına uygun olmasına dikkat ediniz. 
+                    Uygun bir yorum yazarak tekrar deneyebilirsiniz.
+                </p>
+            </div>
+        </div>
+        <div class='footer'>
+            <p>Anlayışınız için teşekkür ederiz.</p>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendNewReviewNotificationToOwnerAsync(string to, string ownerName, string restaurantName, string customerName, int rating, string comment)
+    {
+        var subject = $"⭐ Yeni Yorum - {restaurantName}";
+        var stars = new string('⭐', rating);
+        
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #f8fafc; color: #222; padding: 20px; }}
+        .container {{ max-width: 500px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px #0001; padding: 32px; }}
+        .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #e5e7eb; }}
+        .review-box {{ background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b; }}
+        .footer {{ margin-top: 32px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #888; text-align: center; }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='font-size: 48px; margin: 0;'>⭐</h1>
+            <h2 style='margin: 10px 0; color: #1f2937;'>Yeni Müşteri Yorumu</h2>
+        </div>
+        <div style='padding: 20px 0;'>
+            <h3>Merhaba {ownerName}! 👋</h3>
+            <p><strong>{restaurantName}</strong> restoranınız için yeni bir yorum yapıldı.</p>
+            
+            <div class='review-box'>
+                <p style='margin: 0 0 10px 0; color: #6b7280;'><strong>👤 Müşteri:</strong> {customerName}</p>
+                <p style='margin: 0 0 15px 0; font-size: 24px;'>{stars}</p>
+                <p style='margin: 0 0 5px 0; color: #6b7280;'><strong>💬 Yorum:</strong></p>
+                <p style='margin: 0; color: #1f2937; font-style: italic; line-height: 1.6;'>&quot;{comment}&quot;</p>
+            </div>
+
+            <p style='color: #6b7280; font-size: 14px;'>Yönetim panelinizden tüm yorumları görüntüleyebilir ve yanıt verebilirsiniz.</p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(to, subject, body);
+    }
 }

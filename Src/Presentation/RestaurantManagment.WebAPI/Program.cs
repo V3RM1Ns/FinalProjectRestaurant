@@ -23,6 +23,14 @@ builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo { Title = "RestaurantManagment API", Version = "v1" });
+    
+    // Aynı isimli DTO'lar için schema ID çakışmasını önle
+    c.CustomSchemaIds(type => 
+    {
+        var name = type.FullName?.Replace("+", ".");
+        return name;
+    });
+    
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme.\r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: 'Bearer 12345abcdef'",

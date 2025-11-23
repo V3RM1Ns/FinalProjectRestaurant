@@ -29,6 +29,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<RewardRedemption> RewardRedemptions { get; set; }
     public DbSet<LoyaltyCode> LoyaltyCodes { get; set; }
 
+    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

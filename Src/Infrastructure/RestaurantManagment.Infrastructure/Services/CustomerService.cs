@@ -504,6 +504,8 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             throw new ArgumentException("Customer ID cannot be null or empty.", nameof(customerId));
 
         var order = await context.Orders
+            .Include(o => o.Customer)
+            .Include(o => o.Restaurant)
             .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId && !o.IsDeleted);
 
         if (order == null)
@@ -516,6 +518,25 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
         order.CompletedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
+        
+        // Send cancellation email
+        if (order.Customer != null && order.Restaurant != null)
+        {
+            try
+            {
+                await emailService.SendOrderCancelledEmailAsync(
+                    to: order.Customer.Email ?? "",
+                    customerName: order.Customer.FullName ?? order.Customer.UserName ?? "Müşteri",
+                    orderId: order.Id,
+                    restaurantName: order.Restaurant.Name,
+                    reason: "Müşteri tarafından iptal edildi"
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send order cancellation email: {ex.Message}");
+            }
+        }
     }
 
     public async Task<IEnumerable<OrderDto>> GetActiveOrdersAsync(string customerId)
@@ -686,7 +707,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
 
         if (restaurant == null)
             throw new InvalidOperationException("Restaurant not found.");
-
+        
         // Get customer info
         var customer = await context.Users.FirstOrDefaultAsync(u => u.Id == customerId);
         if (customer == null)
@@ -709,6 +730,8 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             if (!isAvailable)
                 throw new InvalidOperationException("Selected table is not available for the specified date.");
         }
+        
+        var table = await context.Tables.FirstOrDefaultAsync(t => t.Id == tableId);
 
         var reservation = new Reservation
         {
@@ -729,6 +752,25 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
 
         context.Reservations.Add(reservation);
         await context.SaveChangesAsync();
+        
+        // Send reservation confirmation email
+        try
+        {
+            var tableInfo = table != null ? $"Masa {table.TableNumber}" : "Atanacak";
+            await emailService.SendReservationConfirmationEmailAsync(
+                to: customer.Email ?? "",
+                customerName: customer.FullName ?? customer.UserName ?? "Müşteri",
+                reservationId: reservation.Id,
+                restaurantName: restaurant.Name,
+                reservationDate: dto.ReservationDate,
+                numberOfGuests: dto.PartySize,
+                tableInfo: tableInfo
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to send reservation confirmation email: {ex.Message}");
+        }
 
         return await GetReservationByIdAsync(reservation.Id, customerId) 
                ?? throw new InvalidOperationException("Failed to retrieve created reservation.");
@@ -795,6 +837,8 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             throw new ArgumentException("Customer ID cannot be null or empty.", nameof(customerId));
 
         var reservation = await context.Reservations
+            .Include(r => r.Customer)
+            .Include(r => r.Restaurant)
             .FirstOrDefaultAsync(r => r.Id == reservationId && r.CustomerId == customerId && !r.IsDeleted);
 
         if (reservation == null)
@@ -810,6 +854,26 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
         reservation.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
+        
+        // Send cancellation email
+        if (reservation.Customer != null && reservation.Restaurant != null)
+        {
+            try
+            {
+                await emailService.SendReservationCancelledEmailAsync(
+                    to: reservation.Customer.Email ?? "",
+                    customerName: reservation.Customer.FullName ?? reservation.Customer.UserName ?? "Müşteri",
+                    reservationId: reservation.Id,
+                    restaurantName: reservation.Restaurant.Name,
+                    reservationDate: reservation.ReservationDate,
+                    reason: "Müşteri tarafından iptal edildi"
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send reservation cancellation email: {ex.Message}");
+            }
+        }
     }
 
     public async Task<IEnumerable<ReservationDto>> GetUpcomingReservationsAsync(string customerId)

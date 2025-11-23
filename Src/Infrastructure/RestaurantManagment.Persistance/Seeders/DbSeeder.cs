@@ -921,10 +921,13 @@ public static class DbSeeder
         var random = new Random();
         var employeeCount = random.Next(2, 4); // 2 veya 3 çalışan
 
+        var restaurant = await context.Restaurants.FindAsync(restaurantId);
+        var restaurantName = restaurant?.Name ?? "Restaurant";
+
         for (int i = 1; i <= employeeCount; i++)
         {
             var uniqueId = Guid.NewGuid().ToString().Substring(0, 8);
-            var employeeEmail = $"employee_{uniqueId}@gmail.com";
+            var employeeEmail = $"employee_{restaurantName.Replace(" ", "").ToLower()}_{i}@gmail.com";
             
             var employee = await userManager.FindByEmailAsync(employeeEmail);
             if (employee == null)
@@ -956,6 +959,12 @@ public static class DbSeeder
                 {
                     await userManager.AddToRoleAsync(employee, "Employee");
                 }
+            }
+            else if (employee.EmployerRestaurantId != restaurantId)
+            {
+                // Eğer employee başka bir restoranda çalışıyorsa, bu restoran için güncelle
+                employee.EmployerRestaurantId = restaurantId;
+                await userManager.UpdateAsync(employee);
             }
         }
 

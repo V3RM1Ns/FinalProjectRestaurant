@@ -10,7 +10,7 @@ namespace RestaurantManagment.WebAPI.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize(Roles = "Admin")] 
-    public class AdminController(IAdminService adminService) : ControllerBase
+    public class AdminController(IAdminService adminService, IEmailService emailService) : ControllerBase
     {
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboard()
@@ -354,6 +354,39 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
+                // Get review details before approving
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context != null)
+                {
+                    var review = await context.Reviews
+                        .Include(r => r.Customer)
+                        .Include(r => r.Restaurant)
+                        .FirstOrDefaultAsync(r => r.Id == reviewId);
+                    
+                    if (review != null && review.Customer != null && review.Restaurant != null && review.Customer.Email != null)
+                    {
+                        await adminService.ApproveReviewAsync(reviewId);
+                        
+                        // Send approval email to customer
+                        try
+                        {
+                            await emailService.SendReviewApprovedEmailAsync(
+                                review.Customer.Email,
+                                review.Customer.FullName ?? review.Customer.UserName ?? "Müşteri",
+                                review.Restaurant.Name,
+                                review.Rating
+                            );
+                        }
+                        catch (Exception emailEx)
+                        {
+                            // Log email error but don't fail the request
+                            Console.WriteLine($"Failed to send review approval email: {emailEx.Message}");
+                        }
+                        
+                        return Ok(new { message = "Review approved successfully." });
+                    }
+                }
+                
                 await adminService.ApproveReviewAsync(reviewId);
                 return Ok(new { message = "Review approved successfully." });
             }
@@ -368,6 +401,39 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
+                // Get review details before rejecting
+                var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
+                if (context != null)
+                {
+                    var review = await context.Reviews
+                        .Include(r => r.Customer)
+                        .Include(r => r.Restaurant)
+                        .FirstOrDefaultAsync(r => r.Id == reviewId);
+                    
+                    if (review != null && review.Customer != null && review.Restaurant != null && review.Customer.Email != null)
+                    {
+                        await adminService.RejectReviewAsync(reviewId, request.Reason);
+                        
+                        // Send rejection email to customer
+                        try
+                        {
+                            await emailService.SendReviewRejectedEmailAsync(
+                                review.Customer.Email,
+                                review.Customer.FullName ?? review.Customer.UserName ?? "Müşteri",
+                                review.Restaurant.Name,
+                                request.Reason
+                            );
+                        }
+                        catch (Exception emailEx)
+                        {
+                            // Log email error but don't fail the request
+                            Console.WriteLine($"Failed to send review rejection email: {emailEx.Message}");
+                        }
+                        
+                        return Ok(new { message = "Review rejected successfully." });
+                    }
+                }
+                
                 await adminService.RejectReviewAsync(reviewId, request.Reason);
                 return Ok(new { message = "Review rejected successfully." });
             }
