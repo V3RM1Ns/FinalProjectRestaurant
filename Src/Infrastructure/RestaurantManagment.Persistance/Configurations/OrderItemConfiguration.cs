@@ -23,7 +23,6 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
         builder.Property(oi => oi.Notes)
             .HasMaxLength(500);
 
-        // Relationships
         builder.HasOne(oi => oi.Order)
             .WithMany(o => o.OrderItems)
             .HasForeignKey(oi => oi.OrderId)
@@ -33,12 +32,10 @@ public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
             .WithMany(mi => mi.OrderItems)
             .HasForeignKey(oi => oi.MenuItemId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        // Indexes
+        
         builder.HasIndex(oi => oi.OrderId);
         builder.HasIndex(oi => oi.MenuItemId);
-
-        // Soft Delete Query Filter
+        
         builder.HasQueryFilter(oi => !oi.IsDeleted);
     }
 }

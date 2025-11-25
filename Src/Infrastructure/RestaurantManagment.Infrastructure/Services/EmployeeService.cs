@@ -6,6 +6,7 @@ using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
+using RestaurantManagment.Domain.Enums;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 
@@ -512,11 +513,10 @@ public class EmployeeService(IAppDbContext context, IMapper mapper) : IEmployeeS
         table.CreatedAt = DateTime.UtcNow;
         table.CreatedBy = employeeId;
         table.IsDeleted = false;
+        table.Status = TableStatus.Available;
         
-        if (Enum.TryParse<TableStatus>(dto.Status, true, out var status))
-            table.Status = status;
-        else
-            table.Status = TableStatus.Available;
+        if (!string.IsNullOrEmpty(dto.Location) && Enum.TryParse<TableLocation>(dto.Location, true, out var location))
+            table.Location = location;
 
         context.Tables.Add(table);
         await context.SaveChangesAsync();
@@ -554,9 +554,11 @@ public class EmployeeService(IAppDbContext context, IMapper mapper) : IEmployeeS
 
         table.TableNumber = dto.TableNumber;
         table.Capacity = dto.Capacity;
-        table.Location = dto.Location;
         
-        if (Enum.TryParse<TableStatus>(dto.Status, true, out var status))
+        if (!string.IsNullOrEmpty(dto.Location) && Enum.TryParse<TableLocation>(dto.Location, true, out var location))
+            table.Location = location;
+        
+        if (!string.IsNullOrEmpty(dto.Status) && Enum.TryParse<TableStatus>(dto.Status, true, out var status))
             table.Status = status;
 
         table.UpdatedAt = DateTime.UtcNow;

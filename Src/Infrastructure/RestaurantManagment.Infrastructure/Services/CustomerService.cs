@@ -519,7 +519,6 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
 
         await context.SaveChangesAsync();
         
-        // Send cancellation email
         if (order.Customer != null && order.Restaurant != null)
         {
             try
@@ -708,7 +707,6 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
         if (restaurant == null)
             throw new InvalidOperationException("Restaurant not found.");
         
-        // Get customer info
         var customer = await context.Users.FirstOrDefaultAsync(u => u.Id == customerId);
         if (customer == null)
             throw new InvalidOperationException("Customer not found.");
@@ -753,7 +751,6 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
         context.Reservations.Add(reservation);
         await context.SaveChangesAsync();
         
-        // Send reservation confirmation email
         try
         {
             var tableInfo = table != null ? $"Masa {table.TableNumber}" : "Atanacak";
@@ -855,7 +852,6 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
 
         await context.SaveChangesAsync();
         
-        // Send cancellation email
         if (reservation.Customer != null && reservation.Restaurant != null)
         {
             try
@@ -1051,8 +1047,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-
-        // Manual mapping to avoid AutoMapper issues
+        
         var reviewDtos = new List<ReviewDto>();
         foreach (var review in items)
         {

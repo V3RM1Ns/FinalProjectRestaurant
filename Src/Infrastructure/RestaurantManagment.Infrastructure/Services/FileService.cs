@@ -73,8 +73,7 @@ public class FileService : IFileService
 
         var fileName = $"{Guid.NewGuid()}{extension}";
         var categoryFolder = Path.Combine(_uploadsFolder, folder);
-        
-        // Klasör yoksa oluştur
+
         if (!Directory.Exists(categoryFolder))
         {
             Directory.CreateDirectory(categoryFolder);
@@ -105,7 +104,6 @@ public class FileService : IFileService
         var fileName = $"{entityId}_{Guid.NewGuid()}{extension}";
         var categoryFolder = Path.Combine(_uploadsFolder, category);
         
-        // Klasör yoksa oluştur
         if (!Directory.Exists(categoryFolder))
         {
             Directory.CreateDirectory(categoryFolder);

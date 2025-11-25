@@ -32,7 +32,6 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.DeliveryAddress)
             .HasMaxLength(500);
 
-        // Relationships
         builder.HasOne(o => o.Restaurant)
             .WithMany(r => r.Orders)
             .HasForeignKey(o => o.RestaurantId)
@@ -53,13 +52,11 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(o => o.DeliveryPersonId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        // Indexes
         builder.HasIndex(o => o.OrderDate);
         builder.HasIndex(o => o.RestaurantId);
         builder.HasIndex(o => o.CustomerId);
         builder.HasIndex(o => o.Status);
-
-        // Soft Delete Query Filter
+        
         builder.HasQueryFilter(o => !o.IsDeleted);
     }
 }

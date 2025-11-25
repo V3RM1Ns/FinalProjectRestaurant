@@ -27,14 +27,11 @@ public class MenuItem : BaseEntity
     [MaxLength(100)]
     public string? Category { get; set; }
     
-    // Menu relationship
     [Required]
     public string MenuId { get; set; } = string.Empty;
     public Menu Menu { get; set; } = null!;
     
-    // Navigation properties
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
-
-    // Soft delete için IsDeleted
+    
     public bool IsDeleted { get; set; } = false;
 }

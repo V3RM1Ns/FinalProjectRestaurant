@@ -365,7 +365,6 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
     {
         Console.WriteLine($"[DEBUG AdminService] AddRoleToUserAsync called - UserId: {userId}, Role: '{role}'");
 
-        // Use UserManager to find user instead of DbContext to avoid tracking conflicts
         var user = await _userManager.FindByIdAsync(userId);
         
         Console.WriteLine($"[DEBUG AdminService] User found: {user != null}");
@@ -407,8 +406,6 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
 
     public async Task RemoveRoleFromUserAsync(string userId, string role)
     {
-
-        // Use UserManager to find user instead of DbContext to avoid tracking conflicts
         var user = await _userManager.FindByIdAsync(userId);
             
         if (user == null)
@@ -540,11 +537,10 @@ public class AdminService(IAppDbContext _context,UserManager<AppUser> _userManag
                 }
                 catch
                 {
-                    // Ignore deletion errors
+                  
                 }
             }
 
-            // Upload new image
             restaurant.ImageUrl = await _fileService.UploadFileAsync(dto.ImageFile, "restaurants");
         }
 

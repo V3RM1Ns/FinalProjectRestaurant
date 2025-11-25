@@ -29,7 +29,6 @@ public class MappingProfile : Profile
 {
     public MappingProfile()
     {
-        // Restaurant mappings
         CreateMap<Restaurant, RestaurantDto>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FullName))
             .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => !src.IsDeleted))
@@ -50,9 +49,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category.HasValue ? src.Category.ToString() : "General"));
         CreateMap<CreateRestaurantDto, Restaurant>();
         CreateMap<UpdateRestaurantDto, Restaurant>();
-
-     
-        // Menu mappings
+        
         CreateMap<Menu, MenuResponseDto>()
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name));
         
@@ -196,10 +193,16 @@ public class MappingProfile : Profile
 
       
         CreateMap<Table, TableDto>()
-            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()));
+            .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location.HasValue ? src.Location.Value.ToString() : null));
         
-        CreateMap<CreateTableDto, Table>();
-        CreateMap<UpdateTableDto, Table>();
+        CreateMap<CreateTableDto, Table>()
+            .ForMember(dest => dest.Location, opt => opt.Ignore())
+            .ForMember(dest => dest.Status, opt => opt.Ignore());
+        
+        CreateMap<UpdateTableDto, Table>()
+            .ForMember(dest => dest.Location, opt => opt.Ignore())
+            .ForMember(dest => dest.Status, opt => opt.Ignore());
         
         CreateMap<Order, RecentOrderDto>()
             .ForMember(dest => dest.OrderId, opt => opt.MapFrom(src => src.Id))

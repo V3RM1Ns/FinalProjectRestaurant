@@ -354,7 +354,6 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                // Get review details before approving
                 var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
                 if (context != null)
                 {
@@ -367,7 +366,6 @@ namespace RestaurantManagment.WebAPI.Controllers
                     {
                         await adminService.ApproveReviewAsync(reviewId);
                         
-                        // Send approval email to customer
                         try
                         {
                             await emailService.SendReviewApprovedEmailAsync(
@@ -379,7 +377,6 @@ namespace RestaurantManagment.WebAPI.Controllers
                         }
                         catch (Exception emailEx)
                         {
-                            // Log email error but don't fail the request
                             Console.WriteLine($"Failed to send review approval email: {emailEx.Message}");
                         }
                         
@@ -401,7 +398,6 @@ namespace RestaurantManagment.WebAPI.Controllers
         {
             try
             {
-                // Get review details before rejecting
                 var context = HttpContext.RequestServices.GetService<RestaurantManagment.Persistance.Data.AppDbContext>();
                 if (context != null)
                 {
@@ -413,8 +409,7 @@ namespace RestaurantManagment.WebAPI.Controllers
                     if (review != null && review.Customer != null && review.Restaurant != null && review.Customer.Email != null)
                     {
                         await adminService.RejectReviewAsync(reviewId, request.Reason);
-                        
-                        // Send rejection email to customer
+                
                         try
                         {
                             await emailService.SendReviewRejectedEmailAsync(
@@ -426,7 +421,6 @@ namespace RestaurantManagment.WebAPI.Controllers
                         }
                         catch (Exception emailEx)
                         {
-                            // Log email error but don't fail the request
                             Console.WriteLine($"Failed to send review rejection email: {emailEx.Message}");
                         }
                         
@@ -619,7 +613,6 @@ namespace RestaurantManagment.WebAPI.Controllers
                 if (application.Status != RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Pending)
                     return BadRequest(new { message = "Application has already been reviewed." });
 
-                // Create restaurant from application
                 var restaurant = new RestaurantManagment.Domain.Models.Restaurant
                 {
                     Id = Guid.NewGuid().ToString(),
@@ -629,15 +622,13 @@ namespace RestaurantManagment.WebAPI.Controllers
                     PhoneNumber = application.PhoneNumber,
                     Email = application.Email,
                     Website = application.Website,
-                    Category = null, // Category enum olarak daha sonra ayarlanabilir
+                    Category = null,
                     ImageUrl = application.ImageUrl,
                     OwnerId = application.OwnerId,
                     CreatedAt = DateTime.UtcNow
                 };
 
                 context.Restaurants.Add(restaurant);
-
-                // Update application status
                 application.Status = RestaurantManagment.Domain.Models.RestaurantApplicationStatus.Approved;
                 application.ReviewedAt = DateTime.UtcNow;
                 application.ReviewedBy = userId;

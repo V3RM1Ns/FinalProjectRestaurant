@@ -164,7 +164,6 @@ using (var scope = app.Services.CreateScope())
 
 app.UseCors("AllowReactApp");
 
-// Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -175,7 +174,15 @@ app.UseSwaggerUI(c =>
 });
 app.MapOpenApi();
 
+
 app.UseStaticFiles();
+
+
+var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+if (!Directory.Exists(uploadsPath))
+{
+    Directory.CreateDirectory(uploadsPath);
+}
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

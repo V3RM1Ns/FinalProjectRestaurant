@@ -23,8 +23,7 @@ public class JobApplicationConfiguration : IEntityTypeConfiguration<JobApplicati
 
         builder.Property(j => j.ReviewNotes)
             .HasMaxLength(1000);
-
-        // Relationships
+        
         builder.HasOne(j => j.JobPosting)
             .WithMany(jp => jp.Applications)
             .HasForeignKey(j => j.JobPostingId)
@@ -35,12 +34,10 @@ public class JobApplicationConfiguration : IEntityTypeConfiguration<JobApplicati
             .HasForeignKey(j => j.ApplicantId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indexes
         builder.HasIndex(j => j.JobPostingId);
         builder.HasIndex(j => j.ApplicantId);
         builder.HasIndex(j => j.Status);
-
-        // Soft Delete Query Filter
+        
         builder.HasQueryFilter(j => !j.IsDeleted);
     }
 }
@@ -70,18 +67,15 @@ public class JobPostingConfiguration : IEntityTypeConfiguration<JobPosting>
         builder.Property(j => j.EmploymentType)
             .IsRequired()
             .HasMaxLength(50);
-
-        // Relationships
+        
         builder.HasOne(j => j.Restaurant)
             .WithMany(r => r.JobPostings)
             .HasForeignKey(j => j.RestaurantId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Indexes
+        
         builder.HasIndex(j => j.RestaurantId);
         builder.HasIndex(j => j.IsActive);
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(j => !j.IsDeleted);
     }
 }

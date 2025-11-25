@@ -100,7 +100,6 @@ public class CreateTableDto
 {
     public int TableNumber { get; set; }
     public int Capacity { get; set; }
-    public string Status { get; set; } = "Available";
     public string? Location { get; set; }
 }
 
@@ -108,6 +107,6 @@ public class UpdateTableDto
 {
     public int TableNumber { get; set; }
     public int Capacity { get; set; }
-    public string Status { get; set; } = string.Empty;
+    public string? Status { get; set; }
     public string? Location { get; set; }
 }

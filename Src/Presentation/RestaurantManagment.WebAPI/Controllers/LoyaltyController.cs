@@ -17,7 +17,6 @@ public class LoyaltyController : ControllerBase
         _loyaltyService = loyaltyService;
     }
 
-    // ADMIN ENDPOINTS - Generate Loyalty Codes
     [HttpPost("admin/codes")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerateLoyaltyCode([FromBody] CreateLoyaltyCodeDto dto)
@@ -88,7 +87,6 @@ public class LoyaltyController : ControllerBase
         }
     }
 
-    // CUSTOMER ENDPOINTS - Redeem Codes and Points
     [HttpPost("customer/redeem-code")]
     [Authorize(Roles = "Customer")]
     public async Task<IActionResult> RedeemLoyaltyCode([FromBody] RedeemLoyaltyCodeDto dto)
@@ -146,7 +144,6 @@ public class LoyaltyController : ControllerBase
         }
     }
 
-    // OWNER ENDPOINTS - Reward Management
     [HttpPost("owner/rewards")]
     [Authorize(Roles = "RestaurantOwner")]
     public async Task<IActionResult> CreateReward([FromBody] CreateRewardDto dto)
@@ -207,7 +204,6 @@ public class LoyaltyController : ControllerBase
         }
     }
 
-    // PUBLIC/CUSTOMER ENDPOINTS - View Rewards
     [HttpGet("restaurants/{restaurantId}/rewards")]
     public async Task<IActionResult> GetRestaurantRewards(string restaurantId)
     {
@@ -241,7 +237,6 @@ public class LoyaltyController : ControllerBase
         }
     }
 
-    // CUSTOMER ENDPOINTS - Redeem Rewards
     [HttpPost("customer/redeem-reward")]
     [Authorize(Roles = "Customer")]
     public async Task<IActionResult> RedeemReward([FromBody] RedeemRewardDto dto)

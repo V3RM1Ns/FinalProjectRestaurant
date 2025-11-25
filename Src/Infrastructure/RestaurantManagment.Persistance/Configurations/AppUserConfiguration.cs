@@ -14,12 +14,10 @@ public class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
 
         builder.Property(u => u.Address)
             .HasMaxLength(500);
-
-        // Indexes
+        
         builder.HasIndex(u => u.FullName);
         builder.HasIndex(u => u.Email);
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(u => !u.IsDeleted);
     }
 }

@@ -44,7 +44,6 @@ public class EmailService : IEmailService
         }
         catch (Exception ex)
         {
-            // Log the error - in production, use proper logging
             Console.WriteLine($"Email sending failed: {ex.Message}");
             throw;
         }

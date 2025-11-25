@@ -30,7 +30,6 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         builder.Property(res => res.SpecialRequests)
             .HasMaxLength(1000);
 
-        // Relationships
         builder.HasOne(res => res.Restaurant)
             .WithMany(r => r.Reservations)
             .HasForeignKey(res => res.RestaurantId)
@@ -46,12 +45,10 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             .HasForeignKey(res => res.CustomerId)
             .OnDelete(DeleteBehavior.NoAction);
 
-        // Indexes
         builder.HasIndex(res => res.ReservationDate);
         builder.HasIndex(res => res.RestaurantId);
         builder.HasIndex(res => res.CustomerId);
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(res => !res.IsDeleted);
     }
 }

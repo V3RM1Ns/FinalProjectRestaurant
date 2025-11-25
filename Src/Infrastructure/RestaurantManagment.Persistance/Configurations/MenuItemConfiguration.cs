@@ -27,18 +27,15 @@ public class MenuItemConfiguration : IEntityTypeConfiguration<MenuItem>
 
         builder.Property(mi => mi.Category)
             .HasMaxLength(100);
-
-        // Relationships
+        
         builder.HasOne(mi => mi.Menu)
             .WithMany(m => m.MenuItems)
             .HasForeignKey(mi => mi.MenuId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Indexes
+        
         builder.HasIndex(mi => mi.MenuId);
         builder.HasIndex(mi => mi.Category);
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(mi => !mi.IsDeleted);
     }
 }

@@ -452,7 +452,6 @@ public class AccountService(
         }
         catch (Exception ex)
         {
-            // Detaylı hata mesajı döndür
             return (false, $"Error: {ex.Message} - Inner: {ex.InnerException?.Message}");
         }
     }

@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using RestaurantManagment.Domain.Models.Common;
+using RestaurantManagment.Domain.Enums;
 
 namespace RestaurantManagment.Domain.Models;
 
@@ -15,8 +16,7 @@ public class Table : BaseEntity
     
     public TableStatus Status { get; set; } = TableStatus.Available;
     
-    [MaxLength(500)]
-    public string? Location { get; set; }
+    public TableLocation? Location { get; set; }
     
 
     [Required]

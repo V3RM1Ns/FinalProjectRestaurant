@@ -410,8 +410,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         public async Task<ActionResult<JobPostingDto>> CreateJobPosting(CreateJobPostingDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
-            // Verify ownership
+            
             var restaurant = await _context.Restaurants.FindAsync(dto.RestaurantId);
             if (restaurant == null)
                 return NotFound(new { message = "Restaurant not found" });
@@ -497,8 +496,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return NoContent();
         }
-
-        // DELETE: api/JobPosting/{id}
+        
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteJobPosting(string id)
         {
@@ -519,8 +517,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             return NoContent();
         }
-
-        // GET: api/JobPosting/my-restaurants
+        
         [HttpGet("my-restaurants")]
         public async Task<ActionResult<IEnumerable<JobPostingDto>>> GetMyRestaurantsJobPostings()
         {

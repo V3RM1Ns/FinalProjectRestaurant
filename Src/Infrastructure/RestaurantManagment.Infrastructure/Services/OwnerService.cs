@@ -10,6 +10,7 @@ using RestaurantManagment.Application.Common.DTOs.Restaurant;
 using RestaurantManagment.Application.Common.DTOs.Review;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
+using RestaurantManagment.Domain.Enums;
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
@@ -1316,7 +1317,6 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         context.MenuItems.Add(menuItem);
         await context.SaveChangesAsync();
 
-        // Reload with navigation properties
         menuItem = await context.MenuItems
             .Include(mi => mi.Menu)
             .FirstAsync(mi => mi.Id == menuItem.Id);
@@ -1477,11 +1477,10 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         table.CreatedAt = DateTime.UtcNow;
         table.CreatedBy = ownerId;
         table.IsDeleted = false;
+        table.Status = TableStatus.Available;
         
-        if (Enum.TryParse<TableStatus>(dto.Status, true, out var status))
-            table.Status = status;
-        else
-            table.Status = TableStatus.Available;
+        if (!string.IsNullOrEmpty(dto.Location) && Enum.TryParse<TableLocation>(dto.Location, true, out var location))
+            table.Location = location;
 
         context.Tables.Add(table);
         await context.SaveChangesAsync();
@@ -1522,9 +1521,11 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         table.TableNumber = dto.TableNumber;
         table.Capacity = dto.Capacity;
-        table.Location = dto.Location;
         
-        if (Enum.TryParse<TableStatus>(dto.Status, true, out var status))
+        if (!string.IsNullOrEmpty(dto.Location) && Enum.TryParse<TableLocation>(dto.Location, true, out var location))
+            table.Location = location;
+        
+        if (!string.IsNullOrEmpty(dto.Status) && Enum.TryParse<TableStatus>(dto.Status, true, out var status))
             table.Status = status;
 
         table.UpdatedAt = DateTime.UtcNow;

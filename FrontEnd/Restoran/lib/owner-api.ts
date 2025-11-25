@@ -71,15 +71,15 @@ export interface UpdateMenuItemDto {
 export interface CreateTableDto {
   tableNumber: number
   capacity: number
-  status?: string
-  location?: string
+  location: string  // Zorunlu - TableLocation enum değeri
+  // status kaldırıldı - backend otomatik Available yapacak
 }
 
 export interface UpdateTableDto {
   tableNumber: number
   capacity: number
-  status: string
-  location?: string
+  status: string  // Update'te status değiştirilebilir
+  location: string
 }
 
 export interface OwnerDashboardDto {

@@ -18,13 +18,18 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 export function Navbar() {
   const { user, logout } = useAuth()
   const { items } = useCart()
+  const cartItemCount = items.length
 
-  const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  // Sadece Customer rolündeki kullanıcılar navbar'ı görebilir
+  // Giriş yapmamış kullanıcılar da görebilir (login/register için)
+  if (user && user.role !== "Customer") {
+    return null
+  }
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
             <MapPin className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">RestaurantHub</span>

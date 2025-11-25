@@ -314,7 +314,7 @@ public class EmployeeController(
         {
             return BadRequest(new { Message = ex.Message });
         }
-    }
+     }
 
     [HttpPut("menu-items/{menuItemId}")]
     public async Task<IActionResult> UpdateMenuItem(string menuItemId, [FromBody] UpdateMenuItemDto dto)
@@ -386,6 +386,48 @@ public class EmployeeController(
         {
             var count = await employeeService.GetMenuItemsCountAsync(restaurantId, currentUser.Id);
             return Ok(new { Count = count });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPost("menu-items/upload-image")]
+    public async Task<IActionResult> UploadMenuItemImage([FromForm] IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { Message = "No file provided" });
+
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            
+            if (!allowedExtensions.Contains(extension))
+                return BadRequest(new { Message = "Invalid file type. Only images are allowed." });
+            
+            if (file.Length > 5 * 1024 * 1024)
+                return BadRequest(new { Message = "File size exceeds 5MB limit." });
+            
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "menu-items");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+            
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+ 
+            var imageUrl = $"/uploads/menu-items/{uniqueFileName}";
+            return Ok(new { imageUrl = imageUrl });
         }
         catch (Exception ex)
         {

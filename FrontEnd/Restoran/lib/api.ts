@@ -1,8 +1,17 @@
 import { AuthService } from "./auth"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+export const API_SERVER_URL = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || "http://localhost:5000"
 
 export class ApiClient {
+  static get baseURL() {
+    return API_BASE_URL
+  }
+
+  static get serverURL() {
+    return API_SERVER_URL
+  }
+
   private static getHeaders(): HeadersInit {
     const token = AuthService.getToken()
     return {

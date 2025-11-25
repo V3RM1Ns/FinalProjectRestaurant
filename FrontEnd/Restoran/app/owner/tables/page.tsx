@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Table, TableStatus } from "@/types"
+import { Table, TableStatus, TableLocation, TableLocationLabels } from "@/types"
 import {
   Table as UITable,
   TableBody,
@@ -48,7 +48,7 @@ export default function OwnerTablesPage() {
     tableNumber: 0,
     capacity: 2,
     status: "Available" as string,
-    location: "",
+    location: TableLocation.IcMekan as string,
   })
 
   useEffect(() => {
@@ -78,24 +78,54 @@ export default function OwnerTablesPage() {
   const handleSaveTable = async () => {
     if (!selectedRestaurant) return
     
+    if (tableForm.tableNumber <= 0) {
+      toast({
+        title: "Hata",
+        description: "Masa numarası 0'dan büyük olmalıdır",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (tableForm.capacity <= 0) {
+      toast({
+        title: "Hata",
+        description: "Kapasite 0'dan büyük olmalıdır",
+        variant: "destructive",
+      })
+      return
+    }
+    
+    if (!tableForm.location) {
+      toast({
+        title: "Hata",
+        description: "Lütfen bir konum seçin",
+        variant: "destructive",
+      })
+      return
+    }
+    
     try {
       if (editingTable) {
+        // Güncelleme - tüm alanları gönder
         await ownerApi.tables.update(editingTable.id, tableForm)
         toast({
           title: "Başarılı",
           description: "Masa güncellendi",
         })
       } else {
-        await ownerApi.tables.create(selectedRestaurant.id, tableForm)
+        // Yeni ekleme - status göndermiyoruz, backend otomatik Available yapacak
+        const { status, ...createData } = tableForm
+        await ownerApi.tables.create(selectedRestaurant.id, createData)
         toast({
           title: "Başarılı",
-          description: "Masa eklendi",
+          description: "Masa eklendi (Durum: Müsait)",
         })
       }
       
       setDialogOpen(false)
       setEditingTable(null)
-      setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
+      setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: TableLocation.IcMekan })
       await loadTables()
     } catch (error: any) {
       toast({
@@ -131,7 +161,7 @@ export default function OwnerTablesPage() {
       tableNumber: table.tableNumber,
       capacity: table.capacity,
       status: table.status,
-      location: table.location || "",
+      location: table.location || TableLocation.IcMekan,
     })
     setDialogOpen(true)
   }
@@ -183,6 +213,15 @@ export default function OwnerTablesPage() {
     }
   }
 
+  const getLocationLabel = (location?: string) => {
+    if (!location) return "-"
+    // Backend'den enum değeri gelirse label'a çevir
+    if (location in TableLocationLabels) {
+      return TableLocationLabels[location as TableLocation]
+    }
+    return location
+  }
+
   if (!selectedRestaurant) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -219,7 +258,7 @@ export default function OwnerTablesPage() {
         </div>
         <Button onClick={() => {
           setEditingTable(null)
-          setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
+          setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: TableLocation.IcMekan })
           setDialogOpen(true)
         }}>
           <Plus className="h-4 w-4 mr-2" />
@@ -275,7 +314,7 @@ export default function OwnerTablesPage() {
               <p className="text-muted-foreground mb-4">Henüz masa eklenmemiş</p>
               <Button onClick={() => {
                 setEditingTable(null)
-                setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: "" })
+                setTableForm({ tableNumber: 0, capacity: 2, status: "Available", location: TableLocation.IcMekan })
                 setDialogOpen(true)
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -298,7 +337,7 @@ export default function OwnerTablesPage() {
                   <TableRow key={table.id}>
                     <TableCell className="font-medium">Masa {table.tableNumber}</TableCell>
                     <TableCell>{table.capacity} kişi</TableCell>
-                    <TableCell>{table.location || "-"}</TableCell>
+                    <TableCell>{getLocationLabel(table.location)}</TableCell>
                     <TableCell>
                       <Select
                         value={table.status}
@@ -351,68 +390,96 @@ export default function OwnerTablesPage() {
           <DialogHeader>
             <DialogTitle>{editingTable ? "Masayı Düzenle" : "Yeni Masa Ekle"}</DialogTitle>
             <DialogDescription>
-              Masa bilgilerini girin
+              {editingTable ? "Masa bilgilerini güncelleyin" : "Yeni masa eklemek için bilgileri girin"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="tableNumber">Masa Numarası</Label>
+                <Label htmlFor="tableNumber">Masa Numarası *</Label>
                 <Input
                   id="tableNumber"
                   type="number"
                   min="1"
                   value={tableForm.tableNumber}
-                  onChange={(e) => setTableForm({ ...tableForm, tableNumber: parseInt(e.target.value) })}
+                  onChange={(e) => setTableForm({ ...tableForm, tableNumber: parseInt(e.target.value) || 0 })}
                 />
               </div>
               <div>
-                <Label htmlFor="capacity">Kapasite</Label>
+                <Label htmlFor="capacity">Kapasite *</Label>
                 <Input
                   id="capacity"
                   type="number"
                   min="1"
                   value={tableForm.capacity}
-                  onChange={(e) => setTableForm({ ...tableForm, capacity: parseInt(e.target.value) })}
+                  onChange={(e) => setTableForm({ ...tableForm, capacity: parseInt(e.target.value) || 2 })}
                 />
               </div>
             </div>
+            
             <div>
-              <Label htmlFor="location">Konum (Opsiyonel)</Label>
-              <Input
-                id="location"
-                value={tableForm.location}
-                onChange={(e) => setTableForm({ ...tableForm, location: e.target.value })}
-                placeholder="Örn: Pencere kenarı, Bahçe..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="status">Durum</Label>
+              <Label htmlFor="location">Konum *</Label>
               <Select
-                value={tableForm.status}
-                onValueChange={(value) => setTableForm({ ...tableForm, status: value })}
+                value={tableForm.location}
+                onValueChange={(value) => setTableForm({ ...tableForm, location: value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Konum seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={TableStatus.Available}>Müsait</SelectItem>
-                  <SelectItem value={TableStatus.Occupied}>Dolu</SelectItem>
-                  <SelectItem value={TableStatus.Reserved}>Rezerve</SelectItem>
-                  <SelectItem value={TableStatus.OutOfService}>Hizmet Dışı</SelectItem>
+                  <SelectItem value={TableLocation.IcMekan}>{TableLocationLabels[TableLocation.IcMekan]}</SelectItem>
+                  <SelectItem value={TableLocation.PencereKenari}>{TableLocationLabels[TableLocation.PencereKenari]}</SelectItem>
+                  <SelectItem value={TableLocation.Disari}>{TableLocationLabels[TableLocation.Disari]}</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Masanın bulunduğu konumu seçin
+              </p>
             </div>
+
+            {/* Durum alanı SADECE düzenleme modunda gösterilir */}
+            {editingTable && (
+              <div>
+                <Label htmlFor="status">Durum</Label>
+                <Select
+                  value={tableForm.status}
+                  onValueChange={(value) => setTableForm({ ...tableForm, status: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TableStatus.Available}>Müsait</SelectItem>
+                    <SelectItem value={TableStatus.Occupied}>Dolu</SelectItem>
+                    <SelectItem value={TableStatus.Reserved}>Rezerve</SelectItem>
+                    <SelectItem value={TableStatus.OutOfService}>Hizmet Dışı</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Masanın mevcut durumunu değiştirebilirsiniz
+                </p>
+              </div>
+            )}
+            
+            {/* Yeni masa eklenirken bilgilendirme mesajı göster */}
+            {!editingTable && (
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-md">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  ℹ️ Yeni masa eklendiğinde durum otomatik olarak <strong>Müsait</strong> olarak ayarlanır.
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               İptal
             </Button>
-            <Button onClick={handleSaveTable}>Kaydet</Button>
+            <Button onClick={handleSaveTable}>
+              {editingTable ? "Güncelle" : "Ekle"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-

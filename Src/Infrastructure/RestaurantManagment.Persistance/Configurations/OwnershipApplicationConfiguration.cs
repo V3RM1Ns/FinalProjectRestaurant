@@ -9,25 +9,21 @@ public class OwnershipApplicationConfiguration : IEntityTypeConfiguration<Owners
     public void Configure(EntityTypeBuilder<OwnershipApplication> builder)
     {
         builder.HasKey(oa => oa.Id);
-
-        // User relationship
+        
         builder.HasOne(oa => oa.User)
             .WithMany(u => u.OwnershipApplications)
             .HasForeignKey(oa => oa.UserId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        // Reviewer relationship
+        
         builder.HasOne(oa => oa.Reviewer)
             .WithMany(u => u.ReviewedApplications)
             .HasForeignKey(oa => oa.ReviewedBy)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Indexes
         builder.HasIndex(oa => oa.UserId);
         builder.HasIndex(oa => oa.Status);
         builder.HasIndex(oa => oa.ApplicationDate);
 
-        // Soft delete filter
         builder.HasQueryFilter(oa => !oa.IsDeleted);
     }
 }

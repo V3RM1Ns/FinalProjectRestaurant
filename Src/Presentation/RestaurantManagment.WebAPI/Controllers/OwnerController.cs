@@ -584,7 +584,6 @@ public class OwnerController(
         }
     }
 
-    // Owner artık sadece yanıt yazabilir - approve/reject kaldırıldı
     [HttpPost("reviews/{reviewId}/respond")]
     public async Task<IActionResult> RespondToReview(string reviewId, [FromBody] RespondToReviewRequest request)
     {
@@ -603,7 +602,6 @@ public class OwnerController(
         }
     }
 
-    // Yeni endpoint: Owner yorumu şikayet edebilir
     [HttpPost("reviews/{reviewId}/report")]
     public async Task<IActionResult> ReportReview(string reviewId, [FromBody] ReportReviewRequest request)
     {
@@ -1401,7 +1399,6 @@ public class OwnerController(
 
         try
         {
-            // Upload image if provided
             string? imageUrl = null;
             if (imageFile != null)
             {
@@ -1533,7 +1530,6 @@ public class OwnerController(
 
 }
 
-// Request DTOs
 public class RespondToReviewRequest
 {
     public string Response { get; set; } = string.Empty;

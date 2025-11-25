@@ -680,7 +680,7 @@ public static class DbSeeder
                 Capacity = i % 3 == 0 ? 6 : (i % 2 == 0 ? 4 : 2),
                 Status = TableStatus.Available,
                 RestaurantId = restaurantId,
-                Location = i <= 5 ? "İç Mekan" : "Dış Mekan"
+                Location = i <= 5 ? TableLocation.IcMekan : TableLocation.Disari
             });
         }
 

@@ -321,17 +321,14 @@ namespace RestaurantManagment.WebAPI.Controllers
                     return BadRequest(new { Message = "Restaurant image is required." });
                 }
 
-                // Dosyayı yükle ve URL'sini al
                 var imageUrl = await fileService.UploadRestaurantImageAsync(restaurantImage, currentUser.Id);
                 
-                // URL'yi DTO'ya ata
                 applicationDto.ImageUrl = imageUrl;
 
                 var result = await accountService.ApplyForRestaurantOwnershipAsync(currentUser.Id, applicationDto);
 
                 if (!result.Success)
                 {
-                    // Hata mesajını logla
                     Console.WriteLine($"Application failed: {result.Message}");
                     return BadRequest(new { Message = result.Message ?? "Application submission failed" });
                 }
@@ -354,9 +351,6 @@ namespace RestaurantManagment.WebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Upload profile image (Optional for all users)
-        /// </summary>
         [HttpPost("profile/upload-image")]
         [Authorize]
         public async Task<IActionResult> UploadProfileImage([FromForm] IFormFile file)

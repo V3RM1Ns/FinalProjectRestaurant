@@ -19,17 +19,14 @@ public class TableConfiguration : IEntityTypeConfiguration<Table>
         builder.Property(t => t.Location)
             .HasMaxLength(500);
 
-        // Relationships
         builder.HasOne(t => t.Restaurant)
             .WithMany(r => r.Tables)
             .HasForeignKey(t => t.RestaurantId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Indexes
         builder.HasIndex(t => new { t.RestaurantId, t.TableNumber })
             .IsUnique();
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(t => !t.IsDeleted);
     }
 }

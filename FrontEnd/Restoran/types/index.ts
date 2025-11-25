@@ -188,6 +188,19 @@ export enum TableStatus {
   OutOfService = "OutOfService",
 }
 
+export enum TableLocation {
+  IcMekan = "IcMekan",
+  PencereKenari = "PencereKenari",
+  Disari = "Disari",
+}
+
+// Location labels for display
+export const TableLocationLabels: Record<TableLocation, string> = {
+  [TableLocation.IcMekan]: "İç Mekan",
+  [TableLocation.PencereKenari]: "Pencere Kenarı",
+  [TableLocation.Disari]: "Dışarı",
+}
+
 export interface Reservation extends BaseEntity {
   reservationDate: string
   numberOfGuests: number

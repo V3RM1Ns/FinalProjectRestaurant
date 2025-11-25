@@ -23,7 +23,4 @@ public class CreateMenuItemDto
     public string? Category { get; set; }
 
     public bool IsAvailable { get; set; } = true;
-
-    [Required]
-    public string MenuId { get; set; } = string.Empty;
 }

@@ -18,16 +18,13 @@ public class MenuConfiguration : IEntityTypeConfiguration<Menu>
             .IsRequired()
             .HasMaxLength(1000);
 
-        // Relationships
         builder.HasOne(m => m.Restaurant)
             .WithMany(r => r.Menus)
             .HasForeignKey(m => m.RestaurantId)
             .OnDelete(DeleteBehavior.Cascade);
-
-        // Indexes
+        
         builder.HasIndex(m => m.RestaurantId);
-
-        // Soft Delete Query Filter
+        
         builder.HasQueryFilter(m => !m.IsDeleted);
     }
 }

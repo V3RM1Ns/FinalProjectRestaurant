@@ -123,6 +123,40 @@ export const employeeApi = {
 
     getCount: (restaurantId: string) =>
       ApiClient.get<{ count: number }>(`/Employee/restaurants/${restaurantId}/menu-items/count`),
+
+    uploadImage: async (file: File): Promise<string> => {
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      // AuthService'den token al
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+      
+      if (!token) {
+        throw new Error('Oturum bulunamadı. Lütfen tekrar giriş yapın.')
+      }
+      
+      console.log('Uploading with token:', token ? 'Token found' : 'No token')
+      
+      const response = await fetch(`${ApiClient.baseURL}/Employee/menu-items/upload-image`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Oturum süresi dolmuş. Lütfen tekrar giriş yapın.')
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Resim yüklenemedi' }))
+        throw new Error(errorData.message || errorData.Message || 'Resim yüklenemedi')
+      }
+      
+      const data = await response.json()
+      console.log('Upload response:', data)
+      return data.imageUrl || data.ImageUrl || data.url || data.path
+    },
   },
 
   // Table Management
@@ -133,10 +167,10 @@ export const employeeApi = {
     getById: (tableId: string) =>
       ApiClient.get<Table>(`/Employee/tables/${tableId}`),
 
-    create: (restaurantId: string, data: { tableNumber: number; capacity: number; location?: string; status: string }) =>
+    create: (restaurantId: string, data: { tableNumber: number; capacity: number; location: string }) =>
       ApiClient.post<Table>(`/Employee/restaurants/${restaurantId}/tables`, data),
 
-    update: (tableId: string, data: { tableNumber: number; capacity: number; location?: string; status: string }) =>
+    update: (tableId: string, data: { tableNumber: number; capacity: number; location: string; status: string }) =>
       ApiClient.put<Table>(`/Employee/tables/${tableId}`, data),
 
     delete: (tableId: string) =>

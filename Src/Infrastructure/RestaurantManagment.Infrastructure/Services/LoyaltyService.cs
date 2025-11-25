@@ -13,8 +13,7 @@ public class LoyaltyService : ILoyaltyService
     {
         _context = context;
     }
-
-    // Admin - Generate Loyalty Code
+    
     public async Task<LoyaltyCodeResponseDto> GenerateLoyaltyCodeAsync(CreateLoyaltyCodeDto dto, string adminId)
     {
         var code = GenerateUniqueCode();
@@ -101,8 +100,7 @@ public class LoyaltyService : ILoyaltyService
         await _context.SaveChangesAsync(CancellationToken.None);
         return true;
     }
-
-    // Customer - Redeem Loyalty Code
+    
     public async Task<LoyaltyPointDto> RedeemLoyaltyCodeAsync(string codeString, string customerId)
     {
         var code = await _context.LoyaltyCodes
@@ -122,8 +120,7 @@ public class LoyaltyService : ILoyaltyService
 
         if (code.IsUsed && code.MaxUses == 1)
             throw new Exception("This code has already been used");
-
-        // Create loyalty point entry
+        
         var loyaltyPoint = new LoyaltyPoint
         {
             Id = Guid.NewGuid().ToString(),
@@ -137,8 +134,7 @@ public class LoyaltyService : ILoyaltyService
         };
 
         _context.LoyaltyPoints.Add(loyaltyPoint);
-
-        // Update code usage
+        
         code.CurrentUses++;
         if (code.MaxUses == 1)
         {
@@ -236,8 +232,7 @@ public class LoyaltyService : ILoyaltyService
             IsRedeemed = p.IsRedeemed
         }).ToList();
     }
-
-    // Owner - Reward Management
+    
     public async Task<RewardDto> CreateRewardAsync(CreateRewardDto dto, string ownerId)
     {
         var restaurant = await _context.Restaurants
@@ -418,8 +413,7 @@ public class LoyaltyService : ILoyaltyService
             CanRedeem = availablePoints >= reward.PointsRequired
         };
     }
-
-    // Customer - Reward Redemption
+    
     public async Task<RewardRedemptionDto> RedeemRewardAsync(string rewardId, string customerId)
     {
         var reward = await _context.Rewards
@@ -437,8 +431,7 @@ public class LoyaltyService : ILoyaltyService
 
         if (reward.MaxRedemptions.HasValue && reward.CurrentRedemptions >= reward.MaxRedemptions.Value)
             throw new Exception("This reward has reached its maximum redemptions");
-
-        // Check customer points
+        
         var points = await _context.LoyaltyPoints
             .Where(p => p.CustomerId == customerId && p.RestaurantId == reward.RestaurantId)
             .ToListAsync();
@@ -450,7 +443,6 @@ public class LoyaltyService : ILoyaltyService
         if (availablePoints < reward.PointsRequired)
             throw new Exception("Insufficient points");
 
-        // Create redemption
         var couponCode = GenerateUniqueCouponCode();
         var redemption = new RewardRedemption
         {
@@ -464,8 +456,7 @@ public class LoyaltyService : ILoyaltyService
         };
 
         _context.RewardRedemptions.Add(redemption);
-
-        // Deduct points
+        
         var pointDeduction = new LoyaltyPoint
         {
             Id = Guid.NewGuid().ToString(),
@@ -480,8 +471,7 @@ public class LoyaltyService : ILoyaltyService
         };
 
         _context.LoyaltyPoints.Add(pointDeduction);
-
-        // Update reward redemption count
+        
         reward.CurrentRedemptions++;
 
         await _context.SaveChangesAsync(CancellationToken.None);
@@ -547,7 +537,6 @@ public class LoyaltyService : ILoyaltyService
         };
     }
 
-    // Helper methods
     private string GenerateUniqueCode()
     {
         return $"LP-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";

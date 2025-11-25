@@ -42,7 +42,6 @@ public class RestaurantConfiguration : IEntityTypeConfiguration<Restaurant>
         builder.Property(r => r.Longitude)
             .HasColumnType("float");
 
-        // Relationships
         builder.HasOne(r => r.Owner)
             .WithMany(u => u.OwnedRestaurants)
             .HasForeignKey(r => r.OwnerId)
@@ -53,11 +52,9 @@ public class RestaurantConfiguration : IEntityTypeConfiguration<Restaurant>
             .HasForeignKey(u => u.EmployerRestaurantId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Indexes
         builder.HasIndex(r => r.Name);
         builder.HasIndex(r => r.OwnerId);
 
-        // Soft Delete Query Filter
         builder.HasQueryFilter(r => !r.IsDeleted);
     }
 }

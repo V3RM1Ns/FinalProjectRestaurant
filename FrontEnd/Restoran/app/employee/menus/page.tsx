@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { API_SERVER_URL } from "@/lib/api"
 
 export default function EmployeeMenusPage() {
   const [menus, setMenus] = useState<Menu[]>([])
@@ -31,10 +32,13 @@ export default function EmployeeMenusPage() {
   const [showMenuItemDialog, setShowMenuItemDialog] = useState(false)
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null)
   const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null)
+  const [selectedImage, setSelectedImage] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const { toast } = useToast()
   const { user } = useAuth()
 
-  const restaurantId = user?.restaurantId || ""
+  const restaurantId = user?.employerRestaurantId || ""
 
   const [menuForm, setMenuForm] = useState({
     name: "",
@@ -49,7 +53,6 @@ export default function EmployeeMenusPage() {
     category: "",
     imageUrl: "",
     isAvailable: true,
-    preparationTime: 0,
   })
 
   useEffect(() => {
@@ -148,23 +151,72 @@ export default function EmployeeMenusPage() {
     }
   }
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Dosya tipi kontrolü
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Hata",
+          description: "Sadece resim dosyaları yükleyebilirsiniz (JPG, PNG, GIF, WEBP)",
+          variant: "destructive",
+        })
+        return
+      }
+      
+      // Dosya boyutu kontrolü (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: "Hata",
+          description: "Dosya boyutu 5MB'dan küçük olmalıdır",
+          variant: "destructive",
+        })
+        return
+      }
+      
+      setSelectedImage(file)
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+      
+      console.log('Selected file:', file.name, 'Size:', (file.size / 1024).toFixed(2), 'KB')
+    }
+  }
+
   const handleCreateMenuItem = async () => {
     if (!selectedMenu) return
 
     try {
+      setUploadingImage(true)
+
+      // Eğer resim seçilmişse önce yükle
+      let imageUrl = menuItemForm.imageUrl
+      if (selectedImage) {
+        imageUrl = await employeeApi.menuItems.uploadImage(selectedImage)
+      }
+
+      const dataToSave = {
+        ...menuItemForm,
+        imageUrl,
+      }
+
       if (editingMenuItem) {
-        await employeeApi.menuItems.update(editingMenuItem.id, menuItemForm)
+        await employeeApi.menuItems.update(editingMenuItem.id, dataToSave)
         toast({
           title: "Başarılı",
           description: "Menü öğesi güncellendi",
         })
       } else {
-        await employeeApi.menuItems.create(selectedMenu.id, menuItemForm)
+        await employeeApi.menuItems.create(selectedMenu.id, dataToSave)
         toast({
           title: "Başarılı",
           description: "Menü öğesi oluşturuldu",
         })
       }
+
       setShowMenuItemDialog(false)
       setMenuItemForm({
         name: "",
@@ -173,8 +225,9 @@ export default function EmployeeMenusPage() {
         category: "",
         imageUrl: "",
         isAvailable: true,
-        preparationTime: 0,
       })
+      setSelectedImage(null)
+      setImagePreview(null)
       setEditingMenuItem(null)
       loadMenuItems(selectedMenu.id)
       loadMenuItemsCount()
@@ -184,6 +237,8 @@ export default function EmployeeMenusPage() {
         description: error.message || "İşlem başarısız",
         variant: "destructive",
       })
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -247,14 +302,23 @@ export default function EmployeeMenusPage() {
       category: menuItem.category || "",
       imageUrl: menuItem.imageUrl || "",
       isAvailable: menuItem.isAvailable,
-      preparationTime: menuItem.preparationTime || 0,
     })
+    // Mevcut resmi göster
+    if (menuItem.imageUrl) {
+      setImagePreview(null) // Yeni resim önizlemesini temizle
+    }
     setShowMenuItemDialog(true)
   }
 
   const selectMenu = (menu: Menu) => {
     setSelectedMenu(menu)
     loadMenuItems(menu.id)
+  }
+
+  const getImageUrl = (imageUrl?: string) => {
+    if (!imageUrl) return "/placeholder.jpg"
+    if (imageUrl.startsWith("http")) return imageUrl
+    return `${API_SERVER_URL}${imageUrl}`
   }
 
   if (loading) {
@@ -393,7 +457,17 @@ export default function EmployeeMenusPage() {
               <div className="space-y-4">
                 {menuItems.map((item) => (
                   <div key={item.id} className="p-4 border rounded-lg">
-                    <div className="flex justify-between items-start">
+                    <div className="flex justify-between items-start gap-4">
+                      {item.imageUrl && (
+                        <img
+                          src={getImageUrl(item.imageUrl)}
+                          alt={item.name}
+                          className="w-24 h-24 object-cover rounded"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.jpg"
+                          }}
+                        />
+                      )}
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <h4 className="font-semibold">{item.name}</h4>
@@ -412,7 +486,7 @@ export default function EmployeeMenusPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -490,65 +564,73 @@ export default function EmployeeMenusPage() {
           <div className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="itemName">Öğe Adı</Label>
+                <Label htmlFor="itemName">Öğe Adı *</Label>
                 <Input
                   id="itemName"
                   value={menuItemForm.name}
                   onChange={(e) => setMenuItemForm({ ...menuItemForm, name: e.target.value })}
                   placeholder="Örn: İskender Kebap"
+                  required
                 />
               </div>
               <div>
-                <Label htmlFor="price">Fiyat (₺)</Label>
+                <Label htmlFor="price">Fiyat (₺) *</Label>
                 <Input
                   id="price"
                   type="number"
+                  step="0.01"
                   value={menuItemForm.price}
                   onChange={(e) => setMenuItemForm({ ...menuItemForm, price: parseFloat(e.target.value) })}
                   placeholder="0.00"
+                  required
                 />
               </div>
             </div>
             <div>
-              <Label htmlFor="itemDescription">Açıklama</Label>
+              <Label htmlFor="itemDescription">Açıklama *</Label>
               <Textarea
                 id="itemDescription"
                 value={menuItemForm.description}
                 onChange={(e) => setMenuItemForm({ ...menuItemForm, description: e.target.value })}
-                placeholder="Öğe açıklaması (opsiyonel)"
+                placeholder="Menü öğesi açıklaması"
+                required
               />
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="category">Kategori</Label>
-                <Input
-                  id="category"
-                  value={menuItemForm.category}
-                  onChange={(e) => setMenuItemForm({ ...menuItemForm, category: e.target.value })}
-                  placeholder="Örn: Kebaplar"
-                />
-              </div>
-              <div>
-                <Label htmlFor="preparationTime">Hazırlık Süresi (dk)</Label>
-                <Input
-                  id="preparationTime"
-                  type="number"
-                  value={menuItemForm.preparationTime}
-                  onChange={(e) =>
-                    setMenuItemForm({ ...menuItemForm, preparationTime: parseInt(e.target.value) })
-                  }
-                  placeholder="20"
-                />
-              </div>
             </div>
             <div>
-              <Label htmlFor="imageUrl">Görsel URL</Label>
+              <Label htmlFor="category">Kategori</Label>
               <Input
-                id="imageUrl"
-                value={menuItemForm.imageUrl}
-                onChange={(e) => setMenuItemForm({ ...menuItemForm, imageUrl: e.target.value })}
-                placeholder="https://..."
+                id="category"
+                value={menuItemForm.category}
+                onChange={(e) => setMenuItemForm({ ...menuItemForm, category: e.target.value })}
+                placeholder="Örn: Kebaplar, Ana Yemekler, Tatlılar"
               />
+            </div>
+            <div>
+              <Label htmlFor="image">Ürün Görseli</Label>
+              <Input
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="cursor-pointer"
+              />
+              {imagePreview && (
+                <div className="mt-2">
+                  <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded" />
+                </div>
+              )}
+              {editingMenuItem && !imagePreview && menuItemForm.imageUrl && (
+                <div className="mt-2">
+                  <img 
+                    src={getImageUrl(menuItemForm.imageUrl)} 
+                    alt="Current" 
+                    className="w-32 h-32 object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.jpg"
+                    }}
+                  />
+                </div>
+              )}
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -563,7 +645,18 @@ export default function EmployeeMenusPage() {
             <Button variant="outline" onClick={() => setShowMenuItemDialog(false)}>
               İptal
             </Button>
-            <Button onClick={handleCreateMenuItem}>{editingMenuItem ? "Güncelle" : "Ekle"}</Button>
+            <Button onClick={handleCreateMenuItem} disabled={uploadingImage}>
+              {uploadingImage ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Yükleniyor...
+                </>
+              ) : editingMenuItem ? (
+                "Güncelle"
+              ) : (
+                "Ekle"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
