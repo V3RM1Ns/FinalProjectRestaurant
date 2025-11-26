@@ -29,17 +29,16 @@ public class OrderResponseDto
     
     public string? DeliveryAddress { get; set; }
     
-    public List<OrderItemResponseDto> Items { get; set; } = new();
+    public List<OrderItemResponseDto> OrderItems { get; set; } = new();
 }
 
 public class OrderItemResponseDto
 {
     public string Id { get; set; } = string.Empty;
+    public string MenuItemId { get; set; } = string.Empty;
+    public string MenuItemName { get; set; } = string.Empty;
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal Subtotal { get; set; }
     public string? Notes { get; set; }
-    public string MenuItemId { get; set; } = string.Empty;
-    public string MenuItemName { get; set; } = string.Empty;
 }
-

@@ -13,27 +13,43 @@ import {
   ShoppingBag,
   Users,
   TrendingUp,
-  FileText,
   Utensils,
   Briefcase,
   LayoutDashboard,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  Star,
+  Table,
 } from "lucide-react"
 import Link from "next/link"
 
 const ITEMS_PER_PAGE = 5
+
+interface RestaurantStats {
+  restaurantId: string
+  restaurantName: string
+  totalOrders: number
+  totalMenuItems: number
+  totalReservations: number
+  totalEmployees: number
+  averageRating: number
+  totalRevenue: number
+}
 
 export default function OwnerDashboardPage() {
   const { hasRole } = useAuth()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [restaurants, setRestaurants] = useState<any[]>([])
+  const [restaurantStats, setRestaurantStats] = useState<Record<string, RestaurantStats>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [totalMonthlyRevenue, setTotalMonthlyRevenue] = useState(0)
   const [isLoadingRevenue, setIsLoadingRevenue] = useState(false)
   const [totalEmployees, setTotalEmployees] = useState(0)
-  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [totalMenuItems, setTotalMenuItems] = useState(0)
+  const [isLoadingStats, setIsLoadingStats] = useState(false)
 
   useEffect(() => {
     if (!hasRole(UserRole.Owner)) {
@@ -50,10 +66,8 @@ export default function OwnerDashboardPage() {
       const data = await OwnerApi.getMyRestaurants()
       setRestaurants(data)
       
-      // Tüm restoranlardan son 30 günün gelirini topla
       if (data.length > 0) {
-        loadTotalMonthlyRevenue(data)
-        loadTotalEmployees(data)
+        loadAllStats(data)
       }
     } catch (error) {
       console.error("Error loading restaurants:", error)
@@ -62,63 +76,61 @@ export default function OwnerDashboardPage() {
     }
   }
 
-  const loadTotalMonthlyRevenue = async (restaurantList: any[]) => {
+  const loadAllStats = async (restaurantList: any[]) => {
     try {
       setIsLoadingRevenue(true)
-      let totalRevenue = 0
+      setIsLoadingStats(true)
       
-      // Her restoran için son 30 günün gelirini al
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setDate(startDate.getDate() - 30)
-      
-      const revenuePromises = restaurantList.map(async (restaurant) => {
+      const statsPromises = restaurantList.map(async (restaurant) => {
         try {
-          const report = await OwnerApi.getSalesReport(
-            restaurant.id,
-            startDate.toISOString().split('T')[0],
-            endDate.toISOString().split('T')[0]
-          )
-          return report.totalRevenue || 0
+          const stats = await OwnerApi.getStatistics(restaurant.id)
+          return {
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            ...stats,
+          }
         } catch (error) {
-          console.error(`Error loading revenue for restaurant ${restaurant.id}:`, error)
-          return 0
+          console.error(`Error loading stats for restaurant ${restaurant.id}:`, error)
+          return {
+            restaurantId: restaurant.id,
+            restaurantName: restaurant.name,
+            totalOrders: 0,
+            totalMenuItems: 0,
+            totalReservations: 0,
+            totalEmployees: 0,
+            averageRating: 0,
+            totalRevenue: 0,
+          }
         }
       })
       
-      const revenues = await Promise.all(revenuePromises)
-      totalRevenue = revenues.reduce((sum, revenue) => sum + revenue, 0)
+      const allStats = await Promise.all(statsPromises)
       
-      setTotalMonthlyRevenue(totalRevenue)
+      // Store stats by restaurant ID
+      const statsMap: Record<string, RestaurantStats> = {}
+      let totalRev = 0
+      let totalEmp = 0
+      let totalOrd = 0
+      let totalMenu = 0
+      
+      allStats.forEach((stat) => {
+        statsMap[stat.restaurantId] = stat
+        totalRev += stat.totalRevenue || 0
+        totalEmp += stat.totalEmployees || 0
+        totalOrd += stat.totalOrders || 0
+        totalMenu += stat.totalMenuItems || 0
+      })
+      
+      setRestaurantStats(statsMap)
+      setTotalMonthlyRevenue(totalRev)
+      setTotalEmployees(totalEmp)
+      setTotalOrders(totalOrd)
+      setTotalMenuItems(totalMenu)
     } catch (error) {
-      console.error("Error loading total monthly revenue:", error)
+      console.error("Error loading stats:", error)
     } finally {
       setIsLoadingRevenue(false)
-    }
-  }
-
-  const loadTotalEmployees = async (restaurantList: any[]) => {
-    try {
-      setIsLoadingEmployees(true)
-      
-      const employeePromises = restaurantList.map(async (restaurant) => {
-        try {
-          const result = await OwnerApi.getEmployeeCount(restaurant.id)
-          return result.count || 0
-        } catch (error) {
-          console.error(`Error loading employee count for restaurant ${restaurant.id}:`, error)
-          return 0
-        }
-      })
-      
-      const employeeCounts = await Promise.all(employeePromises)
-      const total = employeeCounts.reduce((sum, count) => sum + count, 0)
-      
-      setTotalEmployees(total)
-    } catch (error) {
-      console.error("Error loading total employees:", error)
-    } finally {
-      setIsLoadingEmployees(false)
+      setIsLoadingStats(false)
     }
   }
 
@@ -179,26 +191,25 @@ export default function OwnerDashboardPage() {
           <LayoutDashboard className="w-8 h-8" />
           Owner Dashboard
         </h1>
-        <p className="text-muted-foreground">Manage your restaurants and business</p>
+        <p className="text-muted-foreground">Restoranlarınızın genel istatistikleri</p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+      {/* Quick Stats - Global */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5 mb-8">
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Aylık Toplam Gelir</CardTitle>
-              <DollarSign className="w-8 h-8 text-green-600" />
+              <CardTitle className="text-sm">Toplam Gelir</CardTitle>
+              <DollarSign className="w-6 h-6 text-green-600" />
             </div>
-            <CardDescription>Son 30 gün - Tüm restoranlar</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingRevenue ? (
-              <div className="flex items-center justify-center py-4">
+              <div className="flex items-center justify-center py-2">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <div className="text-3xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-green-600">
                 ₺{totalMonthlyRevenue.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             )}
@@ -208,18 +219,17 @@ export default function OwnerDashboardPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Toplam Çalışanlar</CardTitle>
-              <Users className="w-8 h-8 text-blue-600" />
+              <CardTitle className="text-sm">Toplam Sipariş</CardTitle>
+              <ShoppingBag className="w-6 h-6 text-blue-600" />
             </div>
-            <CardDescription>Tüm restoranlardaki çalışanlar</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoadingEmployees ? (
-              <div className="flex items-center justify-center py-4">
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-2">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
               </div>
             ) : (
-              <div className="text-3xl font-bold text-blue-600">{totalEmployees}</div>
+              <div className="text-2xl font-bold text-blue-600">{totalOrders}</div>
             )}
           </CardContent>
         </Card>
@@ -227,27 +237,50 @@ export default function OwnerDashboardPage() {
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Restoranlarım</CardTitle>
-              <Store className="w-8 h-8 text-primary" />
+              <CardTitle className="text-sm">Menü Öğeleri</CardTitle>
+              <Utensils className="w-6 h-6 text-orange-600" />
             </div>
-            <CardDescription>Toplam restoran sayısı</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{restaurants.length}</div>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-orange-600">{totalMenuItems}</div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm">Çalışanlar</CardTitle>
+              <Users className="w-6 h-6 text-purple-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStats ? (
+              <div className="flex items-center justify-center py-2">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-purple-600">{totalEmployees}</div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/owner/restaurants/new')}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Yeni Restoran</CardTitle>
-              <Store className="w-8 h-8 text-green-600" />
+              <CardTitle className="text-sm">Restoranlar</CardTitle>
+              <Store className="w-6 h-6 text-primary" />
             </div>
-            <CardDescription>Yeni bir restoran ekle</CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full">
-              Restoran Oluştur
+            <div className="text-2xl font-bold">{restaurants.length}</div>
+            <Button size="sm" className="w-full mt-2">
+              Yeni Ekle
             </Button>
           </CardContent>
         </Card>
@@ -255,81 +288,103 @@ export default function OwnerDashboardPage() {
 
       {/* Restaurant Cards */}
       <div className="mb-6">
-        <h2 className="text-2xl font-bold mb-4">Your Restaurants</h2>
+        <h2 className="text-2xl font-bold mb-4">Restoranlarınız</h2>
         <div className="space-y-4">
-          {currentRestaurants.map((restaurant) => (
-            <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Store className="w-5 h-5" />
-                      {restaurant.name}
-                    </CardTitle>
-                    <CardDescription>{restaurant.category}</CardDescription>
+          {currentRestaurants.map((restaurant) => {
+            const stats = restaurantStats[restaurant.id]
+            return (
+              <Card key={restaurant.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-xl">
+                        <Store className="w-5 h-5" />
+                        {restaurant.name}
+                      </CardTitle>
+                      <CardDescription>{restaurant.category}</CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/owner/restaurants/${restaurant.id}/statistics`)}
+                      >
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        İstatistikler
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/owner/restaurants/${restaurant.id}/employees`)}
+                      >
+                        <Users className="w-4 h-4 mr-1" />
+                        Çalışanlar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/owner/restaurants/${restaurant.id}/job-applications`)}
+                      >
+                        <Briefcase className="w-4 h-4 mr-1" />
+                        Başvurular
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/dashboard`)}
-                    >
-                      <LayoutDashboard className="w-4 h-4 mr-1" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/statistics`)}
-                    >
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      Statistics
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/menu`)}
-                    >
-                      <Utensils className="w-4 h-4 mr-1" />
-                      Menu
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/orders`)}
-                    >
-                      <ShoppingBag className="w-4 h-4 mr-1" />
-                      Orders
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/employees`)}
-                    >
-                      <Users className="w-4 h-4 mr-1" />
-                      Staff
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/job-applications`)}
-                    >
-                      <Briefcase className="w-4 h-4 mr-1" />
-                      Applications
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/owner/restaurants/${restaurant.id}/reports`)}
-                    >
-                      <FileText className="w-4 h-4 mr-1" />
-                      Reports
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  {isLoadingStats ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : stats ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <DollarSign className="w-6 h-6 text-green-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-green-600">
+                          ₺{stats.totalRevenue.toLocaleString('tr-TR', { maximumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Gelir</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <ShoppingBag className="w-6 h-6 text-blue-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-blue-600">{stats.totalOrders}</div>
+                        <div className="text-xs text-muted-foreground">Sipariş</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <Utensils className="w-6 h-6 text-orange-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-orange-600">{stats.totalMenuItems}</div>
+                        <div className="text-xs text-muted-foreground">Menü Öğesi</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                        <Users className="w-6 h-6 text-purple-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-purple-600">{stats.totalEmployees}</div>
+                        <div className="text-xs text-muted-foreground">Çalışan</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-indigo-50 rounded-lg">
+                        <Table className="w-6 h-6 text-indigo-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-indigo-600">{stats.totalTables || 0}</div>
+                        <div className="text-xs text-muted-foreground">Masa</div>
+                      </div>
+                      
+                      <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                        <Star className="w-6 h-6 text-yellow-600 mx-auto mb-1" />
+                        <div className="text-lg font-bold text-yellow-600">{stats.averageRating.toFixed(1)}</div>
+                        <div className="text-xs text-muted-foreground">Puan ({stats.totalReviews || 0} yorum)</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      İstatistikler yüklenemedi
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
 
         {/* Pagination Controls */}
@@ -342,10 +397,10 @@ export default function OwnerDashboardPage() {
               disabled={currentPage === 1}
             >
               <ChevronLeft className="w-4 h-4 mr-1" />
-              Previous
+              Önceki
             </Button>
             <span className="text-sm text-muted-foreground">
-              Page {currentPage} of {totalPages}
+              Sayfa {currentPage} / {totalPages}
             </span>
             <Button
               variant="outline"
@@ -353,7 +408,7 @@ export default function OwnerDashboardPage() {
               onClick={goToNextPage}
               disabled={currentPage === totalPages}
             >
-              Next
+              Sonraki
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </div>

@@ -22,4 +22,8 @@
       <ProjectReference Include="..\..\Core\RestaurantManagment.Domain\RestaurantManagment.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Seeders\" />
+    </ItemGroup>
+
 </Project>

@@ -55,6 +55,30 @@ export interface PaginatedResult<T> {
   totalPages: number
 }
 
+export interface Order {
+  id: string
+  restaurantId: string
+  restaurantName?: string
+  customerName?: string
+  orderDate: string
+  totalAmount: number
+  status: string
+  status: number // Backend enum olarak gönderiyor: 0=Pending, 1=Confirmed, 2=Preparing, 3=Ready, 4=OutForDelivery, 5=Delivered, 6=Completed, 7=Cancelled
+  type: number // Backend enum: 0=DineIn, 1=TakeAway, 2=Delivery
+  specialRequests?: string
+  paymentMethod?: string
+}
+
+export interface OrderItem {
+  id: string
+  menuItemId: string
+  menuItemName: string
+  quantity: number
+  unitPrice: number
+  subtotal: number
+  notes?: string
+}
+
 export const employeeApi = {
   // Reservation Management
   reservations: {
@@ -181,5 +205,30 @@ export const employeeApi = {
 
     getAvailableCount: (restaurantId: string) =>
       ApiClient.get<{ count: number }>(`/Employee/restaurants/${restaurantId}/tables/available/count`),
+  },
+
+  // Order Management
+  orders: {
+    getAll: (restaurantId: string, pageNumber = 1, pageSize = 10) =>
+      ApiClient.get<PaginatedResult<Order>>(
+        `/Employee/restaurants/${restaurantId}/orders?pageNumber=${pageNumber}&pageSize=${pageSize}`
+      ),
+
+    getByStatus: (restaurantId: string, status: string, pageNumber = 1, pageSize = 10) =>
+      ApiClient.get<PaginatedResult<Order>>(
+        `/Employee/restaurants/${restaurantId}/orders/status/${status}?pageNumber=${pageNumber}&pageSize=${pageSize}`
+      ),
+
+    getById: (orderId: string) =>
+      ApiClient.get<Order>(`/Employee/orders/${orderId}`),
+
+    updateStatus: (orderId: string, newStatus: string) =>
+      ApiClient.put<Order>(`/Employee/orders/${orderId}/status`, { status: newStatus }),
+
+    getActiveCount: (restaurantId: string) =>
+      ApiClient.get<{ count: number }>(`/Employee/restaurants/${restaurantId}/orders/active/count`),
+
+    getTodayOrders: (restaurantId: string) =>
+      ApiClient.get<Order[]>(`/Employee/restaurants/${restaurantId}/orders/today`),
   },
 }

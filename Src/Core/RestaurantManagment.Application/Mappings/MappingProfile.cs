@@ -13,8 +13,6 @@ using RestaurantManagment.Application.DTOs.MenuItem;
 using RestaurantManagment.Application.DTOs.Order;
 using RestaurantManagment.Application.DTOs.Reservation;
 using RestaurantManagment.Domain.Models;
-using CreateOrderDto = RestaurantManagment.Application.DTOs.Order.CreateOrderDto;
-using CreateOrderItemDto = RestaurantManagment.Application.DTOs.Order.CreateOrderItemDto;
 using CreateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaurant.CreateRestaurantDto;
 using UpdateRestaurantDto = RestaurantManagment.Application.Common.DTOs.Restaurant.UpdateRestaurantDto;
 using RestaurantResponseDto = RestaurantManagment.Application.DTOs.Restaurant.RestaurantResponseDto;
@@ -71,14 +69,13 @@ public class MappingProfile : Profile
         
         CreateMap<CreateMenuItemDto, MenuItem>();
         CreateMap<UpdateMenuItemDto, MenuItem>();
-
-    
+        
         CreateMap<Order, OrderResponseDto>()
             .ForMember(dest => dest.RestaurantName, opt => opt.MapFrom(src => src.Restaurant.Name))
             .ForMember(dest => dest.TableNumber, opt => opt.MapFrom(src => src.Table != null ? src.Table.TableNumber : (int?)null))
             .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.Customer != null ? src.Customer.FullName : null))
             .ForMember(dest => dest.DeliveryPersonName, opt => opt.MapFrom(src => src.DeliveryPerson != null ? src.DeliveryPerson.FullName : null))
-            .ForMember(dest => dest.Items, opt => opt.MapFrom(src => src.OrderItems));
+            .ForMember(dest => dest.OrderItems, opt => opt.MapFrom(src => src.OrderItems));
         
         CreateMap<CreateOrderDto, Order>()
             .ForMember(dest => dest.OrderItems, opt => opt.Ignore());
@@ -87,7 +84,11 @@ public class MappingProfile : Profile
             .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
         CreateMap<OrderItem, OrderItemResponseDto>()
-            .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.Name));
+            .ForMember(dest => dest.MenuItemName, opt => opt.MapFrom(src => src.MenuItem.Name))
+            .ForMember(dest => dest.MenuItemId, opt => opt.MapFrom(src => src.MenuItemId))
+            .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.UnitPrice))
+            .ForMember(dest => dest.Subtotal, opt => opt.MapFrom(src => src.Subtotal))
+            .ForMember(dest => dest.Notes, opt => opt.MapFrom(src => src.Notes));
         
         CreateMap<CreateOrderItemDto, OrderItem>();
 

@@ -15,6 +15,7 @@ interface AuthContextType {
   register: (fullName: string, email: string, password: string, phoneNumber?: string) => Promise<void>
   logout: () => void
   hasRole: (role: UserRole) => boolean
+  getToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -63,6 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user?.roles?.includes(role) ?? false
   }
 
+  const getToken = async (): Promise<string | null> => {
+    return AuthService.getToken()
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -73,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         hasRole,
+        getToken,
       }}
     >
       {children}

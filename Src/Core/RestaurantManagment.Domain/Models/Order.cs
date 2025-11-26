@@ -61,7 +61,8 @@ public enum OrderStatus
     Confirmed,
     Preparing,
     Ready,
-    Served,
+    OutForDelivery,
+    Delivered,
     Completed,
     Cancelled,
 }
@@ -69,6 +70,6 @@ public enum OrderStatus
 public enum OrderType
 {
     DineIn,
-    Takeout,
+    TakeAway,
     Delivery
 }

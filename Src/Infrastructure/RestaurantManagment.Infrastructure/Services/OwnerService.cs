@@ -885,7 +885,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         order.Status = newStatus;
         
         
-        if (newStatus == OrderStatus.Completed || newStatus == OrderStatus.Served)
+        if (newStatus == OrderStatus.Completed || newStatus == OrderStatus.Delivered)
         {
             order.CompletedAt = DateTime.UtcNow;
         }
@@ -909,7 +909,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         var totalRevenue = await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
-                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Delivered)
                 && !o.IsDeleted)
             .SumAsync(o => o.TotalAmount);
 
@@ -929,7 +929,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         var todayRevenue = await context.Orders
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate.Date == today
-                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Delivered)
                 && !o.IsDeleted)
             .SumAsync(o => o.TotalAmount);
 
@@ -1614,7 +1614,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate >= startDate 
                 && o.OrderDate <= endDate
-                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Delivered)
                 && !o.IsDeleted)
             .ToListAsync();
 
@@ -1709,7 +1709,7 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
             .Where(o => o.RestaurantId == restaurantId 
                 && o.OrderDate >= startDate 
                 && o.OrderDate <= endDate
-                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served)
+                && (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Delivered)
                 && !o.IsDeleted)
             .ToListAsync();
 

@@ -19,6 +19,7 @@ namespace RestaurantManagment.WebAPI.Controllers;
 [Authorize(Roles = "RestaurantOwner,Employee")]
 public class OwnerController(
     IOwnerService ownerService,
+    IOrderService orderService,
     UserManager<AppUser> userManager,
     IFileService fileService,
     IAppDbContext context) : ControllerBase

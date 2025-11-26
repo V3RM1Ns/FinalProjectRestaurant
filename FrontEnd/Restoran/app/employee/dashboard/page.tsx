@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Clock, Calendar, Users, MapPin, AlertCircle, UtensilsCrossed, Table as TableIcon, Edit, Trash2, Plus } from "lucide-react"
+import { Clock, Calendar, Users, MapPin, AlertCircle, UtensilsCrossed, Table as TableIcon, Edit, Trash2, Plus, ShoppingBag } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { employeeApi, type Reservation, type Menu, type Table } from "@/lib/employee-api"
@@ -535,6 +535,12 @@ export default function EmployeeDashboardPage() {
             <p className="text-muted-foreground">Restoran yönetimi ve operasyonlar</p>
           </div>
           <div className="flex gap-2">
+            <Link href="/employee/orders">
+              <Button variant="outline">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Siparişler
+              </Button>
+            </Link>
             <Button 
               onClick={() => window.location.href = '/employee/menus'}
               variant="outline"

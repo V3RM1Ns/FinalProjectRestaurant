@@ -36,6 +36,7 @@ export interface UpdateEmployeeDto {
   address?: string
   profileImageUrl?: string
   password?: string
+  isActive?: boolean
 }
 
 export interface CreateMenuDto {
@@ -283,14 +284,14 @@ export const ownerApi = {
         `/Owner/restaurants/${restaurantId}/job-applications/pending?pageNumber=${pageNumber}&pageSize=${pageSize}`
       ),
     
-    getById: (applicationId: number) => 
+    getById: (applicationId: string) => 
       ApiClient.get<any>(`/Owner/job-applications/${applicationId}`),
     
-    accept: (applicationId: number) => 
+    accept: (applicationId: string) => 
       ApiClient.post<any>(`/Owner/job-applications/${applicationId}/accept`, {}),
     
-    reject: (applicationId: number, rejectionReason?: string) => 
-      ApiClient.post<any>(`/Owner/job-applications/${applicationId}/reject`, rejectionReason),
+    reject: (applicationId: string, rejectionReason?: string) => 
+      ApiClient.post<any>(`/Owner/job-applications/${applicationId}/reject`, rejectionReason || ""),
     
     getPendingCount: (restaurantId: string) => 
       ApiClient.get<{ count: number }>(`/Owner/restaurants/${restaurantId}/job-applications/pending/count`),
@@ -533,11 +534,11 @@ export class OwnerApi {
     return ownerApi.jobApplications.getPending(restaurantId, pageNumber, pageSize)
   }
 
-  static async acceptJobApplication(applicationId: number) {
+  static async acceptJobApplication(applicationId: string) {
     return ownerApi.jobApplications.accept(applicationId)
   }
 
-  static async rejectJobApplication(applicationId: number, reason?: string) {
+  static async rejectJobApplication(applicationId: string, reason?: string) {
     return ownerApi.jobApplications.reject(applicationId, reason)
   }
 

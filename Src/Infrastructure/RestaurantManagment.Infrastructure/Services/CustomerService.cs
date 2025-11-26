@@ -548,13 +548,16 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             OrderStatus.Pending, 
             OrderStatus.Confirmed, 
             OrderStatus.Preparing, 
-            OrderStatus.Ready
+            OrderStatus.Ready,
+            OrderStatus.OutForDelivery,
+            OrderStatus.Delivered
         };
 
         var orders = await context.Orders
             .Include(o => o.Restaurant)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.MenuItem)
+            .Include(o => o.DeliveryPerson)
             .Where(o => o.CustomerId == customerId && 
                        !o.IsDeleted && 
                        activeStatuses.Contains(o.Status))
@@ -571,7 +574,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
 
         var completedStatuses = new[] 
         { 
-            OrderStatus.Served, 
+            OrderStatus.Delivered, 
             OrderStatus.Completed, 
             OrderStatus.Cancelled 
         };
@@ -1220,7 +1223,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             .AnyAsync(o => o.RestaurantId == restaurantId && 
                           o.CustomerId == customerId && 
                           !o.IsDeleted && 
-                          (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Served));
+                          (o.Status == OrderStatus.Completed || o.Status == OrderStatus.Delivered));
 
         if (hasCompletedOrder)
             return true;

@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react'
 import { customerApi } from '@/lib/customer-api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award, MessageSquare, Edit, Trash2, Loader2, ChevronLeftIcon, ChevronRightIcon, Package, Clock } from 'lucide-react'
+import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award, MessageSquare, Edit, Trash2, Loader2, ChevronLeftIcon, ChevronRightIcon, Package, Clock, MapPin } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ChatButton } from '@/components/chat/chat-button'
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,10 @@ interface Order {
   createdAt: string
   orderDate?: string
   restaurantId?: string
+  deliveryPersonId?: string
+  deliveryPersonName?: string
+  deliveryAddress?: string
+  type?: string
 }
 
 interface Reservation {

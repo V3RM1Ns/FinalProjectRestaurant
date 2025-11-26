@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Clock, MapPin, Package, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, Clock, MapPin, Package, CheckCircle, XCircle, Loader2, MessageCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { ChatButton } from '@/components/chat/chat-button'
 import type { Order } from '@/types'
 import Link from 'next/link'
 
@@ -227,6 +228,31 @@ export default function OrderDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Chat Button - Teslimat siparişlerinde kurye atandıysa göster */}
+          {order.type === 'Delivery' && order.deliveryPersonId && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5" />
+                  Kurye ile İletişim
+                </CardTitle>
+                <CardDescription>
+                  {order.deliveryPersonName ? `${order.deliveryPersonName} ile mesajlaşın` : 'Kurye ile mesajlaşın'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChatButton
+                  orderId={order.id}
+                  orderInfo={{
+                    deliveryPersonName: order.deliveryPersonName,
+                    restaurantName: order.restaurantName
+                  }}
+                  className="w-full"
+                />
+              </CardContent>
+            </Card>
+          )}
+
           {/* Order Info */}
           <Card>
             <CardHeader>

@@ -10,12 +10,9 @@ import {
   ShoppingBag,
   Users,
   TrendingUp,
-  Utensils,
   Calendar,
   Star,
   FileText,
-  ChefHat,
-  Briefcase,
 } from 'lucide-react'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
@@ -171,48 +168,6 @@ export default function RestaurantDashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/menu`)}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Menu Items</span>
-              <Utensils className="h-6 w-6" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{dashboard.menuItemCount}</div>
-            <Button variant="outline" className="w-full">Manage Menu</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/employees`)}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Employees</span>
-              <ChefHat className="h-6 w-6" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{dashboard.employeeCount}</div>
-            <Button variant="outline" className="w-full">View Staff</Button>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/job-applications`)}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Pending Applications</span>
-              <Briefcase className="h-6 w-6" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold mb-2">{dashboard.pendingApplicationsCount}</div>
-            <Button variant="outline" className="w-full">Review Applications</Button>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Top Selling Items */}
       {dashboard.topSellingItems && dashboard.topSellingItems.length > 0 && (
         <Card className="mb-6">
@@ -268,7 +223,7 @@ export default function RestaurantDashboardPage() {
       )}
 
       {/* Navigation Buttons */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mt-6">
         <Button
           variant="outline"
           onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/statistics`)}
@@ -278,24 +233,17 @@ export default function RestaurantDashboardPage() {
         </Button>
         <Button
           variant="outline"
-          onClick={() => router.push(`/owner/orders?restaurant=${params.restaurantId}`)}
-        >
-          <ShoppingBag className="w-4 h-4 mr-2" />
-          Orders
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/owner/reservations?restaurant=${params.restaurantId}`)}
-        >
-          <Calendar className="w-4 h-4 mr-2" />
-          Reservations
-        </Button>
-        <Button
-          variant="outline"
           onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/reports`)}
         >
           <FileText className="w-4 h-4 mr-2" />
           Reports
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => router.push(`/owner/dashboard`)}
+        >
+          <Users className="w-4 h-4 mr-2" />
+          Back to Main Dashboard
         </Button>
       </div>
     </div>

@@ -5,6 +5,7 @@ using RestaurantManagment.Application.Common.DTOs.Menu;
 using RestaurantManagment.Application.Common.DTOs.MenuItem;
 using RestaurantManagment.Application.Common.DTOs.Owner;
 using RestaurantManagment.Application.Common.DTOs.Restaurant;
+using RestaurantManagment.Application.Common.DTOs.Order;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
 using RestaurantManagment.Domain.Enums;
@@ -16,6 +17,7 @@ namespace RestaurantManagment.WebAPI.Controllers;
 [Authorize(Roles = "Employee")]
 public class EmployeeController(
     IEmployeeService employeeService,
+    IOrderService orderService,
     UserManager<AppUser> userManager) : ControllerBase
 {
     #region Reservations
@@ -577,5 +579,132 @@ public class EmployeeController(
         }
     }
 
+    #endregion
+
+    #region Orders
+    
+    [HttpGet("restaurants/{restaurantId}/orders")]
+    public async Task<IActionResult> GetRestaurantOrders(
+        string restaurantId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var orders = await orderService.GetRestaurantOrdersAsync(restaurantId, currentUser.Id, pageNumber, pageSize);
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurants/{restaurantId}/orders/status/{status}")]
+    public async Task<IActionResult> GetOrdersByStatus(
+        string restaurantId,
+        string status,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            if (!Enum.TryParse<OrderStatus>(status, true, out var orderStatus))
+                return BadRequest(new { Message = "Invalid status value" });
+
+            var orders = await orderService.GetRestaurantOrdersByStatusAsync(restaurantId, currentUser.Id, orderStatus, pageNumber, pageSize);
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("orders/{orderId}")]
+    public async Task<IActionResult> GetOrderById(string orderId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var order = await orderService.GetOrderByIdAsync(orderId, currentUser.Id);
+            return Ok(order);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpPut("orders/{orderId}/status")]
+    public async Task<IActionResult> UpdateOrderStatus(
+        string orderId,
+        [FromBody] UpdateOrderStatusDto dto)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var orderStatus))
+                return BadRequest(new { Message = "Invalid status value" });
+
+            var order = await orderService.UpdateOrderStatusAsync(orderId, currentUser.Id, orderStatus);
+            return Ok(order);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurants/{restaurantId}/orders/active/count")]
+    public async Task<IActionResult> GetActiveOrdersCount(string restaurantId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var count = await orderService.GetActiveOrdersCountAsync(restaurantId, currentUser.Id);
+            return Ok(new { Count = count });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+
+    [HttpGet("restaurants/{restaurantId}/orders/today")]
+    public async Task<IActionResult> GetTodayOrders(string restaurantId)
+    {
+        var currentUser = await userManager.GetUserAsync(User);
+        if (currentUser == null)
+            return Unauthorized(new { Message = "User not found" });
+
+        try
+        {
+            var orders = await orderService.GetTodayOrdersAsync(restaurantId, currentUser.Id);
+            return Ok(orders);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Message = ex.Message });
+        }
+    }
+    
     #endregion
 }

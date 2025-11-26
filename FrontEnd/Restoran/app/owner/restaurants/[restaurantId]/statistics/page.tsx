@@ -1,10 +1,13 @@
-﻿use client'
+﻿"use client"
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Users, ShoppingCart, DollarSign, Briefcase, Table, UtensilsCrossed, Star, TrendingUp } from 'lucide-react'
+import { OwnerApi } from '@/lib/owner-api'
+import { useAuth } from '@/contexts/auth-context'
+import { UserRole } from '@/types'
 
 interface Statistics {
   totalCustomers: number
@@ -22,30 +25,24 @@ interface Statistics {
 export default function StatisticsPage() {
   const params = useParams()
   const router = useRouter()
+  const { hasRole } = useAuth()
   const restaurantId = params.restaurantId as string
   const [statistics, setStatistics] = useState<Statistics | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!hasRole(UserRole.Owner)) {
+      router.push('/unauthorized')
+      return
+    }
     fetchStatistics()
-  }, [restaurantId])
+  }, [restaurantId, hasRole])
 
   const fetchStatistics = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/Owner/restaurants/${restaurantId}/statistics`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      if (response.ok) {
-        const data = await response.json()
-        setStatistics(data)
-      }
+      setLoading(true)
+      const data = await OwnerApi.getStatistics(restaurantId)
+      setStatistics(data)
     } catch (error) {
       console.error('Failed to fetch statistics:', error)
     } finally {
@@ -57,7 +54,7 @@ export default function StatisticsPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <p>Loading statistics...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </div>
     )
@@ -66,8 +63,16 @@ export default function StatisticsPage() {
   if (!statistics) {
     return (
       <div className="container mx-auto p-6">
+        <Button
+          variant="ghost"
+          className="mb-4"
+          onClick={() => router.push(`/owner/dashboard`)}
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </Button>
         <div className="flex items-center justify-center h-64">
-          <p>Failed to load statistics</p>
+          <p className="text-muted-foreground">Failed to load statistics</p>
         </div>
       </div>
     )
@@ -151,7 +156,7 @@ export default function StatisticsPage() {
       <Button
         variant="ghost"
         className="mb-4"
-        onClick={() => router.push(`/owner/restaurants/${restaurantId}/dashboard`)}
+        onClick={() => router.push(`/owner/dashboard`)}
       >
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Dashboard
@@ -183,4 +188,3 @@ export default function StatisticsPage() {
     </div>
   )
 }
-

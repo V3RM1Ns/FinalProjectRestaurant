@@ -5,375 +5,418 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Package, MapPin, Phone, Clock, DollarSign, CheckCircle, Navigation } from "lucide-react"
+import { Package, MapPin, Phone, Clock, DollarSign, CheckCircle, Navigation, Bike, MessageCircle } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
-
-interface DeliveryOrder {
-  id: string
-  orderNumber: string
-  restaurantName: string
-  restaurantAddress: string
-  restaurantPhone: string
-  customerName: string
-  customerAddress: string
-  customerPhone: string
-  totalAmount: number
-  status: "Assigned" | "PickedUp" | "InTransit" | "Delivered"
-  orderDate: string
-  items: Array<{ name: string; quantity: number }>
-  deliveryFee: number
-}
+import { DeliveryApiService } from "@/lib/delivery-api"
+import { Order, OrderStatus } from "@/types"
+import { ChatButton } from "@/components/chat/chat-button"
 
 export default function DeliveryOrdersPage() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [activeOrders, setActiveOrders] = useState<DeliveryOrder[]>([])
-  const [completedOrders, setCompletedOrders] = useState<DeliveryOrder[]>([])
+  const [availableOrders, setAvailableOrders] = useState<Order[]>([])
+  const [myOrders, setMyOrders] = useState<Order[]>([])
+  const [activeOrder, setActiveOrder] = useState<Order | null>(null)
   const [loading, setLoading] = useState(true)
-  const [todayEarnings, setTodayEarnings] = useState(0)
-  const [totalDeliveries, setTotalDeliveries] = useState(0)
 
   useEffect(() => {
-    // Mock API call to fetch delivery orders
-    const fetchDeliveryOrders = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      const mockActiveOrders: DeliveryOrder[] = [
-        {
-          id: "1",
-          orderNumber: "#12345",
-          restaurantName: "Sultanahmet Köftecisi",
-          restaurantAddress: "Sultanahmet Mah. Divan Yolu Cad. No:12, Fatih/İstanbul",
-          restaurantPhone: "+90 212 555 0001",
-          customerName: "Ahmet Yılmaz",
-          customerAddress: "Kadıköy Mah. Bahariye Cad. No:45 D:3, Kadıköy/İstanbul",
-          customerPhone: "+90 532 111 2233",
-          totalAmount: 125.5,
-          status: "Assigned",
-          orderDate: new Date().toISOString(),
-          items: [
-            { name: "İskender Kebap", quantity: 2 },
-            { name: "Ayran", quantity: 2 },
-          ],
-          deliveryFee: 15.0,
-        },
-        {
-          id: "2",
-          orderNumber: "#12346",
-          restaurantName: "Pizza Napoli",
-          restaurantAddress: "Beyoğlu Mah. İstiklal Cad. No:78, Beyoğlu/İstanbul",
-          restaurantPhone: "+90 212 555 0002",
-          customerName: "Zeynep Kaya",
-          customerAddress: "Beşiktaş Mah. Barbaros Bulvarı No:23 D:8, Beşiktaş/İstanbul",
-          customerPhone: "+90 533 444 5566",
-          totalAmount: 89.0,
-          status: "PickedUp",
-          orderDate: new Date().toISOString(),
-          items: [
-            { name: "Margherita Pizza", quantity: 1 },
-            { name: "Caesar Salad", quantity: 1 },
-          ],
-          deliveryFee: 12.0,
-        },
-      ]
-
-      const mockCompletedOrders: DeliveryOrder[] = [
-        {
-          id: "3",
-          orderNumber: "#12344",
-          restaurantName: "Burger House",
-          restaurantAddress: "Şişli Mah. Halaskargazi Cad. No:56, Şişli/İstanbul",
-          restaurantPhone: "+90 212 555 0003",
-          customerName: "Mehmet Demir",
-          customerAddress: "Mecidiyeköy Mah. Büyükdere Cad. No:101 D:15, Şişli/İstanbul",
-          customerPhone: "+90 534 777 8899",
-          totalAmount: 67.5,
-          status: "Delivered",
-          orderDate: new Date(Date.now() - 3600000).toISOString(),
-          items: [{ name: "Classic Burger", quantity: 2 }],
-          deliveryFee: 10.0,
-        },
-      ]
-
-      setActiveOrders(mockActiveOrders)
-      setCompletedOrders(mockCompletedOrders)
-      setTodayEarnings(37.0)
-      setTotalDeliveries(8)
-      setLoading(false)
-    }
-
-    fetchDeliveryOrders()
+    fetchOrders()
+    // Her 30 saniyede bir yenile
+    const interval = setInterval(fetchOrders, 30000)
+    return () => clearInterval(interval)
   }, [])
 
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    setActiveOrders((prev) =>
-      prev.map((order) => (order.id === orderId ? { ...order, status: newStatus as DeliveryOrder["status"] } : order)),
-    )
+  const fetchOrders = async () => {
+    try {
+      setLoading(true)
+      const [available, myOrdersData] = await Promise.all([
+        DeliveryApiService.getAvailableOrders(1, 20),
+        DeliveryApiService.getMyOrders(1, 20),
+      ])
 
-    toast({
-      title: "Durum Güncellendi",
-      description: `Sipariş durumu ${newStatus} olarak güncellendi`,
+      setAvailableOrders(available.items || [])
+      setMyOrders(myOrdersData.items || [])
+
+      // Aktif siparişi bul (status=4 OutForDelivery durumunda)
+      const active = myOrdersData.items?.find(
+        (order: Order) => order.status === 4 || order.status === OrderStatus.OutForDelivery,
+      )
+      setActiveOrder(active || null)
+    } catch (error) {
+      console.error("Error fetching orders:", error)
+      toast({
+        title: "Hata",
+        description: "Siparişler yüklenirken bir hata oluştu",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAcceptOrder = async (orderId: string) => {
+    if (activeOrder) {
+      toast({
+        title: "Uyarı",
+        description: "Zaten aktif bir teslimatınız var. Önce onu tamamlayın.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      await DeliveryApiService.acceptOrder(orderId)
+      toast({
+        title: "Başarılı",
+        description: "Sipariş kabul edildi. Teslimat başladı!",
+      })
+      await fetchOrders()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "Sipariş kabul edilirken bir hata oluştu",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
+    try {
+      await DeliveryApiService.updateOrderStatus(orderId, newStatus)
+      toast({
+        title: "Başarılı",
+        description: "Sipariş durumu güncellendi",
+      })
+      await fetchOrders()
+    } catch (error: any) {
+      toast({
+        title: "Hata",
+        description: error.message || "Durum güncellenirken bir hata oluştu",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const getStatusBadge = (status: OrderStatus) => {
+    const statusConfig: Partial<Record<OrderStatus, { label: string; variant: "secondary" | "default" | "outline" }>> = {
+      [OrderStatus.Ready]: { label: "Hazır", variant: "secondary" },
+      [OrderStatus.OutForDelivery]: { label: "Yolda", variant: "default" },
+      [OrderStatus.Delivered]: { label: "Teslim Edildi", variant: "outline" },
+      [OrderStatus.Completed]: { label: "Tamamlandı", variant: "outline" },
+    }
+
+    const config = statusConfig[status] || { label: status, variant: "secondary" as const }
+    return <Badge variant={config.variant}>{config.label}</Badge>
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
+    }).format(amount)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     })
-
-    // If delivered, move to completed
-    if (newStatus === "Delivered") {
-      setTimeout(() => {
-        const deliveredOrder = activeOrders.find((o) => o.id === orderId)
-        if (deliveredOrder) {
-          setActiveOrders((prev) => prev.filter((o) => o.id !== orderId))
-          setCompletedOrders((prev) => [{ ...deliveredOrder, status: "Delivered" }, ...prev])
-          setTodayEarnings((prev) => prev + deliveredOrder.deliveryFee)
-          setTotalDeliveries((prev) => prev + 1)
-        }
-      }, 500)
-    }
-  }
-
-  const getStatusBadgeVariant = (status: DeliveryOrder["status"]) => {
-    switch (status) {
-      case "Assigned":
-        return "secondary"
-      case "PickedUp":
-        return "default"
-      case "InTransit":
-        return "default"
-      case "Delivered":
-        return "default"
-      default:
-        return "secondary"
-    }
-  }
-
-  const getStatusText = (status: DeliveryOrder["status"]) => {
-    switch (status) {
-      case "Assigned":
-        return "Atandı"
-      case "PickedUp":
-        return "Alındı"
-      case "InTransit":
-        return "Yolda"
-      case "Delivered":
-        return "Teslim Edildi"
-      default:
-        return status
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </div>
-    )
   }
 
   return (
-    <div className="container py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Teslimat Paneli</h1>
-        <p className="text-muted-foreground">Hoş geldiniz, {user?.fullName}</p>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold flex items-center gap-2">
+            <Bike className="h-8 w-8" />
+            Teslimat Paneli
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Hoş geldiniz, {user?.fullName || "Kurye"}
+          </p>
+        </div>
+        <Button onClick={fetchOrders} disabled={loading}>
+          Yenile
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Aktif Teslimatlar</CardTitle>
+      {/* Aktif Teslimat */}
+      {activeOrder && (
+        <Card className="border-primary">
+          <CardHeader className="bg-primary/5">
+            <CardTitle className="flex items-center gap-2">
+              <Navigation className="h-5 w-5" />
+              Aktif Teslimat
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              <span className="text-3xl font-bold">{activeOrders.length}</span>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium">Teslimat Adresi:</span>
+                </div>
+                <p className="text-sm ml-6">{activeOrder.deliveryAddress}</p>
+              </div>
+              {getStatusBadge(activeOrder.status)}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Sipariş Tutarı</p>
+                <p className="text-xl font-bold">{formatCurrency(activeOrder.totalAmount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Sipariş Zamanı</p>
+                <p className="text-sm">{formatDate(activeOrder.orderDate)}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-4 border-t">
+              <p className="font-medium">Sipariş Detayları</p>
+              {(activeOrder.items || activeOrder.orderItems)?.map((item: any) => (
+                <div key={item.id} className="flex justify-between text-sm p-2 bg-muted rounded">
+                  <span>
+                    {item.quantity}x {item.menuItemName || item.menuItem?.name}
+                  </span>
+                  <span className="font-medium">{formatCurrency(item.subtotal)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <ChatButton 
+                orderId={activeOrder.id}
+                orderInfo={{
+                  customerName: activeOrder.customerName,
+                  restaurantName: activeOrder.restaurantName
+                }}
+                className="flex-1"
+              />
+              <Button
+                onClick={() => handleUpdateStatus(activeOrder.id, OrderStatus.Delivered)}
+                className="flex-1"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Teslim Edildi Olarak İşaretle
+              </Button>
             </div>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Bugünkü Kazanç</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-green-600" />
-              <span className="text-3xl font-bold">{todayEarnings.toFixed(2)} ₺</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Toplam Teslimat</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-blue-600" />
-              <span className="text-3xl font-bold">{totalDeliveries}</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Orders Tabs */}
-      <Tabs defaultValue="active" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="active">Aktif Siparişler ({activeOrders.length})</TabsTrigger>
-          <TabsTrigger value="completed">Tamamlanan ({completedOrders.length})</TabsTrigger>
+      <Tabs defaultValue="available" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="available">
+            Müsait Siparişler ({availableOrders.length})
+          </TabsTrigger>
+          <TabsTrigger value="active">
+            Aktif Alınan Sipariş ({activeOrder ? 1 : 0})
+          </TabsTrigger>
+          <TabsTrigger value="history">
+            Geçmiş Siparişlerim (
+            {myOrders.filter((o) => o.status === OrderStatus.Delivered || o.status === OrderStatus.Completed).length})
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="active" className="space-y-4">
-          {activeOrders.length === 0 ? (
+        {/* Müsait Siparişler */}
+        <TabsContent value="available" className="space-y-4">
+          {loading ? (
             <Card>
-              <CardContent className="py-12">
-                <p className="text-center text-muted-foreground">Aktif teslimat yok</p>
+              <CardContent className="pt-6 text-center">
+                <p className="text-muted-foreground">Yükleniyor...</p>
+              </CardContent>
+            </Card>
+          ) : availableOrders.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6 text-center">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Şu anda müsait sipariş bulunmuyor</p>
               </CardContent>
             </Card>
           ) : (
-            activeOrders.map((order) => (
+            availableOrders.map((order) => (
               <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Sipariş {order.orderNumber}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(order.orderDate).toLocaleTimeString("tr-TR")}
-                      </CardDescription>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Teslimat Adresi:</span>
+                      </div>
+                      <p className="text-sm ml-6">{order.deliveryAddress}</p>
                     </div>
-                    <Badge variant={getStatusBadgeVariant(order.status)}>{getStatusText(order.status)}</Badge>
+                    {getStatusBadge(order.status)}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Restaurant Info */}
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      Restoran
-                    </h4>
-                    <p className="font-medium">{order.restaurantName}</p>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>{order.restaurantAddress}</span>
+
+                  <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Tutar</p>
+                      <p className="font-bold">{formatCurrency(order.totalAmount)}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Phone className="h-4 w-4" />
-                      <a href={`tel:${order.restaurantPhone}`} className="hover:underline">
-                        {order.restaurantPhone}
-                      </a>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Ürün Sayısı</p>
+                      <p className="font-medium">{order.orderItems?.length || 0} ürün</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Zaman</p>
+                      <p className="text-sm">{formatDate(order.orderDate)}</p>
                     </div>
                   </div>
 
-                  {/* Customer Info */}
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-semibold mb-2 flex items-center gap-2">
-                      <Navigation className="h-4 w-4" />
-                      Müşteri
-                    </h4>
-                    <p className="font-medium">{order.customerName}</p>
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground mt-1">
-                      <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <span>{order.customerAddress}</span>
+                  {order.specialRequests && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-muted-foreground">Özel İstekler:</p>
+                      <p className="text-sm mt-1">{order.specialRequests}</p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Phone className="h-4 w-4" />
-                      <a href={`tel:${order.customerPhone}`} className="hover:underline">
-                        {order.customerPhone}
-                      </a>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Order Items */}
-                  <div>
-                    <h4 className="font-semibold mb-2">Sipariş İçeriği</h4>
-                    <ul className="space-y-1">
-                      {order.items.map((item, index) => (
-                        <li key={index} className="text-sm">
-                          {item.quantity}x {item.name}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Amount */}
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Toplam Tutar</p>
-                      <p className="text-2xl font-bold">{order.totalAmount.toFixed(2)} ₺</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Teslimat Ücreti</p>
-                      <p className="text-xl font-semibold text-green-600">{order.deliveryFee.toFixed(2)} ₺</p>
-                    </div>
-                  </div>
-
-                  {/* Status Update */}
-                  <div className="flex gap-2">
-                    <Select value={order.status} onValueChange={(value) => handleStatusChange(order.id, value)}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Assigned">Atandı</SelectItem>
-                        <SelectItem value="PickedUp">Alındı</SelectItem>
-                        <SelectItem value="InTransit">Yolda</SelectItem>
-                        <SelectItem value="Delivered">Teslim Edildi</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="outline" size="icon" asChild>
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.customerAddress)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Navigation className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => handleAcceptOrder(order.id)}
+                    disabled={!!activeOrder}
+                    className="w-full"
+                  >
+                    <Bike className="h-4 w-4 mr-2" />
+                    {activeOrder ? "Zaten Aktif Teslimatınız Var" : "Siparişi Al"}
+                  </Button>
                 </CardContent>
               </Card>
             ))
           )}
         </TabsContent>
 
-        <TabsContent value="completed" className="space-y-4">
-          {completedOrders.length === 0 ? (
+        {/* Aktif Alınan Sipariş Sekmesi */}
+        <TabsContent value="active" className="space-y-4">
+          {!activeOrder ? (
             <Card>
-              <CardContent className="py-12">
-                <p className="text-center text-muted-foreground">Tamamlanmış teslimat yok</p>
+              <CardContent className="pt-6 text-center">
+                <Bike className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                <p className="text-muted-foreground">Aktif teslimatınız bulunmuyor</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Müsait Siparişler sekmesinden bir sipariş alabilirsiniz
+                </p>
               </CardContent>
             </Card>
           ) : (
-            completedOrders.map((order) => (
-              <Card key={order.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">Sipariş {order.orderNumber}</CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <Clock className="h-3 w-3" />
-                        {new Date(order.orderDate).toLocaleTimeString("tr-TR")}
-                      </CardDescription>
+            <Card className="border-primary">
+              <CardHeader className="bg-primary/5">
+                <CardTitle className="flex items-center gap-2">
+                  <Navigation className="h-5 w-5" />
+                  Aktif Teslimat
+                </CardTitle>
+                <CardDescription>Sipariş ID: {activeOrder.id.slice(0, 8)}</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Teslimat Adresi:</span>
                     </div>
-                    <Badge variant="default">Teslim Edildi</Badge>
+                    <p className="text-sm ml-6">{activeOrder.deliveryAddress}</p>
+                    
+                    {activeOrder.customerPhone && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Telefon:</span>
+                        <a href={`tel:${activeOrder.customerPhone}`} className="text-primary hover:underline">
+                          {activeOrder.customerPhone}
+                        </a>
+                      </div>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Müşteri</p>
-                      <p className="font-medium">{order.customerName}</p>
+                  {getStatusBadge(activeOrder.status)}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Sipariş Tutarı</p>
+                    <p className="text-xl font-bold">{formatCurrency(activeOrder.totalAmount)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Sipariş Zamanı</p>
+                    <p className="text-sm">{formatDate(activeOrder.orderDate)}</p>
+                  </div>
+                </div>
+
+                {activeOrder.specialRequests && (
+                  <div className="pt-4 border-t">
+                    <p className="font-medium mb-2">Özel İstekler:</p>
+                    <p className="text-sm text-muted-foreground">{activeOrder.specialRequests}</p>
+                  </div>
+                )}
+
+                <div className="space-y-2 pt-4 border-t">
+                  <p className="font-medium">Sipariş Detayları</p>
+                  {(activeOrder.items || activeOrder.orderItems)?.map((item: any) => (
+                    <div key={item.id} className="flex justify-between text-sm p-2 bg-muted rounded">
+                      <span>
+                        {item.quantity}x {item.menuItemName || item.menuItem?.name}
+                      </span>
+                      <span className="font-medium">{formatCurrency(item.subtotal)}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Kazanç</p>
-                      <p className="text-xl font-semibold text-green-600">{order.deliveryFee.toFixed(2)} ₺</p>
+                  ))}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <ChatButton 
+                    orderId={activeOrder.id}
+                    orderInfo={{
+                      customerName: activeOrder.customerName,
+                      restaurantName: activeOrder.restaurantName
+                    }}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={() => handleUpdateStatus(activeOrder.id, OrderStatus.Delivered)}
+                    className="flex-1"
+                    size="lg"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Teslim Edildi Olarak İşaretle
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Geçmiş Siparişler */}
+        <TabsContent value="history" className="space-y-4">
+          {myOrders
+            .filter((order) => order.status === OrderStatus.Delivered || order.status === OrderStatus.Completed)
+            .map((order) => (
+              <Card key={order.id}>
+                <CardContent className="pt-6 space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium">Teslimat Adresi:</p>
+                      <p className="text-sm text-muted-foreground">{order.deliveryAddress}</p>
+                    </div>
+                    {getStatusBadge(order.status)}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 pt-3 border-t">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tutar</p>
+                      <p className="font-medium">{formatCurrency(order.totalAmount)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Teslim Zamanı</p>
+                      <p className="text-sm">{order.completedAt ? formatDate(order.completedAt) : "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Sipariş Zamanı</p>
+                      <p className="text-sm">{formatDate(order.orderDate)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
+            ))}
         </TabsContent>
       </Tabs>
     </div>

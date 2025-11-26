@@ -8,7 +8,6 @@ using RestaurantManagment.Domain.Models;
 using RestaurantManagment.Persistance;
 using RestaurantManagment.Persistance.Data;
 using RestaurantManagment.Infrastructure;
-using RestaurantManagment.Persistance.Seeders;
 using RestaurantManagment.WebAPI;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -104,9 +103,21 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
     
-    // 401 hatası için JSON response döndür
+    // SignalR için JWT token desteği
     options.Events = new JwtBearerEvents
     {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+            {
+                context.Token = accessToken;
+            }
+            
+            return Task.CompletedTask;
+        },
         OnChallenge = context =>
         {
             context.HandleResponse();
@@ -120,16 +131,19 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// SignalR
+builder.Services.AddSignalR();
+
 // CORS ekle
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000") 
+            policy.WithOrigins("http://localhost:3000", "https://localhost:3000", "http://localhost:5000") 
                 .AllowAnyHeader()
                 .AllowAnyMethod()
-                .AllowCredentials();
+                .AllowCredentials(); // SignalR için credentials gerekli
         });
 });
 
@@ -142,23 +156,32 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<AppDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
         
         // Veritabanı bağlantısını kontrol et
-        if (await context.Database.CanConnectAsync())
-        {
-            var logger = services.GetRequiredService<ILogger<Program>>();
-            logger.LogInformation("Seed data oluşturuluyor...");
-            
-            await DbSeeder.SeedDataAsync(services);
-            
-            logger.LogInformation("Seed data başarıyla oluşturuldu.");
-            
-        }
+      //  if (await context.Database.CanConnectAsync())
+       // {
+       //     logger.LogInformation("⚠️ Mevcut veritabanı siliniyor...");
+        //     
+        // Veritabanını sil ve yeniden oluştur
+        //     await context.Database.EnsureDeletedAsync();
+        //    logger.LogInformation("✅ Veritabanı silindi.");
+        //    
+        //    await context.Database.EnsureCreatedAsync();
+        //    logger.LogInformation("✅ Veritabanı oluşturuldu.");
+        //    
+        //    logger.LogInformation("📝 Seed data oluşturuluyor...");
+        //    // SeedData'yı çalıştır
+        //    await SeedData.Initialize(services);
+        //    
+        //    logger.LogInformation("✅ Seed data başarıyla oluşturuldu.");
+      //  }
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogWarning(ex, "Seed data oluşturulurken bir hata oluştu. Uygulama devam edecek.");
+        logger.LogError(ex, "❌ Seed data oluşturulurken bir hata oluştu.");
+        throw; // Hatayı fırlat ki uygulama durmasın ama hata görünsün
     }
 }
 
@@ -190,7 +213,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+// SignalR Hub endpoint
+app.MapHub<RestaurantManagment.WebAPI.Hubs.ChatHub>("/chatHub");
 
+app.Run();
+    
 // Partial class for logger generic type
 public partial class Program { }

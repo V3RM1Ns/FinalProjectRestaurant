@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Clock, MapPin, Phone, Package, XCircle } from 'lucide-react'
+import { Clock, MapPin, Phone, Package, XCircle, MessageCircle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { ChatButton } from '@/components/chat/chat-button'
 
 export default function CustomerOrdersPage() {
   const [activeOrders, setActiveOrders] = useState<any[]>([])
@@ -135,21 +136,41 @@ export default function CustomerOrdersPage() {
           </div>
 
           {/* Total and Actions */}
-          <div className="pt-4 border-t flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Toplam</p>
-              <p className="text-xl font-bold">₺{order.totalAmount?.toFixed(2)}</p>
+          <div className="pt-4 border-t">
+            <div className="flex justify-between items-center mb-3">
+              <div>
+                <p className="text-sm text-muted-foreground">Toplam</p>
+                <p className="text-xl font-bold">₺{order.totalAmount?.toFixed(2)}</p>
+              </div>
             </div>
-            {showCancelButton && order.status === 'Pending' && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => handleCancelOrder(order.id)}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                İptal Et
-              </Button>
-            )}
+            
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              {/* Chat butonu - sadece teslimat siparişlerinde ve kurye atandıysa göster */}
+              {order.type === 'Delivery' && order.deliveryPersonId && (
+                <ChatButton 
+                  orderId={order.id}
+                  orderInfo={{
+                    deliveryPersonName: order.deliveryPersonName,
+                    restaurantName: order.restaurantName
+                  }}
+                  className="flex-1"
+                />
+              )}
+              
+              {/* İptal butonu */}
+              {showCancelButton && order.status === 'Pending' && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleCancelOrder(order.id)}
+                  className="flex-1"
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  İptal Et
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

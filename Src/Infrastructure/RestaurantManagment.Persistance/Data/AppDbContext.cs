@@ -28,6 +28,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Reward> Rewards { get; set; }
     public DbSet<RewardRedemption> RewardRedemptions { get; set; }
     public DbSet<LoyaltyCode> LoyaltyCodes { get; set; }
+    public DbSet<ChatMessage> ChatMessages { get; set; }
 
     
 

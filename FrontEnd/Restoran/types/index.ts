@@ -128,6 +128,8 @@ export enum OrderStatus {
   Confirmed = "Confirmed",
   Preparing = "Preparing",
   Ready = "Ready",
+  OutForDelivery = "OutForDelivery",
+  Delivered = "Delivered",
   Served = "Served",
   Completed = "Completed",
   Cancelled = "Cancelled",

@@ -154,7 +154,6 @@ export default function EmployeeMenusPage() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      // Dosya tipi kontrolü
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
       if (!allowedTypes.includes(file.type)) {
         toast({
@@ -165,7 +164,6 @@ export default function EmployeeMenusPage() {
         return
       }
       
-      // Dosya boyutu kontrolü (5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "Hata",
@@ -192,25 +190,41 @@ export default function EmployeeMenusPage() {
     try {
       setUploadingImage(true)
 
-      // Eğer resim seçilmişse önce yükle
       let imageUrl = menuItemForm.imageUrl
       if (selectedImage) {
         imageUrl = await employeeApi.menuItems.uploadImage(selectedImage)
       }
 
-      const dataToSave = {
-        ...menuItemForm,
-        imageUrl,
-      }
-
       if (editingMenuItem) {
-        await employeeApi.menuItems.update(editingMenuItem.id, dataToSave)
+        // Update için id alanı da dahil ediliyor
+        const updateData = {
+          id: editingMenuItem.id,
+          name: menuItemForm.name,
+          description: menuItemForm.description,
+          price: menuItemForm.price,
+          category: menuItemForm.category,
+          imageUrl,
+          isAvailable: menuItemForm.isAvailable,
+        }
+        
+        await employeeApi.menuItems.update(editingMenuItem.id, updateData)
         toast({
           title: "Başarılı",
           description: "Menü öğesi güncellendi",
         })
       } else {
-        await employeeApi.menuItems.create(selectedMenu.id, dataToSave)
+        // Create için menuId gerekli
+        const createData = {
+          name: menuItemForm.name,
+          description: menuItemForm.description,
+          price: menuItemForm.price,
+          category: menuItemForm.category,
+          imageUrl,
+          isAvailable: menuItemForm.isAvailable,
+          menuId: selectedMenu.id,
+        }
+        
+        await employeeApi.menuItems.create(selectedMenu.id, createData)
         toast({
           title: "Başarılı",
           description: "Menü öğesi oluşturuldu",
@@ -288,7 +302,7 @@ export default function EmployeeMenusPage() {
     setMenuForm({
       name: menu.name,
       description: menu.description || "",
-      isActive: menu.isActive,
+      isActive: menu.isActive ?? true,
     })
     setShowMenuDialog(true)
   }
@@ -303,9 +317,8 @@ export default function EmployeeMenusPage() {
       imageUrl: menuItem.imageUrl || "",
       isAvailable: menuItem.isAvailable,
     })
-    // Mevcut resmi göster
     if (menuItem.imageUrl) {
-      setImagePreview(null) // Yeni resim önizlemesini temizle
+      setImagePreview(null)
     }
     setShowMenuItemDialog(true)
   }
@@ -342,7 +355,6 @@ export default function EmployeeMenusPage() {
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -376,7 +388,6 @@ export default function EmployeeMenusPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        {/* Menus List */}
         <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle>Menüler</CardTitle>
@@ -430,7 +441,6 @@ export default function EmployeeMenusPage() {
           </CardContent>
         </Card>
 
-        {/* Menu Items */}
         <Card className="md:col-span-2">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -510,7 +520,6 @@ export default function EmployeeMenusPage() {
         </Card>
       </div>
 
-      {/* Menu Dialog */}
       <Dialog open={showMenuDialog} onOpenChange={setShowMenuDialog}>
         <DialogContent>
           <DialogHeader>
@@ -554,7 +563,6 @@ export default function EmployeeMenusPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Menu Item Dialog */}
       <Dialog open={showMenuItemDialog} onOpenChange={setShowMenuItemDialog}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

@@ -16,8 +16,7 @@ public class Reservation : BaseEntity
     
     [MaxLength(1000)]
     public string? SpecialRequests { get; set; }
-    
-    // Customer information
+
     [Required]
     [MaxLength(200)]
     public string CustomerName { get; set; } = string.Empty;

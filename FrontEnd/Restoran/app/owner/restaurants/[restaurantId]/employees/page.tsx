@@ -1,4 +1,4 @@
-﻿'use client'
+﻿"use client"
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -6,14 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Users, Plus, Mail, Phone, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+import { OwnerApi } from '@/lib/owner-api'
+import { useAuth } from '@/contexts/auth-context'
+import { UserRole } from '@/types'
 
 interface Employee {
   id: string
   fullName: string
   email: string
   phone: string
+  address?: string
   profileImageUrl?: string
   employerRestaurantId: string
   restaurantName: string
@@ -34,43 +36,26 @@ interface PaginatedResponse {
 export default function RestaurantEmployeesPage() {
   const params = useParams()
   const router = useRouter()
+  const { hasRole } = useAuth()
+  const restaurantId = params.restaurantId as string
   const [data, setData] = useState<PaginatedResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const pageSize = 10
 
   useEffect(() => {
+    if (!hasRole(UserRole.Owner)) {
+      router.push('/unauthorized')
+      return
+    }
     fetchEmployees()
-  }, [params.restaurantId, currentPage])
+  }, [restaurantId, currentPage, hasRole])
 
   const fetchEmployees = async () => {
-    setLoading(true)
     try {
-      const token = localStorage.getItem('auth_token')
-      const url = `${API_BASE_URL}/api/Owner/restaurants/${params.restaurantId}/employees?pageNumber=${currentPage}&pageSize=${pageSize}`
-      console.log('Fetching employees from:', url)
-      console.log('Token:', token ? 'exists' : 'missing')
-      
-      const response = await fetch(url, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-      })
-
-      console.log('Response status:', response.status)
-      
-      if (response.ok) {
-        const responseData = await response.json()
-        console.log('Employees data:', responseData)
-        setData(responseData)
-      } else if (response.status === 401) {
-        console.error('Unauthorized - redirecting to login')
-        router.push('/login')
-      } else {
-        const errorText = await response.text()
-        console.error('Error response:', errorText)
-      }
+      setLoading(true)
+      const response = await OwnerApi.getEmployees(restaurantId, currentPage, pageSize)
+      setData(response)
     } catch (error) {
       console.error('Error fetching employees:', error)
     } finally {
@@ -109,7 +94,7 @@ export default function RestaurantEmployeesPage() {
             <Button 
               variant="ghost" 
               size="sm"
-              onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/dashboard`)}
+              onClick={() => router.push(`/owner/dashboard`)}
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back to Dashboard
@@ -120,7 +105,7 @@ export default function RestaurantEmployeesPage() {
             Employees
           </h1>
           <p className="text-muted-foreground">
-            {data?.restaurantName || 'Manage your restaurant employees'}
+            {data?.items[0]?.restaurantName || 'Manage your restaurant employees'}
           </p>
           {data && (
             <p className="text-sm text-muted-foreground mt-1">
@@ -128,7 +113,7 @@ export default function RestaurantEmployeesPage() {
             </p>
           )}
         </div>
-        <Button onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/employees/new`)}>
+        <Button onClick={() => router.push(`/owner/restaurants/${restaurantId}/employees/new`)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Employee
         </Button>
@@ -142,7 +127,7 @@ export default function RestaurantEmployeesPage() {
             <p className="text-muted-foreground mb-4">
               Get started by adding your first employee
             </p>
-            <Button onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/employees/new`)}>
+            <Button onClick={() => router.push(`/owner/restaurants/${restaurantId}/employees/new`)}>
               <Plus className="mr-2 h-4 w-4" />
               Add First Employee
             </Button>
@@ -173,24 +158,22 @@ export default function RestaurantEmployeesPage() {
                     <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span>{employee.phone}</span>
                   </div>
+                  {employee.address && (
+                    <div className="text-xs text-muted-foreground">
+                      {employee.address}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground">
-                    Joined: {new Date(employee.createdAt).toLocaleDateString()}
+                    Joined: {new Date(employee.createdAt).toLocaleDateString('tr-TR')}
                   </div>
                   <div className="flex gap-2 pt-3 border-t">
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1"
-                      onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/employees/${employee.id}`)}
+                      className="w-full"
+                      onClick={() => router.push(`/owner/restaurants/${restaurantId}/employees/${employee.id}`)}
                     >
                       View Details
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={() => router.push(`/owner/restaurants/${params.restaurantId}/employees/${employee.id}/edit`)}
-                    >
-                      Edit
                     </Button>
                   </div>
                 </CardContent>
@@ -200,44 +183,32 @@ export default function RestaurantEmployeesPage() {
 
           {/* Pagination */}
           {data.totalPages > 1 && (
-            <Card>
-              <CardContent className="py-4">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {((data.pageNumber - 1) * data.pageSize) + 1} to{' '}
-                    {Math.min(data.pageNumber * data.pageSize, data.totalCount)} of{' '}
-                    {data.totalCount} results
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handlePreviousPage}
-                      disabled={!data.hasPreviousPage}
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
-                    </Button>
-                    <span className="text-sm px-4">
-                      Page {data.pageNumber} of {data.totalPages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleNextPage}
-                      disabled={!data.hasNextPage}
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={!data.hasPreviousPage}
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentPage} of {data.totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={!data.hasNextPage}
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           )}
         </>
       )}
     </div>
   )
 }
-
