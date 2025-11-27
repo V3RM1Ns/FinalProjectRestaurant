@@ -9,6 +9,14 @@ import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { customerApi } from "@/lib/customer-api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 interface Review {
   id: string
@@ -44,26 +52,56 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
   const [canReview, setCanReview] = useState(false)
   const [myReview, setMyReview] = useState<Review | null>(null)
   const [averageRating, setAverageRating] = useState("0.0")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [orderId, setOrderId] = useState<string>("")
+  const pageSize = 5
 
   useEffect(() => {
     fetchReviews()
     if (user) {
       checkCanReview()
       fetchMyReview()
+      fetchCompletedOrder()
     }
-  }, [restaurantId, user])
+  }, [restaurantId, user, currentPage])
+
+  const fetchCompletedOrder = async () => {
+    try {
+      // Get user's completed orders for this restaurant
+      const ordersResponse = await customerApi.orders.getAll(1, 100)
+      const orders = ordersResponse.items || ordersResponse.data || ordersResponse || []
+      const completedOrder = orders.find((order: any) => 
+        order.restaurantId === restaurantId && 
+        order.status === "Delivered"
+      )
+      if (completedOrder) {
+        setOrderId(completedOrder.id)
+      } else {
+        console.log('No completed order found for this restaurant')
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error)
+    }
+  }
 
   const fetchReviews = async () => {
     try {
       setLoading(true)
-      const response = await customerApi.restaurants.getReviews(restaurantId, 1, 50)
+      const response = await customerApi.restaurants.getReviews(restaurantId, currentPage, pageSize)
       
-      // Handle both paginated and non-paginated responses
       const reviewsList = response.items || response.data || response || []
       const allReviews = Array.isArray(reviewsList) ? reviewsList : []
       setReviews(allReviews)
       
-      // Calculate average rating from all approved reviews
+      // Set pagination info
+      if (response.totalPages) {
+        setTotalPages(response.totalPages)
+      } else if (response.totalCount) {
+        setTotalPages(Math.ceil(response.totalCount / pageSize))
+      }
+      
+      // Calculate average rating
       const approved = allReviews.filter((r: Review) => r.status === "Approved")
       if (approved.length > 0) {
         const avg = approved.reduce((sum: number, r: Review) => sum + r.rating, 0) / approved.length
@@ -131,6 +169,15 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
       return
     }
 
+    if (!orderId) {
+      toast({
+        title: "Sipariş bulunamadı",
+        description: "Bu restorandan tamamlanmış bir siparişiniz olmalı.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
@@ -145,9 +192,10 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
           description: "Yorumunuz başarıyla güncellendi.",
         })
       } else {
-        // Create new review
+        // Create new review with orderId
         await customerApi.reviews.create({
           restaurantId,
+          orderId,
           rating,
           comment: comment.trim(),
         })
@@ -279,56 +327,90 @@ export function ReviewSection({ restaurantId, restaurantName }: ReviewSectionPro
             </CardContent>
           </Card>
         ) : (
-          approvedReviews.map((review) => (
-            <Card key={review.id}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <Avatar>
-                    <AvatarFallback>{review.customerName.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <p className="font-semibold">{review.customerName}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString("tr-TR", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`h-4 w-4 ${
-                              star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-muted-foreground">{review.comment}</p>
-                    {review.ownerResponse && (
-                      <div className="mt-3 p-3 bg-muted rounded-lg">
-                        <p className="text-sm font-medium mb-1">Restoran Yanıtı:</p>
-                        <p className="text-sm text-muted-foreground">{review.ownerResponse}</p>
-                        {review.respondedAt && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(review.respondedAt).toLocaleDateString("tr-TR")}
+          <>
+            {approvedReviews.map((review) => (
+              <Card key={review.id}>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <Avatar>
+                      <AvatarFallback>{review.customerName.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-semibold">{review.customerName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(review.createdAt).toLocaleDateString("tr-TR", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })}
                           </p>
-                        )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`h-4 w-4 ${
+                                star <= review.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
-                    )}
+                      <p className="text-muted-foreground">{review.comment}</p>
+                      {review.ownerResponse && (
+                        <div className="mt-3 p-3 bg-muted rounded-lg">
+                          <p className="text-sm font-medium mb-1">Restoran Yanıtı:</p>
+                          <p className="text-sm text-muted-foreground">{review.ownerResponse}</p>
+                          {review.respondedAt && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(review.respondedAt).toLocaleDateString("tr-TR")}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
   )
 }
-

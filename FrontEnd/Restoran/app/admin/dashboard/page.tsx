@@ -189,25 +189,7 @@ export default function AdminDashboardPage() {
                         </Button>
                     </CardContent>
                 </Card>
-
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/restaurants-map')}>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <CardTitle>Restoran Haritası</CardTitle>
-                            <LayoutDashboard className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <CardDescription>Tüm restoranları harita üzerinde görüntüleyin</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button variant="outline" className="w-full" onClick={(e) => {
-                            e.stopPropagation()
-                            router.push('/admin/restaurants-map')
-                        }}>
-                            Haritayı Görüntüle
-                        </Button>
-                    </CardContent>
-                </Card>
-
+                
                 <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/reviews')}>
                     <CardHeader>
                         <div className="flex items-center justify-between">

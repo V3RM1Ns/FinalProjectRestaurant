@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { loyaltyApi } from '@/lib/api'
 import { customerApi } from '@/lib/customer-api'
-import { ArrowLeft, Gift, Star, Clock, Users } from 'lucide-react'
+import { ArrowLeft, Gift, Star, Clock, Users, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { useCart } from '@/contexts/cart-context'
 
 interface Reward {
   id: string
@@ -40,11 +41,14 @@ export default function RestaurantRewardsPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { applyCoupon } = useCart()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [loading, setLoading] = useState(false)
+  const [redeeming, setRedeeming] = useState(false)
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [userPoints, setUserPoints] = useState(0)
+  const [restaurantName, setRestaurantName] = useState('')
   
   const restaurantId = params.id as string
 
@@ -57,8 +61,7 @@ export default function RestaurantRewardsPage() {
   const fetchRestaurantInfo = async () => {
     try {
       const restaurantData = await customerApi.restaurants.getById(restaurantId)
-      // You can store restaurant data in state if needed
-      console.log('Restaurant data:', restaurantData)
+      setRestaurantName(restaurantData.name)
     } catch (error: any) {
       console.error('Error fetching restaurant:', error)
     }
@@ -71,8 +74,8 @@ export default function RestaurantRewardsPage() {
       setRewards(data)
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Hata',
+        description: error.message || 'Ödüller yüklenirken bir hata oluştu.',
         variant: 'destructive',
       })
     } finally {
@@ -98,24 +101,39 @@ export default function RestaurantRewardsPage() {
   const handleConfirmRedeem = async () => {
     if (!selectedReward) return
 
-    setLoading(true)
+    setRedeeming(true)
     try {
       const redemption = await loyaltyApi.customer.redeemReward(selectedReward.id)
+      
+      // Apply coupon to cart
+      applyCoupon({
+        couponCode: redemption.couponCode,
+        discountAmount: selectedReward.discountAmount || 0,
+        discountPercentage: selectedReward.discountPercentage || 0,
+        rewardName: selectedReward.name,
+        restaurantId: restaurantId
+      })
+
       toast({
-        title: 'Success!',
-        description: `Reward redeemed! Your coupon code: ${redemption.couponCode}`,
+        title: 'Başarılı!',
+        description: `Ödül kullanıldı! Kupon kodunuz: ${redemption.couponCode}. Sepete otomatik olarak eklendi.`,
       })
       setConfirmDialogOpen(false)
-      fetchRewards()
-      fetchUserPoints()
+      await fetchRewards()
+      await fetchUserPoints()
+
+      // Navigate to cart after 2 seconds
+      setTimeout(() => {
+        router.push('/cart')
+      }, 2000)
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Hata',
+        description: error.message || 'Ödül kullanılırken bir hata oluştu.',
         variant: 'destructive',
       })
     } finally {
-      setLoading(false)
+      setRedeeming(false)
     }
   }
 
@@ -123,27 +141,31 @@ export default function RestaurantRewardsPage() {
     <div className="container mx-auto p-6 max-w-6xl">
       <Button variant="ghost" onClick={() => router.back()} className="mb-4">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back
+        Geri
       </Button>
 
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Loyalty Rewards</h1>
-        <p className="text-muted-foreground">Redeem your points for exclusive rewards</p>
+        <h1 className="text-3xl font-bold">Sadakat Ödülleri</h1>
+        <p className="text-muted-foreground">
+          {restaurantName && `${restaurantName} - `}Puanlarınızı kullanarak özel ödülleri kazanın
+        </p>
         <div className="mt-2">
           <Badge variant="outline" className="text-lg px-4 py-2">
             <Star className="w-4 h-4 mr-2" />
-            Your Points: {userPoints}
+            Puanınız: {userPoints}
           </Badge>
         </div>
       </div>
 
       {loading && rewards.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">Loading rewards...</div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
       ) : rewards.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Gift className="w-16 h-16 mx-auto mb-4 opacity-20" />
-            <p>No rewards available at this restaurant yet.</p>
+            <p>Bu restoranda henüz ödül bulunmuyor.</p>
           </CardContent>
         </Card>
       ) : (
@@ -169,7 +191,7 @@ export default function RestaurantRewardsPage() {
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{reward.name}</CardTitle>
                     {!isAvailable && (
-                      <Badge variant="secondary">Unavailable</Badge>
+                      <Badge variant="secondary">Kullanılamaz</Badge>
                     )}
                   </div>
                   <CardDescription className="mt-2">{reward.description}</CardDescription>
@@ -180,15 +202,15 @@ export default function RestaurantRewardsPage() {
                     {(reward.discountAmount || reward.discountPercentage) && (
                       <div className="bg-primary/10 p-3 rounded-lg text-center">
                         <div className="text-2xl font-bold text-primary">
-                          {reward.discountAmount && `$${reward.discountAmount} OFF`}
-                          {reward.discountPercentage && `${reward.discountPercentage}% OFF`}
+                          {reward.discountAmount && `₺${reward.discountAmount} İNDİRİM`}
+                          {reward.discountPercentage && `%${reward.discountPercentage} İNDİRİM`}
                         </div>
                       </div>
                     )}
 
                     {/* Points Required */}
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Points Required</span>
+                      <span className="text-sm text-muted-foreground">Gereken Puan</span>
                       <Badge variant={hasEnoughPoints ? 'default' : 'secondary'} className="text-base px-3 py-1">
                         <Star className="w-4 h-4 mr-1" />
                         {reward.pointsRequired}
@@ -201,7 +223,7 @@ export default function RestaurantRewardsPage() {
                         <div className="flex items-center gap-2">
                           <Users className="w-3 h-3" />
                           <span>
-                            {reward.currentRedemptions}/{reward.maxRedemptions} redeemed
+                            {reward.currentRedemptions}/{reward.maxRedemptions} kullanıldı
                           </span>
                         </div>
                       )}
@@ -209,7 +231,7 @@ export default function RestaurantRewardsPage() {
                         <div className="flex items-center gap-2">
                           <Clock className="w-3 h-3" />
                           <span>
-                            Valid until {new Date(reward.endDate).toLocaleDateString()}
+                            Geçerlilik: {new Date(reward.endDate).toLocaleDateString('tr-TR')}
                           </span>
                         </div>
                       )}
@@ -222,8 +244,8 @@ export default function RestaurantRewardsPage() {
                       className="w-full"
                     >
                       {!hasEnoughPoints 
-                        ? `Need ${reward.pointsRequired - userPoints} more points`
-                        : 'Redeem Now'
+                        ? `${reward.pointsRequired - userPoints} puan daha gerekli`
+                        : 'Hemen Kullan'
                       }
                     </Button>
                   </div>
@@ -238,9 +260,9 @@ export default function RestaurantRewardsPage() {
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Redemption</DialogTitle>
+            <DialogTitle>Ödülü Kullan</DialogTitle>
             <DialogDescription>
-              Are you sure you want to redeem this reward?
+              Bu ödülü kullanmak istediğinizden emin misiniz?
             </DialogDescription>
           </DialogHeader>
           {selectedReward && (
@@ -250,34 +272,35 @@ export default function RestaurantRewardsPage() {
                   <h4 className="font-semibold">{selectedReward.name}</h4>
                   <p className="text-sm text-muted-foreground">{selectedReward.description}</p>
                 </div>
-                <div className="bg-muted p-3 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm">Points to Spend</span>
-                    <span className="font-bold">-{selectedReward.pointsRequired}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Remaining Balance</span>
-                    <span className="font-bold">{userPoints - selectedReward.pointsRequired}</span>
-                  </div>
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm">Harcanacak Puan</span>
+                  <Badge variant="default" className="text-base">
+                    <Star className="w-4 h-4 mr-1" />
+                    {selectedReward.pointsRequired}
+                  </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  You'll receive a coupon code that can be used at this restaurant.
-                </p>
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <span className="text-sm">Kalan Puan</span>
+                  <Badge variant="outline" className="text-base">
+                    {userPoints - selectedReward.pointsRequired}
+                  </Badge>
+                </div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setConfirmDialogOpen(false)
-                setSelectedReward(null)
-              }}
-            >
-              Cancel
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} disabled={redeeming}>
+              İptal
             </Button>
-            <Button onClick={handleConfirmRedeem} disabled={loading}>
-              {loading ? 'Redeeming...' : 'Confirm Redeem'}
+            <Button onClick={handleConfirmRedeem} disabled={redeeming}>
+              {redeeming ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Kullanılıyor...
+                </>
+              ) : (
+                'Onayla ve Kullan'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

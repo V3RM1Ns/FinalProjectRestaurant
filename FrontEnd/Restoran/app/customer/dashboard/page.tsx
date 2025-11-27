@@ -4,13 +4,11 @@ import { useEffect, useState } from 'react'
 import { customerApi } from '@/lib/customer-api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award, MessageSquare, Edit, Trash2, Loader2, ChevronLeftIcon, ChevronRightIcon, Package, Clock, MapPin } from 'lucide-react'
+import { ShoppingBag, Calendar, Star, Heart, TrendingUp, Award, MessageSquare, Edit, Trash2, Loader2, ChevronLeftIcon, ChevronRightIcon, Package, Clock, Gift, Ticket } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ChatButton } from '@/components/chat/chat-button'
 import {
   Dialog,
   DialogContent,
@@ -20,13 +18,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
 import {
   Pagination,
   PaginationContent,
   PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
   PaginationEllipsis,
 } from '@/components/ui/pagination'
 
@@ -82,6 +78,29 @@ interface Review {
   createdAt: string
 }
 
+interface LoyaltyBalance {
+  customerId: string
+  restaurantId: string
+  restaurantName: string
+  totalPoints: number
+  availablePoints: number
+  redeemedPoints: number
+  recentTransactions: LoyaltyTransaction[]
+}
+
+interface LoyaltyTransaction {
+  id: string
+  customerId: string
+  restaurantId: string
+  restaurantName: string
+  points: number
+  description: string
+  type: string
+  earnedAt: string
+  expiryDate?: string
+  isRedeemed: boolean
+}
+
 export default function CustomerDashboard() {
   const { toast } = useToast()
   const [stats, setStats] = useState<Statistics | null>(null)
@@ -104,6 +123,16 @@ export default function CustomerDashboard() {
   const [reviewsPageSize] = useState(5)
   const [totalReviewsCount, setTotalReviewsCount] = useState(0)
   const [reviewsLoading, setReviewsLoading] = useState(false)
+
+  // Loyalty states
+  const [loyaltyBalances, setLoyaltyBalances] = useState<LoyaltyBalance[]>([])
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false)
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false)
+  const [redeemCode, setRedeemCode] = useState('')
+  const [redeemingCode, setRedeemingCode] = useState(false)
+  const [selectedRestaurantForHistory, setSelectedRestaurantForHistory] = useState<string | null>(null)
+  const [loyaltyHistory, setLoyaltyHistory] = useState<LoyaltyTransaction[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
@@ -270,6 +299,66 @@ export default function CustomerDashboard() {
         description: error.message || 'Yorum silinirken bir hata oluştu.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const loadLoyaltyBalance = async () => {
+    try {
+      setLoyaltyLoading(true)
+      const balances = await customerApi.loyalty.getBalance()
+      setLoyaltyBalances(balances || [])
+    } catch (error) {
+      console.error('Error loading loyalty balance:', error)
+    } finally {
+      setLoyaltyLoading(false)
+    }
+  }
+
+  const handleRedeemCode = async () => {
+    if (!redeemCode.trim()) {
+      toast({
+        title: 'Hata',
+        description: 'Lütfen bir kod girin.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setRedeemingCode(true)
+    try {
+      const result = await customerApi.loyalty.redeemCode(redeemCode.trim())
+      toast({
+        title: 'Başarılı!',
+        description: `${result.points} puan kazandınız! (${result.restaurantName})`,
+      })
+      setRedeemCode('')
+      setRedeemDialogOpen(false)
+      await loadLoyaltyBalance()
+    } catch (error: any) {
+      toast({
+        title: 'Hata',
+        description: error.message || 'Kod kullanılırken bir hata oluştu.',
+        variant: 'destructive',
+      })
+    } finally {
+      setRedeemingCode(false)
+    }
+  }
+
+  const loadLoyaltyHistory = async (restaurantId?: string) => {
+    try {
+      setHistoryLoading(true)
+      const history = await customerApi.loyalty.getHistory(restaurantId)
+      setLoyaltyHistory(history || [])
+    } catch (error) {
+      console.error('Error loading loyalty history:', error)
+      toast({
+        title: 'Hata',
+        description: 'Sadakat geçmişi yüklenirken bir hata oluştu.',
+        variant: 'destructive',
+      })
+    } finally {
+      setHistoryLoading(false)
     }
   }
 
@@ -624,7 +713,7 @@ export default function CustomerDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Link href="/restaurants">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
@@ -657,6 +746,18 @@ export default function CustomerDashboard() {
                 Favorilerim
               </CardTitle>
               <CardDescription>Favori restoranlarınızı görün</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/customer/loyalty">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="h-5 w-5" />
+                Sadakat Puanları
+              </CardTitle>
+              <CardDescription>Puanlarınızı görüntüleyin ve kod kullanın</CardDescription>
             </CardHeader>
           </Card>
         </Link>
@@ -946,6 +1047,200 @@ export default function CustomerDashboard() {
               ) : (
                 'Güncelle'
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loyalty Points Dialog */}
+      <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gift className="h-5 w-5" />
+              Sadakat Puanlarım
+            </DialogTitle>
+            <DialogDescription>
+              Restoranlardaki puan bakiyeleriniz ve kod kullanma
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Redeem Code Section */}
+            <div className="border rounded-lg p-4 bg-gradient-to-r from-orange-50 to-amber-50">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Ticket className="h-4 w-4" />
+                Kod Kullan
+              </h3>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Sadakat kodu girin (örn: LP-XXXXXX)"
+                  value={redeemCode}
+                  onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                  disabled={redeemingCode}
+                />
+                <Button onClick={handleRedeemCode} disabled={redeemingCode}>
+                  {redeemingCode ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Kullanılıyor...
+                    </>
+                  ) : (
+                    'Kullan'
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Loyalty Balances */}
+            <div>
+              <h3 className="font-semibold mb-3">Puan Bakiyelerim</h3>
+              {loyaltyLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : loyaltyBalances.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Henüz puan bakiyeniz bulunmuyor</p>
+                  <p className="text-sm mt-1">Sipariş vererek puan kazanmaya başlayın!</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {loyaltyBalances.map((balance) => (
+                    <div key={balance.restaurantId} className="border rounded-lg p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium">{balance.restaurantName}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Toplam: {balance.totalPoints} puan
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-primary">{balance.availablePoints}</div>
+                          <p className="text-xs text-muted-foreground">Kullanılabilir Puan</p>
+                        </div>
+                      </div>
+
+                      {balance.redeemedPoints > 0 && (
+                        <div className="text-sm text-muted-foreground">
+                          Kullanılan: {balance.redeemedPoints} puan
+                        </div>
+                      )}
+
+                      {/* Recent Transactions */}
+                      {balance.recentTransactions && balance.recentTransactions.length > 0 && (
+                        <div className="pt-3 border-t">
+                          <p className="text-sm font-medium mb-2">Son İşlemler</p>
+                          <div className="space-y-2">
+                            {balance.recentTransactions.slice(0, 3).map((transaction) => (
+                              <div key={transaction.id} className="flex items-center justify-between text-sm">
+                                <div className="flex-1">
+                                  <p className="font-medium">{transaction.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(transaction.earnedAt).toLocaleDateString('tr-TR', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+                                <Badge variant={transaction.type === 'Bonus' ? 'default' : 'secondary'}>
+                                  +{transaction.points}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 mt-2"
+                            onClick={() => {
+                              setSelectedRestaurantForHistory(balance.restaurantId)
+                              loadLoyaltyHistory(balance.restaurantId)
+                            }}
+                          >
+                            Tüm geçmişi gör →
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRedeemDialogOpen(false)}>
+              Kapat
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loyalty History Dialog */}
+      <Dialog open={!!selectedRestaurantForHistory} onOpenChange={(open) => !open && setSelectedRestaurantForHistory(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Puan Geçmişi</DialogTitle>
+            <DialogDescription>
+              {loyaltyBalances.find(b => b.restaurantId === selectedRestaurantForHistory)?.restaurantName} için puan hareketleriniz
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            {historyLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : loyaltyHistory.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>İşlem geçmişi bulunamadı</p>
+              </div>
+            ) : (
+              loyaltyHistory.map((transaction) => (
+                <div key={transaction.id} className="border rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium">{transaction.description}</p>
+                        <Badge variant={transaction.type === 'Bonus' ? 'default' : transaction.type === 'Earned' ? 'secondary' : 'outline'}>
+                          {transaction.type}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(transaction.earnedAt).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      {transaction.expiryDate && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Son kullanma: {new Date(transaction.expiryDate).toLocaleDateString('tr-TR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-primary">+{transaction.points}</div>
+                      <p className="text-xs text-muted-foreground">puan</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedRestaurantForHistory(null)}>
+              Kapat
             </Button>
           </DialogFooter>
         </DialogContent>

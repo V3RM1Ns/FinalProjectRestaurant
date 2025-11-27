@@ -115,7 +115,7 @@ export default function RestaurantEmployeesPage() {
         </div>
         <Button onClick={() => router.push(`/owner/restaurants/${restaurantId}/employees/new`)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Employee
+          Add Employee Applicant
         </Button>
       </div>
 
@@ -129,7 +129,7 @@ export default function RestaurantEmployeesPage() {
             </p>
             <Button onClick={() => router.push(`/owner/restaurants/${restaurantId}/employees/new`)}>
               <Plus className="mr-2 h-4 w-4" />
-              Add First Employee
+              Add First Employee Applicant
             </Button>
           </CardContent>
         </Card>

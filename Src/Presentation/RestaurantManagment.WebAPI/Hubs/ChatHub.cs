@@ -47,32 +47,25 @@ public class ChatHub : Hub
         await base.OnDisconnectedAsync(exception);
     }
 
-    /// <summary>
-    /// Kullanıcıyı belirli bir sipariş chat odasına ekler
-    /// </summary>
     public async Task JoinOrderChat(string orderId)
     {
         var userId = GetUserId();
 
-        // Sipariş kontrolü
         var order = await _context.Orders.FindAsync(orderId);
         if (order == null)
         {
             throw new HubException("Order not found");
         }
 
-        // Kullanıcının bu siparişe erişim yetkisi var mı?
         if (order.CustomerId != userId && order.DeliveryPersonId != userId)
         {
             throw new HubException("Unauthorized access to order chat");
         }
 
-        // Kullanıcıyı odaya ekle
         await Groups.AddToGroupAsync(Context.ConnectionId, $"Order_{orderId}");
         
         Console.WriteLine($"👥 User {userId} joined order chat: {orderId}");
         
-        // Diğer kullanıcılara bildir
         await Clients.OthersInGroup($"Order_{orderId}").SendAsync("UserJoined", new
         {
             UserId = userId,
@@ -81,9 +74,7 @@ public class ChatHub : Hub
         });
     }
 
-    /// <summary>
-    /// Kullanıcıyı belirli bir sipariş chat odasından çıkarır
-    /// </summary>
+    
     public async Task LeaveOrderChat(string orderId)
     {
         var userId = GetUserId();
@@ -101,9 +92,6 @@ public class ChatHub : Hub
         });
     }
 
-    /// <summary>
-    /// Sipariş chatine mesaj gönderir (Customer ve Delivery arasında)
-    /// </summary>
     public async Task SendMessage(string orderId, string content)
     {
         var userId = GetUserId();
@@ -113,30 +101,25 @@ public class ChatHub : Hub
             throw new HubException("Message content cannot be empty");
         }
 
-        // Kullanıcı bilgilerini al
         var user = await _context.Users.FindAsync(userId);
         if (user == null)
         {
             throw new HubException("User not found");
         }
 
-        // Sipariş kontrolü
         var order = await _context.Orders.FindAsync(orderId);
         if (order == null)
         {
             throw new HubException("Order not found");
         }
 
-        // Yetki kontrolü - Sadece müşteri ve kurye mesajlaşabilir
         if (order.CustomerId != userId && order.DeliveryPersonId != userId)
         {
             throw new HubException("Unauthorized access to order chat");
         }
 
-        // Kullanıcının rolünü belirle
         string senderRole = order.CustomerId == userId ? "Customer" : "Delivery";
 
-        // Mesajı veritabanına kaydet
         var message = new ChatMessage
         {
             Id = Guid.NewGuid().ToString(),
@@ -154,7 +137,6 @@ public class ChatHub : Hub
 
         Console.WriteLine($"💬 Message sent in order {orderId} by {user.FullName} ({senderRole}): {content.Substring(0, Math.Min(50, content.Length))}...");
 
-        // Mesajı odadaki tüm kullanıcılara gönder
         await Clients.Group($"Order_{orderId}").SendAsync("ReceiveMessage", new
         {
             message.Id,
@@ -168,9 +150,6 @@ public class ChatHub : Hub
         });
     }
 
-    /// <summary>
-    /// Kullanıcının yazıyor durumunu iletir
-    /// </summary>
     public async Task SendTypingIndicator(string orderId, bool isTyping)
     {
         var userId = GetUserId();
@@ -181,7 +160,6 @@ public class ChatHub : Hub
             throw new HubException("User not found");
         }
 
-        // Sadece diğer kullanıcılara gönder (kendisine değil)
         await Clients.OthersInGroup($"Order_{orderId}").SendAsync("UserTyping", new
         {
             UserId = userId,
@@ -192,9 +170,6 @@ public class ChatHub : Hub
         });
     }
 
-    /// <summary>
-    /// Mesajın okunduğunu bildirir
-    /// </summary>
     public async Task MarkMessageAsRead(string messageId)
     {
         var userId = GetUserId();
@@ -207,14 +182,11 @@ public class ChatHub : Hub
         {
             throw new HubException("Message not found");
         }
-
-        // Kendi mesajını okuma olarak işaretleyemez
         if (message.SenderId == userId)
         {
             return;
         }
 
-        // Yetki kontrolü
         if (message.Order.CustomerId != userId && message.Order.DeliveryPersonId != userId)
         {
             throw new HubException("Unauthorized access");
@@ -226,7 +198,6 @@ public class ChatHub : Hub
             message.ReadAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            // Gönderene bildir
             await Clients.Group($"Order_{message.OrderId}").SendAsync("MessageRead", new
             {
                 MessageId = messageId,

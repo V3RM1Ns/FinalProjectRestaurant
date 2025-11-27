@@ -109,6 +109,14 @@ export const customerApi = {
 
   // Loyalty
   loyalty: {
+    getBalance: () => ApiClient.get<any[]>("/Loyalty/customer/balance"),
+    getHistory: (restaurantId?: string) => {
+      const url = restaurantId 
+        ? `/Loyalty/customer/history?restaurantId=${restaurantId}`
+        : "/Loyalty/customer/history"
+      return ApiClient.get<any[]>(url)
+    },
+    redeemCode: (code: string) => ApiClient.post<any>("/Loyalty/customer/redeem-code", { code }),
     getPoints: (restaurantId: string) => ApiClient.get<any>(`/Customer/loyalty/${restaurantId}/points`),
     getRewards: (restaurantId: string) => ApiClient.get<any[]>(`/Customer/loyalty/${restaurantId}/rewards`),
     redeemReward: (rewardId: string) => ApiClient.post<any>(`/Customer/loyalty/rewards/${rewardId}/redeem`, {}),

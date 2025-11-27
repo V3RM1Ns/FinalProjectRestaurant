@@ -12,6 +12,14 @@ interface CartItem {
   restaurantName: string
 }
 
+interface AppliedCoupon {
+  couponCode: string
+  discountAmount: number
+  discountPercentage: number
+  rewardName: string
+  restaurantId: string
+}
+
 interface CartContextType {
   items: CartItem[];
   addItem: (item: MenuItem, restaurantId: string, restaurantName: string, quantityToAdd?: number) => Promise<boolean>
@@ -21,6 +29,11 @@ interface CartContextType {
   total: number
   currentRestaurantId: string | null
   currentRestaurantName: string | null
+  appliedCoupon: AppliedCoupon | null
+  applyCoupon: (coupon: AppliedCoupon) => void
+  removeCoupon: () => void
+  discountAmount: number
+  finalTotal: number
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined)
@@ -29,6 +42,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [currentRestaurantId, setCurrentRestaurantId] = useState<string | null>(null)
   const [currentRestaurantName, setCurrentRestaurantName] = useState<string | null>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -42,6 +56,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCurrentRestaurantId(parsed[0].restaurantId)
         setCurrentRestaurantName(parsed[0].restaurantName)
       }
+    }
+
+    // Load applied coupon
+    const savedCoupon = localStorage.getItem("appliedCoupon")
+    if (savedCoupon) {
+      setAppliedCoupon(JSON.parse(savedCoupon))
     }
   }, [])
 
@@ -57,7 +77,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setCurrentRestaurantId(null)
       setCurrentRestaurantName(null)
     }
-  }, [items])
+
+    // Remove coupon if restaurant changed
+    if (appliedCoupon && items.length > 0 && items[0].restaurantId !== appliedCoupon.restaurantId) {
+      setAppliedCoupon(null)
+      localStorage.removeItem("appliedCoupon")
+    }
+  }, [items, appliedCoupon])
+
+  // Save applied coupon to localStorage
+  useEffect(() => {
+    if (appliedCoupon) {
+      localStorage.setItem("appliedCoupon", JSON.stringify(appliedCoupon))
+    } else {
+      localStorage.removeItem("appliedCoupon")
+    }
+  }, [appliedCoupon])
 
   const addItem = async (menuItem: MenuItem, restaurantId: string, restaurantName: string, quantityToAdd: number = 1): Promise<boolean> => {
     // Check if trying to add from a different restaurant
@@ -74,6 +109,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       // Clear cart and continue with adding the new item
       setItems([])
+      setAppliedCoupon(null)
     }
 
     setItems((prev) => {
@@ -109,9 +145,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setItems([])
+    setAppliedCoupon(null)
+  }
+
+  const applyCoupon = (coupon: AppliedCoupon) => {
+    // Check if coupon is for current restaurant
+    if (currentRestaurantId && coupon.restaurantId !== currentRestaurantId) {
+      return
+    }
+    setAppliedCoupon(coupon)
+  }
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null)
   }
 
   const total = items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0)
+
+  // Calculate discount
+  let discountAmount = 0
+  if (appliedCoupon) {
+    if (appliedCoupon.discountAmount > 0) {
+      discountAmount = appliedCoupon.discountAmount
+    } else if (appliedCoupon.discountPercentage > 0) {
+      discountAmount = (total * appliedCoupon.discountPercentage) / 100
+    }
+  }
+
+  const finalTotal = Math.max(0, total - discountAmount)
 
   return (
     <CartContext.Provider value={{ 
@@ -122,7 +183,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       clearCart, 
       total,
       currentRestaurantId,
-      currentRestaurantName
+      currentRestaurantName,
+      appliedCoupon,
+      applyCoupon,
+      removeCoupon,
+      discountAmount,
+      finalTotal
     }}>
       {children}
     </CartContext.Provider>

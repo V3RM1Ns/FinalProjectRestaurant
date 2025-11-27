@@ -169,6 +169,53 @@ export interface PaginatedResponse<T> {
   totalCount: number
 }
 
+export interface CreateRewardDto {
+  restaurantId: string
+  name: string
+  description: string
+  pointsRequired: number
+  discountAmount?: number
+  discountPercentage?: number
+  imageUrl?: string
+  isActive?: boolean
+  startDate?: string
+  endDate?: string
+  maxRedemptions?: number
+}
+
+export interface UpdateRewardDto {
+  name: string
+  description: string
+  pointsRequired: number
+  discountAmount?: number
+  discountPercentage?: number
+  imageUrl?: string
+  isActive: boolean
+  startDate?: string
+  endDate?: string
+  maxRedemptions?: number
+}
+
+export interface Reward {
+  id: string
+  restaurantId: string
+  restaurantName: string
+  name: string
+  description: string
+  pointsRequired: number
+  discountAmount: number
+  discountPercentage: number
+  imageUrl?: string
+  isActive: boolean
+  startDate: string
+  endDate: string
+  maxRedemptions: number
+  currentRedemptions: number
+  canRedeem: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
 // Owner API Service - Base implementation
 export const ownerApi = {
   // Restaurant Management
@@ -445,6 +492,45 @@ export const ownerApi = {
     getAvailableCount: (restaurantId: string) => 
       ApiClient.get<{ count: number }>(`/Owner/restaurants/${restaurantId}/tables/available/count`),
   },
+
+  // Rewards
+  rewards: {
+    getAll: (restaurantId: string) => 
+      ApiClient.get<Reward[]>(`/Loyalty/restaurants/${restaurantId}/rewards`),
+    
+    getById: (restaurantId: string, rewardId: string) => 
+      ApiClient.get<Reward>(`/Loyalty/restaurants/${restaurantId}/rewards/${rewardId}`),
+    
+    create: (data: CreateRewardDto) => 
+      ApiClient.post<Reward>(`/Loyalty/owner/rewards`, data),
+    
+    update: (rewardId: string, data: UpdateRewardDto) => 
+      ApiClient.put<Reward>(`/Loyalty/owner/rewards/${rewardId}`, data),
+    
+    delete: (rewardId: string) => 
+      ApiClient.delete<void>(`/Loyalty/owner/rewards/${rewardId}`),
+    
+    uploadImage: async (rewardId: string, imageFile: File) => {
+      const formData = new FormData()
+      formData.append('image', imageFile)
+      
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/Loyalty/owner/rewards/${rewardId}/upload-image`, {
+        method: 'POST',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: response.statusText }))
+        throw new Error(errorData.message || errorData.Message || 'Görsel yüklenemedi')
+      }
+      
+      return response.json()
+    },
+  },
 }
 
 // Owner API Service - Convenient wrapper class
@@ -654,5 +740,26 @@ export class OwnerApi {
 
   static async updateTableStatus(tableId: string, status: string) {
     return ownerApi.tables.updateStatus(tableId, status)
+  }
+
+  // Rewards
+  static async getRewards(restaurantId: string) {
+    return ownerApi.rewards.getAll(restaurantId)
+  }
+
+  static async getRewardById(restaurantId: string, rewardId: string) {
+    return ownerApi.rewards.getById(restaurantId, rewardId)
+  }
+
+  static async createReward(data: CreateRewardDto) {
+    return ownerApi.rewards.create(data)
+  }
+
+  static async updateReward(rewardId: string, data: UpdateRewardDto) {
+    return ownerApi.rewards.update(rewardId, data)
+  }
+
+  static async deleteReward(rewardId: string) {
+    return ownerApi.rewards.delete(rewardId)
   }
 }

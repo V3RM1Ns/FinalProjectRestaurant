@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import type { Restaurant, Menu, MenuItem } from "@/types"
 import { getCategoryName } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, MapPin, Clock, Phone, Mail, Plus, Minus } from "lucide-react"
+import { Star, MapPin, Clock, Phone, Mail, Plus, Minus, Gift } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -19,12 +19,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { ChatButton } from "@/components/chat/chat-button"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { ReviewSection } from "@/components/reviews/review-section"
 import { customerApi } from "@/lib/customer-api"
 import { RestaurantLocationMap } from "@/components/maps/RestaurantLocationMap"
+
 export default function RestaurantDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const { addItem } = useCart()
   const { toast } = useToast()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
@@ -32,6 +41,8 @@ export default function RestaurantDetailPage() {
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [currentMenuPage, setCurrentMenuPage] = useState<{[key: string]: number}>({})
+  const menuItemsPerPage = 6
 
   useEffect(() => {
     const fetchData = async () => {
@@ -52,8 +63,8 @@ export default function RestaurantDetailPage() {
         const menusData = await customerApi.restaurants.getMenus(params.id as string)
         
         // Fix imageUrls in menu items
-        menusData.forEach(menu => {
-          menu.menuItems?.forEach(item => {
+        menusData.forEach((menu: any) => {
+          menu.menuItems?.forEach((item: any) => {
             if (item.imageUrl && !item.imageUrl.startsWith('http')) {
               const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
               item.imageUrl = `${baseUrl}${item.imageUrl}`
@@ -85,7 +96,6 @@ export default function RestaurantDetailPage() {
   const handleAddToCart = async () => {
     if (!restaurant || !selectedItem) return
 
-    // Tek seferde istenen miktarı ekle
     const success = await addItem(selectedItem, restaurant.id, restaurant.name, quantity)
 
     if (success) {
@@ -94,7 +104,6 @@ export default function RestaurantDetailPage() {
         description: `${selectedItem.name} (${quantity} adet) sepetinize eklendi.`,
       })
 
-      // Dialog'u kapat - bu otomatik olarak handleDialogClose'u tetikleyecek
       const closeButton = document.querySelector('[data-state="open"] button[aria-label="Close"]') as HTMLButtonElement
       closeButton?.click()
     }
@@ -102,12 +111,26 @@ export default function RestaurantDetailPage() {
 
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      // Dialog kapandığında state'leri sıfırla
       setTimeout(() => {
         setSelectedItem(null)
         setQuantity(1)
       }, 100)
     }
+  }
+
+  const getPaginatedItems = (items: MenuItem[], menuId: string) => {
+    const page = currentMenuPage[menuId] || 1
+    const startIndex = (page - 1) * menuItemsPerPage
+    const endIndex = startIndex + menuItemsPerPage
+    return items.slice(startIndex, endIndex)
+  }
+
+  const getTotalPages = (itemsCount: number) => {
+    return Math.ceil(itemsCount / menuItemsPerPage)
+  }
+
+  const setMenuPage = (menuId: string, page: number) => {
+    setCurrentMenuPage(prev => ({ ...prev, [menuId]: page }))
   }
 
   if (loading) {
@@ -154,10 +177,17 @@ export default function RestaurantDetailPage() {
                   <span className="font-medium">{restaurant.rating}</span>
                 </div>
                 <Badge>{getCategoryName(restaurant.category)}</Badge>
-                {restaurant.priceRange && <span>{restaurant.priceRange}</span>}
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <Button 
+                variant="default"
+                onClick={() => router.push(`/restaurants/${params.id}/rewards`)}
+                className="gap-2"
+              >
+                <Gift className="h-4 w-4" />
+                Rewards
+              </Button>
               <Button variant="outline" size="icon">
                 <MapPin className="h-4 w-4" />
               </Button>
@@ -227,89 +257,128 @@ export default function RestaurantDetailPage() {
               ))}
             </TabsList>
 
-            {menus.map((menu) => (
-              <TabsContent key={menu.id} value={menu.id}>
-                <p className="text-muted-foreground mb-6">{menu.description}</p>
+            {menus.map((menu) => {
+              const paginatedItems = getPaginatedItems(menu.menuItems, menu.id)
+              const totalPages = getTotalPages(menu.menuItems.length)
+              const currentPage = currentMenuPage[menu.id] || 1
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {menu.menuItems.map((item) => (
-                    <Card key={item.id} className="overflow-hidden">
-                      <div className="relative h-48">
-                        <img
-                          src={item.imageUrl || "/placeholder.svg"}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                        {!item.isAvailable && (
-                          <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
-                            <Badge variant="destructive">Stokta Yok</Badge>
-                          </div>
-                        )}
-                      </div>
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="text-lg">{item.name}</CardTitle>
-                          <span className="font-bold text-primary whitespace-nowrap">₺{item.price}</span>
+              return (
+                <TabsContent key={menu.id} value={menu.id}>
+                  <p className="text-muted-foreground mb-6">{menu.description}</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {paginatedItems.map((item) => (
+                      <Card key={item.id} className="overflow-hidden">
+                        <div className="relative h-48">
+                          <img
+                            src={item.imageUrl || "/placeholder.svg"}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                          {!item.isAvailable && (
+                            <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+                              <Badge variant="destructive">Stokta Yok</Badge>
+                            </div>
+                          )}
                         </div>
-                        <CardDescription className="line-clamp-2">{item.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Dialog 
-                          open={selectedItem?.id === item.id} 
-                          onOpenChange={(open) => handleDialogClose(open)}
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              className="w-full"
-                              disabled={!item.isAvailable}
-                              onClick={() => handleDialogOpen(item)}
-                            >
-                              Sepete Ekle
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>{item.name}</DialogTitle>
-                              <DialogDescription>{item.description}</DialogDescription>
-                            </DialogHeader>
-                            {selectedItem && (
-                              <div className="space-y-4">
-                                <img
-                                  src={selectedItem.imageUrl || "/placeholder.svg"}
-                                  alt={selectedItem.name}
-                                  className="w-full h-48 object-cover rounded-lg"
-                                />
+                        <CardHeader>
+                          <div className="flex items-start justify-between gap-2">
+                            <CardTitle className="text-lg">{item.name}</CardTitle>
+                            <span className="font-bold text-primary whitespace-nowrap">₺{item.price}</span>
+                          </div>
+                          <CardDescription className="line-clamp-2">{item.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Dialog 
+                            open={selectedItem?.id === item.id} 
+                            onOpenChange={(open) => handleDialogClose(open)}
+                          >
+                            <DialogTrigger asChild>
+                              <Button
+                                className="w-full"
+                                disabled={!item.isAvailable}
+                                onClick={() => handleDialogOpen(item)}
+                              >
+                                Sepete Ekle
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>{item.name}</DialogTitle>
+                                <DialogDescription>{item.description}</DialogDescription>
+                              </DialogHeader>
+                              {selectedItem && (
+                                <div className="space-y-4">
+                                  <img
+                                    src={selectedItem.imageUrl || "/placeholder.svg"}
+                                    alt={selectedItem.name}
+                                    className="w-full h-48 object-cover rounded-lg"
+                                  />
 
-                                <div className="flex items-center justify-between">
-                                  <span className="text-2xl font-bold">₺{selectedItem.price}</span>
-                                  <div className="flex items-center gap-3">
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                    >
-                                      <Minus className="h-4 w-4" />
-                                    </Button>
-                                    <span className="text-xl font-medium w-8 text-center">{quantity}</span>
-                                    <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}>
-                                      <Plus className="h-4 w-4" />
-                                    </Button>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-2xl font-bold">₺{selectedItem.price}</span>
+                                    <div className="flex items-center gap-3">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                                      >
+                                        <Minus className="h-4 w-4" />
+                                      </Button>
+                                      <span className="text-xl font-medium w-8 text-center">{quantity}</span>
+                                      <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}>
+                                        <Plus className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
 
-                                <Button className="w-full" size="lg" onClick={handleAddToCart}>
-                                  Sepete Ekle - ₺{selectedItem.price * quantity}
-                                </Button>
-                              </div>
-                            )}
-                          </DialogContent>
-                        </Dialog>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
-            ))}
+                                  <Button className="w-full" size="lg" onClick={handleAddToCart}>
+                                    Sepete Ekle - ₺{selectedItem.price * quantity}
+                                  </Button>
+                                </div>
+                              )}
+                            </DialogContent>
+                          </Dialog>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Menu Items Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center mt-6">
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => setMenuPage(menu.id, Math.max(1, currentPage - 1))}
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                onClick={() => setMenuPage(menu.id, page)}
+                                isActive={currentPage === page}
+                                className="cursor-pointer"
+                              >
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => setMenuPage(menu.id, Math.min(totalPages, currentPage + 1))}
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </TabsContent>
+              )
+            })}
           </Tabs>
         </div>
 
@@ -337,9 +406,6 @@ export default function RestaurantDetailPage() {
           </div>
         )}
       </div>
-
-      {/* Chat Button */}
-      <ChatButton restaurantId={restaurant.id} />
     </div>
   )
 }

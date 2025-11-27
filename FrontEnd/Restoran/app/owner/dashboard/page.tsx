@@ -21,6 +21,7 @@ import {
   Calendar,
   Star,
   Table,
+  Gift,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -327,6 +328,14 @@ export default function OwnerDashboardPage() {
                       >
                         <Briefcase className="w-4 h-4 mr-1" />
                         Başvurular
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/owner/restaurants/${restaurant.id}/rewards`)}
+                      >
+                        <Gift className="w-4 h-4 mr-1" />
+                        Rewards
                       </Button>
                     </div>
                   </div>

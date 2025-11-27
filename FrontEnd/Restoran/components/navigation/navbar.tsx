@@ -29,25 +29,16 @@ export function Navbar() {
             <span className="text-xl font-bold">RestaurantHub</span>
           </Link>
 
-          {user && (
-            <div className="hidden md:flex items-center gap-4">
-              <Link href="/restaurants">
-                <Button variant="ghost">Restoranlar</Button>
+          <div className="hidden md:flex items-center gap-4">
+            <Link href="/restaurants">
+              <Button variant="ghost">Restoranlar</Button>
+            </Link>
+            {user && (
+              <Link href="/customer/dashboard">
+                <Button variant="ghost">Dashboard</Button>
               </Link>
-              <Link href="/restaurants/map">
-                <Button variant="ghost">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Harita
-                </Button>
-              </Link>
-              <Link href="/reservations">
-                <Button variant="ghost">Rezervasyonlar</Button>
-              </Link>
-              <Link href="/jobs">
-                <Button variant="ghost">İş İlanları</Button>
-              </Link>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
