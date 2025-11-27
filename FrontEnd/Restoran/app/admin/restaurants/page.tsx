@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, ChevronRight, MapPin, User, Store, StoreIcon, Loader2, Tag } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MapPin, User, Store, StoreIcon, Loader2, Tag, Search } from 'lucide-react'
 import { adminApi } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ export default function AdminRestaurantsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [toggleLoading, setToggleLoading] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
   
   // Category management states
   const [showCategoryDialog, setShowCategoryDialog] = useState(false)
@@ -175,6 +177,14 @@ export default function AdminRestaurantsPage() {
     return 'bg-purple-100 text-purple-800 border-purple-200'
   }
 
+  // Filter restaurants based on search term
+  const filteredRestaurants = restaurants?.items.filter((restaurant) =>
+    restaurant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    restaurant.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    restaurant.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    restaurant.category.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || []
+
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
@@ -203,6 +213,19 @@ export default function AdminRestaurantsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Search Input */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Restoran adı, adres, sahip veya kategori ile ara..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           {loading ? (
             <div className="text-center py-12">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
@@ -223,7 +246,7 @@ export default function AdminRestaurantsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {restaurants.items.map((restaurant) => (
+                    {filteredRestaurants.map((restaurant) => (
                       <TableRow key={restaurant.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">

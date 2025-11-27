@@ -34,7 +34,6 @@ import { RestaurantLocationMap } from "@/components/maps/RestaurantLocationMap"
 export default function RestaurantDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const { addItem } = useCart()
   const { toast } = useToast()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menus, setMenus] = useState<Menu[]>([])
@@ -180,6 +179,7 @@ export default function RestaurantDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <Button variant="outline" size="icon">
               <Button 
                 variant="default"
                 onClick={() => router.push(`/restaurants/${params.id}/rewards`)}
@@ -187,15 +187,6 @@ export default function RestaurantDetailPage() {
               >
                 <Gift className="h-4 w-4" />
                 Rewards
-              </Button>
-              <Button variant="outline" size="icon">
-                <MapPin className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Clock className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon">
-                <Phone className="h-4 w-4" />
               </Button>
               <Button variant="outline" size="icon">
                 <Mail className="h-4 w-4" />

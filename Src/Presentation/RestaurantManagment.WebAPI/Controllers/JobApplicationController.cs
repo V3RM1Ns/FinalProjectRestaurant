@@ -57,7 +57,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
      
         [HttpGet("restaurant/{restaurantId}")]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<IEnumerable<JobApplicationDto>>> GetRestaurantApplications(string restaurantId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -100,7 +100,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
        
         [HttpGet("job-posting/{jobPostingId}")]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<IEnumerable<JobApplicationDto>>> GetJobPostingApplications(string jobPostingId)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -223,7 +223,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
      
         [HttpPut("review")]
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<IActionResult> ReviewJobApplication(ReviewJobApplicationDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -301,7 +301,6 @@ namespace RestaurantManagment.WebAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Owner")]
     public class JobPostingController : ControllerBase
     {
         private readonly IAppDbContext _context;
@@ -407,6 +406,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
       
         [HttpPost]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<JobPostingDto>> CreateJobPosting(CreateJobPostingDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -457,6 +457,7 @@ namespace RestaurantManagment.WebAPI.Controllers
 
         
         [HttpPut("{id}")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<IActionResult> UpdateJobPosting(string id, UpdateJobPostingDto dto)
         {
             if (id != dto.Id)
@@ -498,6 +499,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         }
         
         [HttpDelete("{id}")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<IActionResult> DeleteJobPosting(string id)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -519,6 +521,7 @@ namespace RestaurantManagment.WebAPI.Controllers
         }
         
         [HttpGet("my-restaurants")]
+        [Authorize(Roles = "RestaurantOwner")]
         public async Task<ActionResult<IEnumerable<JobPostingDto>>> GetMyRestaurantsJobPostings()
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

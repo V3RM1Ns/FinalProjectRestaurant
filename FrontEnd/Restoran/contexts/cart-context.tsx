@@ -21,8 +21,8 @@ interface AppliedCoupon {
 }
 
 interface CartContextType {
-  items: CartItem[];
-  addItem: (item: MenuItem, restaurantId: string, restaurantName: string, quantityToAdd?: number) => Promise<boolean>
+  items: CartItem[]
+  addItem: (menuItem: MenuItem, restaurantId: string, restaurantName: string) => boolean
   removeItem: (menuItemId: string) => void
   updateQuantity: (menuItemId: string, quantity: number) => void
   clearCart: () => void
@@ -94,8 +94,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [appliedCoupon])
 
-  const addItem = async (menuItem: MenuItem, restaurantId: string, restaurantName: string, quantityToAdd: number = 1): Promise<boolean> => {
-    // Check if trying to add from a different restaurant
+  const addItem = (menuItem: MenuItem, restaurantId: string, restaurantName: string): boolean => {
+    // Check if cart has items from a different restaurant
     if (currentRestaurantId && currentRestaurantId !== restaurantId) {
       const confirmed = window.confirm(
         `Sepetinizde "${currentRestaurantName}" restoranından ürünler var.\n\n` +
@@ -109,24 +109,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       // Clear cart and continue with adding the new item
       setItems([])
-      setAppliedCoupon(null)
     }
 
     setItems((prev) => {
-      // Check if item already exists
-      const existingIndex = prev.findIndex((item) => item.menuItem.id === menuItem.id)
+      const existingItem = prev.find((item) => item.menuItem.id === menuItem.id)
 
-      if (existingIndex > -1) {
-        // Update quantity
-        const updated = [...prev]
-        updated[existingIndex].quantity += quantityToAdd
-        return updated
+      if (existingItem) {
+        return prev.map((item) =>
+          item.menuItem.id === menuItem.id ? { ...item, quantity: item.quantity + 1 } : item
+        )
       }
 
-      // Add new item
-      return [...prev, { menuItem, quantity: quantityToAdd, restaurantId, restaurantName }]
+      return [...prev, { menuItem, quantity: 1, restaurantId, restaurantName }]
     })
-    
+
     return true
   }
 
@@ -149,10 +145,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const applyCoupon = (coupon: AppliedCoupon) => {
-    // Check if coupon is for current restaurant
-    if (currentRestaurantId && coupon.restaurantId !== currentRestaurantId) {
-      return
-    }
     setAppliedCoupon(coupon)
   }
 
@@ -161,16 +153,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const total = items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0)
-
-  // Calculate discount
-  let discountAmount = 0
-  if (appliedCoupon) {
-    if (appliedCoupon.discountAmount > 0) {
-      discountAmount = appliedCoupon.discountAmount
-    } else if (appliedCoupon.discountPercentage > 0) {
-      discountAmount = (total * appliedCoupon.discountPercentage) / 100
-    }
-  }
+  
+  const discountAmount = appliedCoupon 
+    ? appliedCoupon.discountPercentage > 0 
+      ? (total * appliedCoupon.discountPercentage) / 100 
+      : appliedCoupon.discountAmount
+    : 0
 
   const finalTotal = Math.max(0, total - discountAmount)
 

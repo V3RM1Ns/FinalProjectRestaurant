@@ -41,14 +41,14 @@ export default function RestaurantRewardsPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
-  const { applyCoupon } = useCart()
   const [rewards, setRewards] = useState<Reward[]>([])
-  const [loading, setLoading] = useState(false)
-  const [redeeming, setRedeeming] = useState(false)
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
-  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [userPoints, setUserPoints] = useState(0)
   const [restaurantName, setRestaurantName] = useState('')
+  const { applyCoupon } = useCart()
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
+  const [redeeming, setRedeeming] = useState(false)
   
   const restaurantId = params.id as string
 
@@ -62,6 +62,7 @@ export default function RestaurantRewardsPage() {
     try {
       const restaurantData = await customerApi.restaurants.getById(restaurantId)
       setRestaurantName(restaurantData.name)
+      console.log('Restaurant data:', restaurantData)
     } catch (error: any) {
       console.error('Error fetching restaurant:', error)
     }
@@ -105,6 +106,11 @@ export default function RestaurantRewardsPage() {
     try {
       const redemption = await loyaltyApi.customer.redeemReward(selectedReward.id)
       
+      toast({
+        title: 'Başarılı!',
+        description: `Ödül kullanıldı! Kupon kodunuz: ${redemption.couponCode}. Sepete otomatik olarak eklendi.`,
+      })
+      
       // Apply coupon to cart
       applyCoupon({
         couponCode: redemption.couponCode,
@@ -114,13 +120,11 @@ export default function RestaurantRewardsPage() {
         restaurantId: restaurantId
       })
 
-      toast({
-        title: 'Başarılı!',
-        description: `Ödül kullanıldı! Kupon kodunuz: ${redemption.couponCode}. Sepete otomatik olarak eklendi.`,
-      })
-      setConfirmDialogOpen(false)
       await fetchRewards()
       await fetchUserPoints()
+
+      setConfirmDialogOpen(false)
+      setSelectedReward(null)
 
       // Navigate to cart after 2 seconds
       setTimeout(() => {
@@ -138,18 +142,21 @@ export default function RestaurantRewardsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-4">
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Geri
-      </Button>
-
+    <div className="container mx-auto py-8">
       <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => router.back()}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Geri
+        </Button>
         <h1 className="text-3xl font-bold">Sadakat Ödülleri</h1>
         <p className="text-muted-foreground">
           {restaurantName && `${restaurantName} - `}Puanlarınızı kullanarak özel ödülleri kazanın
         </p>
-        <div className="mt-2">
+        <div className="mt-4">
           <Badge variant="outline" className="text-lg px-4 py-2">
             <Star className="w-4 h-4 mr-2" />
             Puanınız: {userPoints}
@@ -157,31 +164,31 @@ export default function RestaurantRewardsPage() {
         </div>
       </div>
 
-      {loading && rewards.length === 0 ? (
+      {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </div>
       ) : rewards.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
+          <CardContent className="text-center py-12">
             <Gift className="w-16 h-16 mx-auto mb-4 opacity-20" />
             <p>Bu restoranda henüz ödül bulunmuyor.</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {rewards.map((reward) => {
+            const hasEnoughPoints = userPoints >= reward.pointsRequired
             const isAvailable = reward.isActive && 
                                (!reward.maxRedemptions || reward.currentRedemptions < reward.maxRedemptions) &&
                                (!reward.endDate || new Date(reward.endDate) > new Date())
-            const hasEnoughPoints = userPoints >= reward.pointsRequired
 
             return (
               <Card key={reward.id} className={!isAvailable ? 'opacity-60' : ''}>
                 {reward.imageUrl && (
                   <div className="aspect-video w-full overflow-hidden rounded-t-lg">
-                    <img 
-                      src={reward.imageUrl} 
+                    <img
+                      src={reward.imageUrl}
                       alt={reward.name}
                       className="w-full h-full object-cover"
                     />
@@ -266,12 +273,12 @@ export default function RestaurantRewardsPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedReward && (
-            <div className="py-4">
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-semibold">{selectedReward.name}</h4>
-                  <p className="text-sm text-muted-foreground">{selectedReward.description}</p>
-                </div>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold">{selectedReward.name}</h4>
+                <p className="text-sm text-muted-foreground">{selectedReward.description}</p>
+              </div>
+              <div className="space-y-2">
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <span className="text-sm">Harcanacak Puan</span>
                   <Badge variant="default" className="text-base">
@@ -286,20 +293,33 @@ export default function RestaurantRewardsPage() {
                   </Badge>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Bu restoranda kullanabileceğiniz bir kupon kodu alacaksınız. Kupon otomatik olarak sepetinize eklenecektir.
+              </p>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} disabled={redeeming}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmDialogOpen(false)
+                setSelectedReward(null)
+              }}
+              disabled={redeeming}
+            >
               İptal
             </Button>
-            <Button onClick={handleConfirmRedeem} disabled={redeeming}>
+            <Button
+              onClick={handleConfirmRedeem}
+              disabled={redeeming}
+            >
               {redeeming ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Kullanılıyor...
                 </>
               ) : (
-                'Onayla ve Kullan'
+                'Onayla'
               )}
             </Button>
           </DialogFooter>

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, Store, Briefcase, FileText, LayoutDashboard } from "lucide-react"
+import { Users, Store, Briefcase, FileText, LayoutDashboard, Gift } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { api } from "@/lib/api"
@@ -201,6 +201,21 @@ export default function AdminDashboardPage() {
                     <CardContent>
                         <Button variant="outline" className="w-full">
                             Yorumları Yönet
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => router.push('/admin/loyalty-codes')}>
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <CardTitle>Loyalty Kodları Yönetimi</CardTitle>
+                            <Gift className="w-8 h-8 text-primary" />
+                        </div>
+                        <CardDescription>Puan ve ödül sistemini yönetin</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button variant="outline" className="w-full">
+                            Kodları Yönet
                         </Button>
                     </CardContent>
                 </Card>

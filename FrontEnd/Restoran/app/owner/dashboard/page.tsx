@@ -22,6 +22,7 @@ import {
   Star,
   Table,
   Gift,
+  FileText,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -320,6 +321,14 @@ export default function OwnerDashboardPage() {
                       >
                         <Users className="w-4 h-4 mr-1" />
                         Çalışanlar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/owner/restaurants/${restaurant.id}/job-postings`)}
+                      >
+                        <FileText className="w-4 h-4 mr-1" />
+                        İş İlanları
                       </Button>
                       <Button
                         variant="outline"
