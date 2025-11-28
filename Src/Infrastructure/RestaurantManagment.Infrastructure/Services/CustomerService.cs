@@ -440,10 +440,53 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             orderItemsList.Add((menuItem.Name, itemDto.Quantity, menuItem.Price));
         }
 
-        order.TotalAmount = totalAmount;
+        // Use the total amount from frontend if provided (includes delivery fee and coupon discount)
+        order.TotalAmount = dto.TotalAmount > 0 ? dto.TotalAmount : totalAmount;
+        
+        // If coupon code is provided, mark it as used
+        if (!string.IsNullOrEmpty(dto.CouponCode))
+        {
+            var redemption = await context.RewardRedemptions
+                .FirstOrDefaultAsync(r => r.CouponCode == dto.CouponCode && r.CustomerId == customerId && !r.IsUsed);
+            
+            if (redemption != null)
+            {
+                redemption.IsUsed = true;
+                redemption.UsedAt = DateTime.UtcNow;
+            }
+        }
 
         context.Orders.Add(order);
         await context.SaveChangesAsync();
+        try
+        {
+            var pointsToAdd = (int)Math.Floor(order.TotalAmount / 100) * 10;
+            
+            if (pointsToAdd > 0)
+            {
+                var loyaltyPoint = new LoyaltyPoint
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    CustomerId = customerId,
+                    RestaurantId = dto.RestaurantId,
+                    Points = pointsToAdd,
+                    Description = $"Sipariş puanı - Sipariş #{order.Id.Substring(0, 8)}",
+                    Type = LoyaltyPointType.Earned,
+                    EarnedAt = DateTime.UtcNow,
+                    ExpiryDate = DateTime.UtcNow.AddYears(1),
+                    IsRedeemed = false
+                };
+
+                context.LoyaltyPoints.Add(loyaltyPoint);
+                await context.SaveChangesAsync();
+                
+                Console.WriteLine($"Added {pointsToAdd} loyalty points for order {order.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to add loyalty points: {ex.Message}");
+        }
         
         try
         {
@@ -452,7 +495,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
                 customerName: customer.FullName ?? customer.UserName ?? "Müşteri",
                 orderId: order.Id,
                 restaurantName: restaurant.Name,
-                totalAmount: totalAmount,
+                totalAmount: order.TotalAmount,
                 deliveryAddress: dto.DeliveryAddress ?? "Belirtilmedi",
                 items: orderItemsList
             );

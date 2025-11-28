@@ -18,7 +18,7 @@ using RestaurantManagment.Application.Common.DTOs.Reward;
 
 namespace RestaurantManagment.Infrastructure.Services;
 
-public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<AppUser> userManager): IOwnerService
+public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<AppUser> userManager, IEmailService emailService): IOwnerService
 {
     public async Task<IEnumerable<OwnerRestaurantDto>> GetOwnerRestaurantsAsync(string ownerId)
     {
@@ -527,6 +527,8 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         var application = await context.JobApplications
             .Include(ja => ja.JobPosting)
+                .ThenInclude(jp => jp.Restaurant)
+            .Include(ja => ja.Applicant)
             .FirstOrDefaultAsync(ja => ja.Id == applicationId && !ja.IsDeleted);
 
         if (application == null)
@@ -542,6 +544,26 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         application.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
+
+        try
+        {
+            var subject = $"İş Başvurunuz Kabul Edildi - {application.JobPosting.Restaurant.Name}";
+            var body = $@"
+                <h2>Tebrikler!</h2>
+                <p>Sayın {application.Applicant.FullName},</p>
+                <p><strong>{application.JobPosting.Restaurant.Name}</strong> restoranındaki <strong>{application.JobPosting.Title}</strong> pozisyonu için yaptığınız başvuru kabul edilmiştir.</p>
+                <p>En kısa sürede sizinle iletişime geçilecektir.</p>
+                <p>İyi günler dileriz.</p>
+                <hr>
+                <p><small>Bu otomatik bir mesajdır.</small></p>
+            ";
+            await emailService.SendEmailAsync(application.Applicant.Email, subject, body);
+        }
+        catch (Exception ex)
+        {
+            // Log email error but don't fail the acceptance
+            Console.WriteLine($"Failed to send acceptance email: {ex.Message}");
+        }
     }
 
     public async Task RejectJobApplicationAsync(string applicationId, string ownerId, string? rejectionReason = null)
@@ -551,6 +573,8 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
 
         var application = await context.JobApplications
             .Include(ja => ja.JobPosting)
+                .ThenInclude(jp => jp.Restaurant)
+            .Include(ja => ja.Applicant)
             .FirstOrDefaultAsync(ja => ja.Id == applicationId && !ja.IsDeleted);
 
         if (application == null)
@@ -568,6 +592,27 @@ public class OwnerService(IAppDbContext context, IMapper mapper, UserManager<App
         application.UpdatedAt = DateTime.UtcNow;
 
         await context.SaveChangesAsync();
+
+        try
+        {
+            var subject = $"İş Başvurunuz Hakkında - {application.JobPosting.Restaurant.Name}";
+            var body = $@"
+                <h2>İş Başvurunuz Hakkında</h2>
+                <p>Sayın {application.Applicant.FullName},</p>
+                <p><strong>{application.JobPosting.Restaurant.Name}</strong> restoranındaki <strong>{application.JobPosting.Title}</strong> pozisyonu için yaptığınız başvuruyu değerlendirdik.</p>
+                <p>Ne yazık ki bu pozisyon için başvurunuz kabul edilememiştir.</p>
+                {(!string.IsNullOrEmpty(rejectionReason) ? $"<p><strong>Sebep:</strong> {rejectionReason}</p>" : "")}
+                <p>İlginiz için teşekkür ederiz. Gelecekte başka pozisyonlar için başvuruda bulunabilirsiniz.</p>
+                <p>İyi günler dileriz.</p>
+                <hr>
+                <p><small>Bu otomatik bir mesajdır.</small></p>
+            ";
+            await emailService.SendEmailAsync(application.Applicant.Email, subject, body);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to send rejection email: {ex.Message}");
+        }
     }
 
     public async Task<int> GetPendingApplicationsCountAsync(string restaurantId, string ownerId)

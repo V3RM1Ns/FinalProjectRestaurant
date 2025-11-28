@@ -26,7 +26,7 @@ export default function StatisticsPage() {
   const params = useParams()
   const router = useRouter()
   const { hasRole } = useAuth()
-  const restaurantId = params.restaurantId as string
+  const restaurantId = params.id as string // params.restaurantId yerine params.id
   const [statistics, setStatistics] = useState<Statistics | null>(null)
   const [loading, setLoading] = useState(true)
 

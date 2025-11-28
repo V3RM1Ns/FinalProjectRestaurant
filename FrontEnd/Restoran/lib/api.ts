@@ -31,6 +31,9 @@ export class ApiClient {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }))
 
+      console.error("API Error Response:", errorData)
+      console.error("Response status:", response.status)
+
       // Backend ModelState hatalarını handle et
       if (errorData.errors) {
         const errorMessages = Object.entries(errorData.errors)
@@ -40,6 +43,11 @@ export class ApiClient {
           })
           .join("\n")
         throw new Error(errorMessages)
+      }
+
+      // Backend'den gelen title ve errors alanlarını kontrol et
+      if (errorData.title) {
+        throw new Error(errorData.title)
       }
 
       throw new Error(errorData.message || errorData.Message || `API Error: ${response.statusText}`)
@@ -77,6 +85,16 @@ export class ApiClient {
       method: "PUT",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
+    })
+
+    return this.handleResponse<T>(response)
+  }
+
+  static async postFormData<T>(endpoint: string, data: FormData): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: "POST",
+      headers: this.getHeadersWithoutContentType(),
+      body: data,
     })
 
     return this.handleResponse<T>(response)
@@ -162,8 +180,20 @@ export const employeeApi = {
 export const jobApplicationApi = {
   getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/JobApplication/restaurant/${restaurantId}`),
   getById: (id: string) => ApiClient.get<any>(`/JobApplication/${id}`),
-  accept: (id: string) => ApiClient.patch<any>(`/JobApplication/${id}/accept`, {}),
+  create: (data: FormData) => ApiClient.postFormData<any>('/JobApplication', data),
+  accept: (id: string, interviewDate: string) => ApiClient.patch<any>(`/JobApplication/${id}/accept`, { interviewDate }),
   reject: (id: string, reason?: string) => ApiClient.patch<any>(`/JobApplication/${id}/reject`, { reason }),
+}
+
+// Job Posting API
+export const jobPostingApi = {
+  getAll: () => ApiClient.get<any[]>('/JobPosting'),
+  getByRestaurant: (restaurantId: string) => ApiClient.get<any[]>(`/JobPosting/restaurant/${restaurantId}`),
+  getById: (id: string) => ApiClient.get<any>(`/JobPosting/${id}`),
+  getActive: () => ApiClient.get<any[]>('/JobPosting/active'),
+  create: (data: any) => ApiClient.post<any>('/JobPosting', data),
+  update: (id: string, data: any) => ApiClient.put<any>(`/JobPosting/${id}`, data),
+  delete: (id: string) => ApiClient.delete<any>(`/JobPosting/${id}`),
 }
 
 // Review API

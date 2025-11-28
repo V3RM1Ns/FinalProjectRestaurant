@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import type { Restaurant, Menu, MenuItem } from "@/types"
+import type { Restaurant, Menu, MenuItem, JobPosting } from "@/types"
 import { getCategoryName } from "@/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Star, MapPin, Clock, Phone, Mail, Plus, Minus, Gift } from "lucide-react"
+import { Star, MapPin, Clock, Phone, Mail, Plus, Minus, Gift, Briefcase, Calendar, DollarSign } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
 import { useToast } from "@/hooks/use-toast"
 import {
@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import {
   Pagination,
@@ -30,18 +31,36 @@ import {
 import { ReviewSection } from "@/components/reviews/review-section"
 import { customerApi } from "@/lib/customer-api"
 import { RestaurantLocationMap } from "@/components/maps/RestaurantLocationMap"
+import { jobPostingApi, jobApplicationApi } from "@/lib/api"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/auth-context"
+import { AuthService } from "@/lib/auth"
 
 export default function RestaurantDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
+  const { addItem } = useCart()
+  const { user } = useAuth()
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null)
   const [menus, setMenus] = useState<Menu[]>([])
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [currentMenuPage, setCurrentMenuPage] = useState<{[key: string]: number}>({})
   const menuItemsPerPage = 6
+  
+  // Job application states
+  const [selectedJob, setSelectedJob] = useState<JobPosting | null>(null)
+  const [jobDialogOpen, setJobDialogOpen] = useState(false)
+  const [applyingJob, setApplyingJob] = useState(false)
+  const [applicationForm, setApplicationForm] = useState({
+    coverLetter: "",
+    cvFile: null as File | null,
+  })
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +91,25 @@ export default function RestaurantDetailPage() {
         })
         
         setMenus(menusData)
+        
+        // Fetch job postings
+        try {
+          const jobsData = await jobPostingApi.getByRestaurant(params.id as string)
+          console.log("Fetched jobs:", jobsData)
+          console.log("First job isActive:", jobsData?.[0]?.isActive)
+          console.log("First job full data:", JSON.stringify(jobsData?.[0], null, 2))
+          
+          // Filter by isActive field
+          const activeJobs = Array.isArray(jobsData) 
+            ? jobsData.filter((job: any) => job.isActive === true)
+            : []
+          console.log("Active jobs:", activeJobs)
+          console.log("Active jobs count:", activeJobs.length)
+          setJobPostings(activeJobs)
+        } catch (error) {
+          console.error("Error fetching jobs:", error)
+          setJobPostings([])
+        }
       } catch (error: any) {
         console.error("Error fetching restaurant:", error)
         toast({
@@ -95,7 +133,7 @@ export default function RestaurantDetailPage() {
   const handleAddToCart = async () => {
     if (!restaurant || !selectedItem) return
 
-    const success = await addItem(selectedItem, restaurant.id, restaurant.name, quantity)
+    const success = addItem(selectedItem, restaurant.id, restaurant.name)
 
     if (success) {
       toast({
@@ -114,6 +152,118 @@ export default function RestaurantDetailPage() {
         setSelectedItem(null)
         setQuantity(1)
       }, 100)
+    }
+  }
+
+  const handleJobApply = (job: JobPosting) => {
+    if (!user) {
+      toast({
+        title: "Giriş Gerekli",
+        description: "İş başvurusu yapmak için giriş yapmalısınız.",
+        variant: "destructive",
+      })
+      router.push('/login')
+      return
+    }
+    setSelectedJob(job)
+    setJobDialogOpen(true)
+  }
+
+  const handleSubmitApplication = async () => {
+    if (!selectedJob || !user) return
+
+    // Check if token exists
+    const token = AuthService.getToken()
+    if (!token) {
+      toast({
+        title: "Oturum Süresi Doldu",
+        description: "Lütfen tekrar giriş yapın.",
+        variant: "destructive",
+      })
+      router.push('/login')
+      return
+    }
+
+    if (!applicationForm.coverLetter.trim()) {
+      toast({
+        title: "Hata",
+        description: "Lütfen ön yazı alanını doldurun.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (!applicationForm.cvFile) {
+      toast({
+        title: "Hata",
+        description: "Lütfen CV dosyanızı yükleyin.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check file size (max 5MB)
+    if (applicationForm.cvFile.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Hata",
+        description: "CV dosyası maksimum 5MB olabilir.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check file type
+    const allowedTypes = ['.pdf', '.doc', '.docx']
+    const fileName = applicationForm.cvFile.name.toLowerCase()
+    const isValidType = allowedTypes.some(type => fileName.endsWith(type))
+    
+    if (!isValidType) {
+      toast({
+        title: "Hata",
+        description: "Sadece PDF, DOC veya DOCX formatında dosya yükleyebilirsiniz.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setApplyingJob(true)
+    try {
+      const formData = new FormData()
+      formData.append('JobPostingId', selectedJob.id)
+      formData.append('CoverLetter', applicationForm.coverLetter)
+      formData.append('cvFile', applicationForm.cvFile)
+
+      await jobApplicationApi.create(formData)
+
+      toast({
+        title: "Başarılı!",
+        description: "Başvurunuz alındı. Başvuru durumunuz hakkında e-posta adresinize bilgilendirme yapılacaktır.",
+      })
+
+      setJobDialogOpen(false)
+      setApplicationForm({ coverLetter: "", cvFile: null })
+      setSelectedJob(null)
+    } catch (error: any) {
+      console.error("Job application error:", error)
+      
+      // If unauthorized, redirect to login
+      if (error.message?.includes('401') || error.message?.includes('Unauthorized')) {
+        toast({
+          title: "Oturum Süresi Doldu",
+          description: "Lütfen tekrar giriş yapın.",
+          variant: "destructive",
+        })
+        router.push('/login')
+        return
+      }
+      
+      toast({
+        title: "Hata",
+        description: error.message || "Başvuru gönderilirken bir hata oluştu.",
+        variant: "destructive",
+      })
+    } finally {
+      setApplyingJob(false)
     }
   }
 
@@ -179,9 +329,16 @@ export default function RestaurantDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="icon">
               <Button 
                 variant="default"
+                onClick={() => router.push(`/restaurants/${params.id}/reserve`)}
+                className="gap-2"
+              >
+                <Calendar className="h-4 w-4" />
+                Rezervasyon Yap
+              </Button>
+              <Button 
+                variant="outline"
                 onClick={() => router.push(`/restaurants/${params.id}/rewards`)}
                 className="gap-2"
               >
@@ -373,30 +530,158 @@ export default function RestaurantDetailPage() {
           </Tabs>
         </div>
 
+        {/* Job Postings Section */}
+        {jobPostings.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold mb-6 flex items-center gap-2">
+              <Briefcase className="h-8 w-8" />
+              İş İlanları
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {jobPostings.map((job) => (
+                <Card key={job.id}>
+                  <CardHeader>
+                    <CardTitle>{job.title}</CardTitle>
+                    <CardDescription className="line-clamp-2">{job.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {job.position && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Briefcase className="h-4 w-4 text-muted-foreground" />
+                        <span>Pozisyon: {job.position}</span>
+                      </div>
+                    )}
+                    {job.salary && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span>Maaş: ₺{job.salary.toLocaleString('tr-TR')}</span>
+                      </div>
+                    )}
+                    {job.employmentType && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <span>Çalışma Tipi: {job.employmentType}</span>
+                      </div>
+                    )}
+                    {job.expiryDate && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>Son Başvuru: {new Date(job.expiryDate).toLocaleDateString('tr-TR')}</span>
+                      </div>
+                    )}
+                    <Button className="w-full" onClick={() => handleJobApply(job)}>
+                      Başvur
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Reviews Section */}
         <div className="mt-12">
           <ReviewSection restaurantId={restaurant.id} restaurantName={restaurant.name} />
         </div>
 
-        {/* Map Section */}
+        {/* Map Section - Only render on client side to avoid SSR issues with Leaflet */}
         {restaurant.latitude && restaurant.longitude && (
           <div className="mt-12">
             <h2 className="text-2xl font-bold mb-4">Konum</h2>
             <Card>
               <CardContent className="p-4">
                 <div className="h-64 w-full">
-                  <RestaurantLocationMap
-                    latitude={restaurant.latitude}
-                    longitude={restaurant.longitude}
-                    restaurantName={restaurant.name}
-                    address={restaurant.address}
-                  />
+                  {typeof window !== 'undefined' && (
+                    <RestaurantLocationMap
+                      latitude={restaurant.latitude}
+                      longitude={restaurant.longitude}
+                      restaurantName={restaurant.name}
+                      address={restaurant.address}
+                    />
+                  )}
+                  {typeof window === 'undefined' && (
+                    <div className="flex items-center justify-center h-full bg-gray-100 rounded-lg">
+                      <div className="text-center">
+                        <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-muted-foreground">Harita yükleniyor...</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
       </div>
+
+      {/* Job Application Dialog */}
+      <Dialog open={jobDialogOpen} onOpenChange={setJobDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedJob?.title} - İş Başvurusu</DialogTitle>
+            <DialogDescription>
+              Başvurunuzu tamamlamak için aşağıdaki bilgileri doldurun.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedJob && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold mb-2">İş Tanımı</h4>
+                <p className="text-sm text-muted-foreground">{selectedJob.description}</p>
+              </div>
+              
+              {selectedJob.requirements && (
+                <div>
+                  <h4 className="font-semibold mb-2">Gereksinimler</h4>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedJob.requirements}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="coverLetter">Ön Yazı *</Label>
+                <Textarea
+                  id="coverLetter"
+                  placeholder="Kendinizi tanıtın ve neden bu pozisyon için uygun olduğunuzu açıklayın..."
+                  value={applicationForm.coverLetter}
+                  onChange={(e) => setApplicationForm({ ...applicationForm, coverLetter: e.target.value })}
+                  rows={6}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cvFile">CV Dosyası * (PDF, DOC, DOCX - Max 5MB)</Label>
+                <Input
+                  id="cvFile"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setApplicationForm({ ...applicationForm, cvFile: file })
+                  }}
+                  required
+                  className="cursor-pointer"
+                />
+                {applicationForm.cvFile && (
+                  <p className="text-sm text-muted-foreground">
+                    Seçilen dosya: {applicationForm.cvFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setJobDialogOpen(false)} disabled={applyingJob}>
+              İptal
+            </Button>
+            <Button onClick={handleSubmitApplication} disabled={applyingJob}>
+              {applyingJob ? "Gönderiliyor..." : "Başvuruyu Gönder"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

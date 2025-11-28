@@ -290,13 +290,17 @@ export enum ReviewStatus {
 
 export interface JobPosting extends BaseEntity {
   restaurantId: string
+  restaurantName?: string
   title: string
   description: string
   requirements: string
-  salary?: string
-  workingHours?: string
-  status: JobPostingStatus
-  applicationDeadline?: string
+  position: string
+  salary?: number
+  employmentType: string
+  postedDate: string
+  expiryDate?: string
+  isActive: boolean
+  applicationCount?: number
 }
 
 export enum JobPostingStatus {
@@ -310,18 +314,20 @@ export interface JobApplication extends BaseEntity {
   applicantId: string
   applicantName: string
   applicantEmail: string
-  applicantPhone?: string
+  applicantPhone: string
   coverLetter: string
   resumeUrl?: string
   status: JobApplicationStatus
-  appliedDate: string
+  appliedAt: string
   reviewedAt?: string
-  reviewNotes?: string
+  interviewDate?: string
+  rejectionReason?: string
 }
 
 export enum JobApplicationStatus {
   Pending = "Pending",
-  Reviewed = "Reviewed",
+  UnderReview = "UnderReview",
+  InterviewScheduled = "InterviewScheduled",
   Accepted = "Accepted",
   Rejected = "Rejected",
 }

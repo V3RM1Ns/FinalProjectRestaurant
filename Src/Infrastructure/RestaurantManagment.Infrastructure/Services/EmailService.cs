@@ -931,7 +931,6 @@ public class EmailService : IEmailService
         await SendEmailAsync(to, subject, body);
     }
 
-
     public async Task SendReservationConfirmationEmailAsync(string to, string customerName, string reservationId, string restaurantName, DateTime reservationDate, int numberOfGuests, string tableInfo)
     {
         var subject = $"✅ Rezervasyon Onaylandı - {restaurantName}";
@@ -1310,7 +1309,9 @@ public class EmailService : IEmailService
                 <p style='margin: 0; color: #1f2937; font-style: italic; line-height: 1.6;'>&quot;{comment}&quot;</p>
             </div>
 
-            <p style='color: #6b7280; font-size: 14px;'>Yönetim panelinizden tüm yorumları görüntüleyebilir ve yanıt verebilirsiniz.</p>
+            <p style='color: #6b7280; font-size: 14px; margin-top: 30px;'>
+                Yönetim panelinizden tüm yorumları görüntüleyebilir ve yanıt verebilirsiniz.
+            </p>
         </div>
         <div class='footer'>
             <p>Restaurant Management</p>
@@ -1320,5 +1321,210 @@ public class EmailService : IEmailService
 </html>";
 
         await SendEmailAsync(to, subject, body);
+    }
+
+    public async Task SendJobApplicationReceivedAsync(string applicantEmail, string applicantName, string jobTitle, string restaurantName)
+    {
+        var subject = "✅ Başvurunuz Alındı - " + jobTitle;
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f3f4f6;
+            padding: 20px;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 28px;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .info-box {{
+            background: #f0fdf4;
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }}
+        .footer {{
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <div style='font-size: 48px; margin-bottom: 10px;'>✅</div>
+            <h1>Başvurunuz Alındı!</h1>
+        </div>
+        <div class='content'>
+            <h2 style='color: #1f2937; margin-top: 0;'>Merhaba {applicantName}! 👋</h2>
+            <p><strong>{restaurantName}</strong> restoranındaki <strong>{jobTitle}</strong> pozisyonu için başvurunuz başarıyla alınmıştır.</p>
+            
+            <div class='info-box'>
+                <h3 style='margin-top: 0; color: #059669;'>📋 Başvuru Durumu</h3>
+                <p style='margin: 0;'><strong>Pozisyon:</strong> {jobTitle}</p>
+                <p style='margin: 10px 0 0 0;'><strong>Restoran:</strong> {restaurantName}</p>
+                <p style='margin: 10px 0 0 0;'><strong>Durum:</strong> İnceleniyor</p>
+            </div>
+
+            <p>Başvurunuz değerlendirmeye alınmıştır. Başvuru sürecinde size bu e-posta adresi üzerinden bilgilendirme yapılacaktır.</p>
+            
+            <p style='color: #6b7280; font-size: 14px; margin-top: 30px;'>
+                En kısa sürede size dönüş yapılacaktır. İyi şanslar! 🍀
+            </p>
+        </div>
+        <div class='footer'>
+            <p>Restaurant Management System</p>
+            <p>Bu e-posta otomatik olarak gönderilmiştir.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(applicantEmail, subject, body);
+    }
+
+    public async Task SendJobApplicationAcceptedAsync(string applicantEmail, string applicantName, string jobTitle, string restaurantName, string restaurantAddress, string interviewInfo)
+    {
+        var subject = "🎉 Tebrikler! Başvurunuz Kabul Edildi - Mülakat Davetiyesi";
+        var body = $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f3f4f6;
+            padding: 20px;
+        }}
+        .container {{
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 28px;
+        }}
+        .content {{
+            padding: 40px 30px;
+        }}
+        .success-box {{
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 12px;
+            text-align: center;
+        }}
+        .interview-box {{
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }}
+        .interview-box h3 {{
+            margin-top: 0;
+            color: #92400e;
+        }}
+        .interview-box p {{
+            margin: 10px 0;
+            color: #78350f;
+        }}
+        .footer {{
+            background: #f9fafb;
+            padding: 20px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+        }}
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <div style='font-size: 64px; margin-bottom: 10px;'>🎉</div>
+            <h1>Tebrikler!</h1>
+            <p style='margin: 10px 0 0 0; font-size: 18px;'>Başvurunuz Kabul Edildi</p>
+        </div>
+        <div class='content'>
+            <h2 style='color: #1f2937; margin-top: 0;'>Harika Haber, {applicantName}! 🌟</h2>
+            
+            <div class='success-box'>
+                <div style='font-size: 48px; margin-bottom: 10px;'>✅</div>
+                <p style='font-size: 18px; font-weight: bold; color: #059669; margin: 0;'>
+                    {jobTitle} pozisyonu için başvurunuz kabul edildi!
+                </p>
+            </div>
+
+            <p><strong>{restaurantName}</strong> restoranı sizi mülakata davet ediyor.</p>
+
+            <div class='interview-box'>
+                <h3>📅 Mülakat Bilgileri</h3>
+                <p><strong>📍 Adres:</strong> {restaurantAddress}</p>
+                <p><strong>🏢 Restoran:</strong> {restaurantName}</p>
+                <p><strong>💼 Pozisyon:</strong> {jobTitle}</p>
+                <div style='margin-top: 15px; padding-top: 15px; border-top: 1px solid #fbbf24;'>
+                    <p style='margin: 0;'><strong>ℹ️ Detaylar:</strong></p>
+                    <p style='margin: 10px 0 0 0; white-space: pre-line;'>{interviewInfo}</p>
+                </div>
+            </div>
+
+            <p style='background: #eff6ff; padding: 15px; border-radius: 8px; border-left: 4px solid #3b82f6;'>
+                <strong>💡 Önemli:</strong> Lütfen mülakat için zamanında hazır olun. Yanınızda kimlik belgenizi getirmeyi unutmayın.
+            </p>
+
+            <p style='color: #6b7280; font-size: 14px; margin-top: 30px;'>
+                İyi şanslar! Ekibimizle tanışmayı dört gözle bekliyoruz. 🤝
+            </p>
+        </div>
+        <div class='footer'>
+            <p><strong>Restaurant Management System</strong></p>
+            <p>Sorularınız için restoranla iletişime geçebilirsiniz.</p>
+        </div>
+    </div>
+</body>
+</html>";
+
+        await SendEmailAsync(applicantEmail, subject, body);
     }
 }

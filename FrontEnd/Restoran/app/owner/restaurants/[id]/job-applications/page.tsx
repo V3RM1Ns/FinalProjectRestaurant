@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Briefcase, ArrowLeft, ChevronLeft, ChevronRight, Mail, Phone, CheckCircle, XCircle } from 'lucide-react'
+import { Briefcase, ArrowLeft, ChevronLeft, ChevronRight, Mail, Phone, CheckCircle, XCircle, Download, FileText } from 'lucide-react'
 import { OwnerApi } from '@/lib/owner-api'
 import { useAuth } from '@/contexts/auth-context'
 import { UserRole } from '@/types'
@@ -31,20 +31,11 @@ interface JobApplication {
   applicantEmail: string
   applicantPhone: string
   coverLetter: string
+  cvUrl?: string
   status: string
   applicationDate: string
   reviewedDate?: string
   reviewNotes?: string
-}
-
-interface PaginatedResponse {
-  items: JobApplication[]
-  totalCount: number
-  pageNumber: number
-  pageSize: number
-  totalPages: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
 }
 
 export default function JobApplicationsPage() {
@@ -52,8 +43,8 @@ export default function JobApplicationsPage() {
   const router = useRouter()
   const { hasRole } = useAuth()
   const { toast } = useToast()
-  const restaurantId = params.restaurantId as string
-  const [data, setData] = useState<PaginatedResponse | null>(null)
+  const restaurantId = params.id as string
+  const [data, setData] = useState<import('@/lib/owner-api').PaginatedResponse<JobApplication> | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [showPendingOnly, setShowPendingOnly] = useState(true)
@@ -74,15 +65,14 @@ export default function JobApplicationsPage() {
   const fetchApplications = async () => {
     try {
       setLoading(true)
-      let response: PaginatedResponse
       
       if (showPendingOnly) {
-        response = await OwnerApi.getPendingJobApplications(restaurantId, currentPage, pageSize)
+        const response = await OwnerApi.getPendingJobApplications(restaurantId, currentPage, pageSize) as any
+        setData(response)
       } else {
-        response = await OwnerApi.getJobApplications(restaurantId, currentPage, pageSize)
+        const response = await OwnerApi.getJobApplications(restaurantId, currentPage, pageSize) as any
+        setData(response)
       }
-      
-      setData(response)
     } catch (error) {
       console.error('Error fetching applications:', error)
       toast({
@@ -126,6 +116,68 @@ export default function JobApplicationsPage() {
       toast({
         title: "Hata",
         description: error?.message || "Başvuru reddedilirken hata oluştu",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDownloadCV = async (application: JobApplication) => {
+    try {
+      if (!application.cvUrl) {
+        toast({
+          title: "Hata",
+          description: "CV dosyası bulunamadı",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // CV URL'ini tam URL'e çevir
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+      const cvUrl = application.cvUrl.startsWith('http') 
+        ? application.cvUrl 
+        : `${baseUrl}${application.cvUrl}`
+
+      // Token'ı al
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      
+      // Fetch ile dosyayı indir
+      const response = await fetch(cvUrl, {
+        method: 'GET',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('CV indirilemedi')
+      }
+
+      // Blob'a çevir
+      const blob = await response.blob()
+      
+      // Dosya adını belirle
+      const fileName = `CV_${application.applicantName.replace(/\s+/g, '_')}.pdf`
+      
+      // İndirme linkini oluştur
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      toast({
+        title: "Başarılı",
+        description: "CV başarıyla indirildi",
+      })
+    } catch (error: any) {
+      console.error('Error downloading CV:', error)
+      toast({
+        title: "Hata",
+        description: error?.message || "CV indirilirken hata oluştu",
         variant: "destructive",
       })
     }
@@ -265,9 +317,13 @@ export default function JobApplicationsPage() {
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-medium mb-2">Cover Letter:</p>
-                    <p className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+                  {/* Cover Letter Preview */}
+                  <div className="border-l-4 border-primary pl-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">Ön Yazı:</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md whitespace-pre-line">
                       {application.coverLetter}
                     </p>
                   </div>
@@ -285,25 +341,41 @@ export default function JobApplicationsPage() {
                   )}
 
                   {application.status === "Pending" && (
-                    <div className="flex gap-2 pt-4 border-t">
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="flex-1"
-                        onClick={() => handleAccept(application.id)}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="flex-1"
-                        onClick={() => openRejectDialog(application.id)}
-                      >
-                        <XCircle className="w-4 h-4 mr-2" />
-                        Reject
-                      </Button>
+                    <div className="flex flex-col gap-3 pt-4 border-t">
+                      {/* CV Download Button - Büyük ve üstte */}
+                      {application.cvUrl && (
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="w-full gap-2 font-semibold"
+                          onClick={() => handleDownloadCV(application)}
+                        >
+                          <Download className="h-5 w-5" />
+                          CV İndir
+                        </Button>
+                      )}
+                      
+                      {/* Accept/Reject Buttons */}
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="flex-1"
+                          onClick={() => handleAccept(application.id)}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Kabul Et
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => openRejectDialog(application.id)}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reddet
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </CardContent>

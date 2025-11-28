@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
 using RestaurantManagment.Application.Common.DTOs.JobApplication;
 using RestaurantManagment.Application.Common.Interfaces;
 using RestaurantManagment.Domain.Models;
@@ -17,11 +16,16 @@ namespace RestaurantManagment.WebAPI.Controllers
     {
         private readonly IAppDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly IWebHostEnvironment _environment;
 
-        public JobApplicationController(IAppDbContext context, IEmailService emailService)
+        public JobApplicationController(
+            IAppDbContext context, 
+            IEmailService emailService,
+            IWebHostEnvironment environment)
         {
             _context = context;
             _emailService = emailService;
+            _environment = environment;
         }
 
      
@@ -146,7 +150,8 @@ namespace RestaurantManagment.WebAPI.Controllers
        
         [HttpPost]
         [Authorize(Roles = "Customer")]
-        public async Task<ActionResult<JobApplicationDto>> CreateJobApplication(CreateJobApplicationDto dto)
+        [Consumes("multipart/form-data")]
+        public async Task<ActionResult<JobApplicationDto>> CreateJobApplication([FromForm] CreateJobApplicationDto dto, [FromForm] IFormFile? cvFile)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
@@ -161,7 +166,6 @@ namespace RestaurantManagment.WebAPI.Controllers
             if (!jobPosting.IsActive)
                 return BadRequest("Job posting is not active");
 
-           
             var existingApplication = await _context.JobApplications
                 .FirstOrDefaultAsync(ja => ja.JobPostingId == dto.JobPostingId && ja.ApplicantId == userId);
 
@@ -170,12 +174,42 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             var applicant = await _context.Users.FindAsync(userId);
 
+            string? cvPath = null;
+            if (cvFile != null && cvFile.Length > 0)
+            {
+                var allowedExtensions = new[] { ".pdf", ".doc", ".docx" };
+                var fileExtension = Path.GetExtension(cvFile.FileName).ToLowerInvariant();
+                
+                if (!allowedExtensions.Contains(fileExtension))
+                {
+                    return BadRequest("Only PDF, DOC, and DOCX files are allowed");
+                }
+
+                if (cvFile.Length > 5 * 1024 * 1024)
+                {
+                    return BadRequest("File size cannot exceed 5MB");
+                }
+
+                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads", "cvs");
+                Directory.CreateDirectory(uploadsFolder);
+
+                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+                using (var fileStream = new FileStream(filePath, FileMode.Create))
+                {
+                    await cvFile.CopyToAsync(fileStream);
+                }
+
+                cvPath = $"/uploads/cvs/{uniqueFileName}";
+            }
+
             var application = new JobApplication
             {
                 JobPostingId = dto.JobPostingId,
                 ApplicantId = userId!,
                 CoverLetter = dto.CoverLetter,
-                ResumeUrl = dto.ResumeUrl,
+                ResumeUrl = cvPath,
                 Status = "Pending",
                 ApplicationDate = DateTime.UtcNow
             };
@@ -183,13 +217,22 @@ namespace RestaurantManagment.WebAPI.Controllers
             _context.JobApplications.Add(application);
             await _context.SaveChangesAsync();
 
-        
             try
             {
-                if (applicant != null && jobPosting.Restaurant.Owner != null)
+                if (applicant != null && !string.IsNullOrEmpty(applicant.Email))
+                {
+                    await _emailService.SendJobApplicationReceivedAsync(
+                        applicant.Email,
+                        applicant.FullName,
+                        jobPosting.Title,
+                        jobPosting.Restaurant.Name
+                    );
+                }
+
+                if (applicant != null && jobPosting.Restaurant.Owner != null && !string.IsNullOrEmpty(jobPosting.Restaurant.Owner.Email))
                 {
                     await _emailService.SendNewJobApplicationNotificationAsync(
-                        jobPosting.Restaurant.Owner.Email ?? "",
+                        jobPosting.Restaurant.Owner.Email,
                         jobPosting.Restaurant.Owner.FullName,
                         applicant.FullName,
                         jobPosting.Title,
@@ -197,9 +240,9 @@ namespace RestaurantManagment.WebAPI.Controllers
                     );
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-          
+                Console.WriteLine($"Email sending failed: {ex.Message}");
             }
 
             var result = new JobApplicationDto
@@ -250,24 +293,25 @@ namespace RestaurantManagment.WebAPI.Controllers
 
             await _context.SaveChangesAsync();
 
-           
-            try
+            if (dto.Status == "Accepted" && application.Applicant != null && !string.IsNullOrEmpty(application.Applicant.Email))
             {
-                if (application.Applicant != null && !string.IsNullOrEmpty(application.Applicant.Email))
+                try
                 {
-                    await _emailService.SendJobApplicationStatusEmailAsync(
+                    var interviewInfo = dto.ReviewNotes ?? "Mülakat detayları en kısa sürede paylaşılacaktır.";
+                    
+                    await _emailService.SendJobApplicationAcceptedAsync(
                         application.Applicant.Email,
                         application.Applicant.FullName,
                         application.JobPosting.Title,
                         application.JobPosting.Restaurant.Name,
-                        dto.Status,
-                        dto.ReviewNotes
+                        application.JobPosting.Restaurant.Address,
+                        interviewInfo
                     );
                 }
-            }
-            catch (Exception)
-            {
-               
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Email sending failed: {ex.Message}");
+                }
             }
 
             return NoContent();
@@ -295,7 +339,6 @@ namespace RestaurantManagment.WebAPI.Controllers
         }
     }
 }
-
 
 namespace RestaurantManagment.WebAPI.Controllers
 {
@@ -558,4 +601,3 @@ namespace RestaurantManagment.WebAPI.Controllers
         }
     }
 }
-

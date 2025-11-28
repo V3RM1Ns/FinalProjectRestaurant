@@ -167,6 +167,8 @@ export interface PaginatedResponse<T> {
   pageSize: number
   totalPages: number
   totalCount: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
 }
 
 export interface CreateRewardDto {

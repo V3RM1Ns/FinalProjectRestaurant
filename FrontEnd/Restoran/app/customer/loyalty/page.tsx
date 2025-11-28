@@ -50,14 +50,17 @@ export default function CustomerLoyaltyPage() {
     try {
       setLoading(true)
       const balances = await customerApi.loyalty.getBalance()
-      setLoyaltyBalances(balances || [])
-    } catch (error) {
+      console.log('Loyalty balances loaded:', balances)
+      setLoyaltyBalances(Array.isArray(balances) ? balances : [])
+    } catch (error: any) {
       console.error('Error loading loyalty balance:', error)
+      console.error('Error details:', error.response?.data)
       toast({
         title: 'Hata',
-        description: 'Sadakat puanları yüklenirken bir hata oluştu.',
+        description: error.response?.data?.message || error.message || 'Sadakat puanları yüklenirken bir hata oluştu.',
         variant: 'destructive',
       })
+      setLoyaltyBalances([])
     } finally {
       setLoading(false)
     }
@@ -140,12 +143,23 @@ export default function CustomerLoyaltyPage() {
               <TrendingUp className="h-5 w-5" />
               Toplam Puan Bakiyeniz
             </span>
-            <Badge variant="default" className="text-lg px-4 py-2">
-              {totalPoints} Puan
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="text-lg px-4 py-2">
+                {totalPoints} Puan
+              </Badge>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={loadLoyaltyBalance}
+                className="ml-2"
+              >
+                <Loader2 className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Yenile
+              </Button>
+            </div>
           </CardTitle>
           <CardDescription>
-            {loyaltyBalances.length} restoranınız var
+            {loyaltyBalances.length} restoran
           </CardDescription>
         </CardHeader>
       </Card>
@@ -332,4 +346,3 @@ export default function CustomerLoyaltyPage() {
     </div>
   )
 }
-

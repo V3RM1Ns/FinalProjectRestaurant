@@ -65,7 +65,7 @@ export default function MenuManagementPage() {
   const router = useRouter()
   const { hasRole } = useAuth()
   const { toast } = useToast()
-  const restaurantId = params.restaurantId as string
+  const restaurantId = params.id as string // params.restaurantId yerine params.id
   const [menus, setMenus] = useState<Menu[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -119,7 +119,7 @@ export default function MenuManagementPage() {
     if (!selectedMenu) return
 
     try {
-      await OwnerApi.menuItems.create(selectedMenu.id, {
+      await OwnerApi.createMenuItem(selectedMenu.id, {
         ...menuItemForm,
         menuId: selectedMenu.id,
       })
@@ -144,7 +144,7 @@ export default function MenuManagementPage() {
     if (!editingMenuItem) return
 
     try {
-      await OwnerApi.menuItems.update(editingMenuItem.id, menuItemForm)
+      await OwnerApi.updateMenuItem(editingMenuItem.id, menuItemForm)
       toast({
         title: "Success",
         description: "Menu item updated successfully",
@@ -167,7 +167,7 @@ export default function MenuManagementPage() {
     if (!confirm("Are you sure you want to delete this menu item?")) return
 
     try {
-      await OwnerApi.menuItems.delete(menuItemId)
+      await OwnerApi.deleteMenuItem(menuItemId)
       toast({
         title: "Success",
         description: "Menu item deleted successfully",
@@ -185,7 +185,7 @@ export default function MenuManagementPage() {
 
   const handleToggleAvailability = async (menuItemId: string, isAvailable: boolean) => {
     try {
-      await OwnerApi.menuItems.updateAvailability(menuItemId, !isAvailable)
+      await OwnerApi.updateMenuItemAvailability(menuItemId, !isAvailable)
       toast({
         title: "Success",
         description: `Menu item ${!isAvailable ? "enabled" : "disabled"}`,
@@ -595,4 +595,3 @@ export default function MenuManagementPage() {
     </div>
   )
 }
-

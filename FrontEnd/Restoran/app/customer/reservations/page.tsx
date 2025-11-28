@@ -106,12 +106,12 @@ export default function CustomerReservationsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <span>{reservation.partySize} Kişi</span>
+              <span>{reservation.numberOfGuests} Kişi</span>
             </div>
-            {reservation.tableName && (
+            {reservation.tableNumber && (
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                <span>Masa: {reservation.tableName}</span>
+                <span>Masa {reservation.tableNumber}</span>
               </div>
             )}
           </div>
@@ -221,4 +221,3 @@ export default function CustomerReservationsPage() {
     </div>
   )
 }
-

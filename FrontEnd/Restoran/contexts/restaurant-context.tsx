@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 import { Restaurant } from "@/types"
-import { restaurantApi } from "@/lib/api"
 import { useAuth } from "./auth-context"
+import { ownerApi } from "@/lib/owner-api"
 
 interface RestaurantContextType {
   restaurants: Restaurant[]
@@ -26,21 +26,20 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     
     try {
       setLoading(true)
-      const data = await restaurantApi.getAll()
-      // Owner'a ait restoranları filtrele
-      const ownerRestaurants = data.filter((r: Restaurant) => r.ownerId === user.id)
-      setRestaurants(ownerRestaurants)
+      // Owner için doğru endpoint kullan
+      const data = await ownerApi.restaurants.getMyRestaurants()
+      setRestaurants(data)
 
       // Eğer seçili restoran yoksa ve restoranlar varsa, ilkini seç
-      if (!selectedRestaurant && ownerRestaurants.length > 0) {
-        setSelectedRestaurant(ownerRestaurants[0])
-        localStorage.setItem("selectedRestaurantId", ownerRestaurants[0].id)
+      if (!selectedRestaurant && data.length > 0) {
+        setSelectedRestaurant(data[0])
+        localStorage.setItem("selectedRestaurantId", data[0].id)
       }
       
       // Local storage'dan seçili restoranı yükle
       const savedRestaurantId = localStorage.getItem("selectedRestaurantId")
       if (savedRestaurantId) {
-        const restaurant = ownerRestaurants.find((r: Restaurant) => r.id === savedRestaurantId)
+        const restaurant = data.find((r: Restaurant) => r.id === savedRestaurantId)
         if (restaurant) {
           setSelectedRestaurant(restaurant)
         }
@@ -89,4 +88,3 @@ export function useRestaurant() {
   }
   return context
 }
-

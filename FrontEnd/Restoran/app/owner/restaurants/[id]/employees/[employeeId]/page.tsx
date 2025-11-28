@@ -29,7 +29,7 @@ export default function EmployeeDetailPage() {
   const router = useRouter()
   const { hasRole } = useAuth()
   const { toast } = useToast()
-  const restaurantId = params.restaurantId as string
+  const restaurantId = params.id as string // params.restaurantId yerine params.id
   const employeeId = params.employeeId as string
   const [employee, setEmployee] = useState<Employee | null>(null)
   const [loading, setLoading] = useState(true)

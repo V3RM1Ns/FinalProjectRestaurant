@@ -153,22 +153,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }
 
   const total = items.reduce((sum, item) => sum + item.menuItem.price * item.quantity, 0)
-  
-  const discountAmount = appliedCoupon 
-    ? appliedCoupon.discountPercentage > 0 
-      ? (total * appliedCoupon.discountPercentage) / 100 
+
+  const discountAmount = appliedCoupon
+    ? appliedCoupon.discountPercentage > 0
+      ? (total * appliedCoupon.discountPercentage) / 100
       : appliedCoupon.discountAmount
     : 0
 
   const finalTotal = Math.max(0, total - discountAmount)
 
   return (
-    <CartContext.Provider value={{ 
-      items, 
-      addItem, 
-      removeItem, 
-      updateQuantity, 
-      clearCart, 
+    <CartContext.Provider value={{
+      items,
+      addItem,
+      removeItem,
+      updateQuantity,
+      clearCart,
       total,
       currentRestaurantId,
       currentRestaurantName,

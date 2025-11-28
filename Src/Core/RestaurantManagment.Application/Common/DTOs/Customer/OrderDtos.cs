@@ -9,6 +9,8 @@ public class CreateOrderDto
     public string? DeliveryInstructions { get; set; }
     public OrderType OrderType { get; set; }
     public string? PaymentMethod { get; set; }
+    public string? CouponCode { get; set; }
+    public decimal TotalAmount { get; set; }
     public List<OrderItemDto> Items { get; set; } = new();
 }
 
@@ -24,4 +26,3 @@ public class OrderItemDto
     public int Quantity { get; set; }
     public string? SpecialInstructions { get; set; }
 }
-

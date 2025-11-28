@@ -39,7 +39,7 @@ export default function RestaurantRewardsPage() {
   const router = useRouter()
   const { hasRole } = useAuth()
   const { toast } = useToast()
-  const restaurantId = params.restaurantId as string
+  const restaurantId = params.id as string  // params.restaurantId yerine params.id
 
   const [rewards, setRewards] = useState<Reward[]>([])
   const [loading, setLoading] = useState(true)

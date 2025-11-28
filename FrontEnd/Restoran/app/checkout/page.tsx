@@ -17,12 +17,13 @@ import { useToast } from "@/hooks/use-toast"
 import { customerApi } from "@/lib/customer-api"
 
 export default function CheckoutPage() {
-  const { items, total, clearCart } = useCart()
+  const { items, total, clearCart, appliedCoupon, discountAmount, finalTotal } = useCart()
   const { user } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState("card")
+  const DELIVERY_FEE = 15
   const [address, setAddress] = useState({
     street: "",
     city: "",
@@ -67,6 +68,8 @@ export default function CheckoutPage() {
         deliveryAddress: deliveryAddress,
         deliveryInstructions: address.notes || "",
         paymentMethod: paymentMethod === "card" ? "Kredi Kartı" : "Kapıda Nakit",
+        couponCode: appliedCoupon?.couponCode || null,
+        totalAmount: finalTotal + DELIVERY_FEE,
         items: items.map(item => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
@@ -77,9 +80,12 @@ export default function CheckoutPage() {
       // Create order via API
       const response = await customerApi.orders.create(orderData)
 
+      // Calculate earned loyalty points (10 points per 100 TL)
+      const earnedPoints = Math.floor(finalTotal / 100) * 10
+
       toast({
         title: "Sipariş Oluşturuldu! ✅",
-        description: `Sipariş numaranız: #${response.id.substring(0, 8).toUpperCase()}. Email adresinize onay maili gönderildi.`,
+        description: `Sipariş numaranız: #${response.id.substring(0, 8).toUpperCase()}. ${earnedPoints > 0 ? `🎉 ${earnedPoints} sadakat puanı kazandınız!` : ''} Email adresinize onay maili gönderildi.`,
       })
 
       clearCart()
@@ -230,13 +236,19 @@ export default function CheckoutPage() {
                     <span>₺{total.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Teslimat</span>
-                    <span>₺15.00</span>
+                    <span className="text-muted-foreground">Teslimat Ücreti</span>
+                    <span>₺{DELIVERY_FEE.toFixed(2)}</span>
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Kupon İndirimi ({appliedCoupon.couponCode})</span>
+                      <span>-₺{discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
                     <span>Toplam</span>
-                    <span>₺{(total + 15).toFixed(2)}</span>
+                    <span>₺{(finalTotal + DELIVERY_FEE).toFixed(2)}</span>
                   </div>
                 </div>
 

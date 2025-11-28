@@ -28,7 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Check if user is already logged in
     const currentUser = AuthService.getUser()
-    setUser(currentUser)
+    const token = AuthService.getToken()
+    
+    // Token yoksa ama user varsa, user'ı da temizle
+    if (currentUser && !token) {
+      console.warn("User exists but token is missing. Clearing user data.")
+      AuthService.logout()
+      setUser(null)
+    } else {
+      setUser(currentUser)
+    }
+    
     setIsLoading(false)
   }, [])
 

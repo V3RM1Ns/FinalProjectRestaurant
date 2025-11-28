@@ -57,16 +57,17 @@ export default function RestaurantDashboardPage() {
   const router = useRouter()
   const [dashboard, setDashboard] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const restaurantId = params.id as string  // params.restaurantId yerine params.id
 
   useEffect(() => {
     fetchDashboard()
-  }, [params.restaurantId])
+  }, [restaurantId])  // params.restaurantId yerine restaurantId
 
   const fetchDashboard = async () => {
     setLoading(true)
     try {
       const token = localStorage.getItem('auth_token')
-      const url = `${API_BASE_URL}/api/Owner/restaurants/${params.restaurantId}/dashboard`
+      const url = `${API_BASE_URL}/api/Owner/restaurants/${restaurantId}/dashboard`  // params.restaurantId yerine restaurantId
       console.log('Fetching dashboard from:', url)
       console.log('Token:', token ? 'exists' : 'missing')
       

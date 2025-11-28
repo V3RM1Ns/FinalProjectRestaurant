@@ -84,10 +84,19 @@ export default function AdminLoyaltyCodesPage() {
 
   const fetchRestaurants = async () => {
     try {
-      const data = await api.get<Restaurant[]>("/Admin/restaurants")
-      setRestaurants(data)
+      const data = await api.get<any>("/Admin/restaurants")
+      // Check if data is paginated (has items property) or direct array
+      if (data && Array.isArray(data.items)) {
+        setRestaurants(data.items)
+      } else if (Array.isArray(data)) {
+        setRestaurants(data)
+      } else {
+        console.error("Unexpected data format:", data)
+        setRestaurants([])
+      }
     } catch (error: any) {
       console.error("Restoranlar yüklenemedi:", error)
+      setRestaurants([])
     }
   }
 
@@ -315,4 +324,3 @@ export default function AdminLoyaltyCodesPage() {
     </div>
   )
 }
-
