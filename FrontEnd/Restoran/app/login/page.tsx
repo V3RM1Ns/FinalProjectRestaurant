@@ -92,10 +92,8 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = () => {
-    toast({
-      title: "Google ile giriş",
-      description: "Google OAuth entegrasyonu yakında eklenecek.",
-    })
+    window.location.href = "http://localhost:5000/api/auth/google";
+
   }
 
   return (

@@ -576,3 +576,4 @@ C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.Web
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.pdb
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\RestaurantManagment.WebAPI.genruntimeconfig.cache
 C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\obj\Debug\net9.0\ref\RestaurantManagment.WebAPI.dll
+C:\Users\user\Desktop\FinalProject-main\Src\Presentation\RestaurantManagment.WebAPI\bin\Debug\net9.0\Microsoft.AspNetCore.Authentication.Google.dll

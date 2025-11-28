@@ -440,19 +440,28 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
             orderItemsList.Add((menuItem.Name, itemDto.Quantity, menuItem.Price));
         }
 
-        // Use the total amount from frontend if provided (includes delivery fee and coupon discount)
         order.TotalAmount = dto.TotalAmount > 0 ? dto.TotalAmount : totalAmount;
         
-        // If coupon code is provided, mark it as used
         if (!string.IsNullOrEmpty(dto.CouponCode))
         {
+            var coupon = await context.LoyaltyCodes.FirstOrDefaultAsync(c => c.Code == dto.CouponCode);
+            if (coupon == null)
+                throw new Exception("Invalid coupon code");
+
+            if (coupon.MaxUses.HasValue && coupon.CurrentUses >= coupon.MaxUses.Value)
+                throw new Exception("This coupon code has reached its maximum number of uses");
+
+            var alreadyUsed = await context.RewardRedemptions.AnyAsync(r => r.CouponCode == dto.CouponCode && r.CustomerId == customerId && r.IsUsed);
+            if (alreadyUsed)
+                throw new Exception("You have already used this coupon code");
+
             var redemption = await context.RewardRedemptions
                 .FirstOrDefaultAsync(r => r.CouponCode == dto.CouponCode && r.CustomerId == customerId && !r.IsUsed);
-            
             if (redemption != null)
             {
                 redemption.IsUsed = true;
                 redemption.UsedAt = DateTime.UtcNow;
+                coupon.CurrentUses++;
             }
         }
 
@@ -523,7 +532,7 @@ public class CustomerService(IAppDbContext context, IMapper mapper, IEmailServic
         var order = await context.Orders
             .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId && !o.IsDeleted);
 
-        if (order == null)
+        if (order == null)      
             throw new InvalidOperationException("Order not found.");
         
         if (order.Status != OrderStatus.Pending)
