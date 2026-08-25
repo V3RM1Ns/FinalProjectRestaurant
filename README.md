@@ -39,7 +39,7 @@
 
 🏛️ The backend follows **Clean Architecture** principles to ensure clear separation of concerns, maintainability, and scalability.
 
-```text
+
 FinalProjectRestaurant/
 ├── Src/
 │   ├── Core/
