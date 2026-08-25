@@ -36,8 +36,8 @@
 ---
 
 ## 📁 Project Architecture
-
-🏛️ The backend follows **Clean Architecture** principles to ensure clear separation of concerns, maintainability, and scalability.
+```text
+🏛️ The backend follows **Onion Architecture** principles to ensure clear separation of concerns, maintainability, and scalability.
 
 
 FinalProjectRestaurant/
@@ -52,8 +52,7 @@ FinalProjectRestaurant/
 │       └── RestaurantManagment.WebAPI         # 🔌 Controllers, Middlewares, SignalR Hubs
 └── FrontEnd/
     └── Restoran                               # 🖥️ Next.js 15 Frontend Application
-
-
+```
 ---
 
 ## 🔥 Key Features by Role
@@ -181,7 +180,7 @@ NEXT_PUBLIC_API_URL=http://localhost:5000/api
 🔥 Launch Development Server:
 Bash
 npm run dev
-
+```text
 Frontend Route Structure
 Plaintext
 FrontEnd/Restoran/src/app/
@@ -192,3 +191,4 @@ FrontEnd/Restoran/src/app/
 ├── employee/             # 👩‍💼 /employee/orders, /employee/tables
 ├── delivery/             # 🛵 /delivery/active, /delivery/history
 └── admin/                # 🛡️ /admin/users, /admin/applications, /admin/moderation
+```
