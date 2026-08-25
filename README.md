@@ -1,249 +1,194 @@
-# FinalProjectRestaurant
+<div align="center">
 
-Restaurant management platform with a **.NET 9 Web API** backend and a **Next.js 15** frontend.  
-The system supports full multi-role workflows for customers, restaurant owners, employees, delivery staff, and admins.
+# 🍽️ FinalProjectRestaurant
 
-## Tech Stack
+**🚀 A modern, full-stack Restaurant Management Platform powered by .NET 9 Web API and Next.js 15.**
 
-- **Backend:** ASP.NET Core Web API, Entity Framework Core, SQL Server, ASP.NET Identity, JWT, SignalR, Swagger/OpenAPI
-- **Frontend:** Next.js (App Router), React 19, TypeScript, Tailwind CSS, shadcn/ui, SignalR client, Leaflet maps
+*✨ Supports comprehensive multi-role workflows for Customers 🧑‍🤝‍🧑, Restaurant Owners 👨‍🍳, Employees 👩‍💼, Delivery Personnel 🛵, and System Administrators 🛡️.*
 
-## Project Structure
+---
+
+[![Backend Stack](https://img.shields.io/badge/Backend-.NET%209%20%7C%20EF%20Core-512BD4?style=flat-square&logo=dotnet)](https://dotnet.microsoft.com/)
+[![Frontend Stack](https://img.shields.io/badge/Frontend-Next.js%2015%20%7C%20React%2019-000000?style=flat-square&logo=nextdotjs)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/Language-TypeScript-3178C6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Database](https://img.shields.io/badge/Database-SQL%20Server-CC292B?style=flat-square&logo=microsoftsqlserver)](https://www.microsoft.com/sql-server)
+[![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20%7C%20shadcn%2Fui-06B6D4?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
+
+</div>
+
+---
+
+## 🛠️ Tech Stack
+
+### ⚙️ Backend (.NET Web API)
+* 🚀 **Framework:** .NET 9 Web API
+* 🗄️ **ORM & Database:** Entity Framework Core & Microsoft SQL Server
+* 🔑 **Authentication & Authorization:** ASP.NET Core Identity, JWT, Google OAuth
+* ⚡ **Real-time Engine:** SignalR (WebSockets)
+* 📖 **Documentation:** Swagger / OpenAPI
+
+### 💻 Frontend (Next.js Application)
+* ⚛️ **Framework:** Next.js 15 (App Router) & React 19
+* 📘 **Language:** TypeScript
+* 🎨 **Styling & UI Components:** Tailwind CSS, shadcn/ui
+* 🗺️ **Interactive Utilities:** SignalR Client, Leaflet Maps
+
+---
+
+## 📁 Project Architecture
+
+🏛️ The backend follows **Clean Architecture** principles to ensure clear separation of concerns, maintainability, and scalability.
 
 ```text
 FinalProjectRestaurant/
 ├── Src/
 │   ├── Core/
-│   │   ├── RestaurantManagment.Domain
-│   │   └── RestaurantManagment.Application
+│   │   ├── RestaurantManagment.Domain         # 🧱 Entities, Enums, Domain Logic
+│   │   └── RestaurantManagment.Application    # 🧠 Interfaces, DTOs, Business Logic, CQRS/Services
 │   ├── Infrastructure/
-│   │   ├── RestaurantManagment.Persistance
-│   │   └── RestaurantManagment.Infrastructure
+│   │   ├── RestaurantManagment.Persistance    # 💾 EF Core, DbContext, Migrations, Repositories
+│   │   └── RestaurantManagment.Infrastructure # 🌐 External Services (Email, File Storage, OAuth)
 │   └── Presentation/
-│       └── RestaurantManagment.WebAPI
+│       └── RestaurantManagment.WebAPI         # 🔌 Controllers, Middlewares, SignalR Hubs
 └── FrontEnd/
-    └── Restoran
-```
+    └── Restoran                               # 🖥️ Next.js 15 Frontend Application
 
-## Main Features
 
-## Authentication & Account
+---
 
-- Register / login with JWT
-- Google authentication flow
-- Email verification and resend verification
-- Forgot/reset/change password
-- Profile view/update and profile image upload
-- Logout
-- Account deletion request and confirmation
-- Restaurant ownership application from account flow
+## 🔥 Key Features by Role
 
-## Customer Features
+### 🔐 Authentication & Account Management
+* 🔑 **JWT & OAuth:** Registration, login, and Google OAuth flow.
+* 🛡️ **Security & Tokens:** Email verification, resend confirmation, forgot/reset/change password workflows.
+* 👤 **Profile Controls:** User profile management, avatar uploads, and account deletion workflows.
+* 📋 **Applications:** Direct restaurant ownership application flow.
 
-- Restaurant discovery:
-  - List, detail, search
-  - Category filtering
-  - Nearby restaurants
-  - Top-rated restaurants
-- Menu browsing:
-  - Restaurant menus and menu items
-  - Available items and menu-item search
-- Cart & checkout:
-  - Add/remove/update quantities
-  - Single-restaurant cart protection
-  - Coupon/reward discount application
-- Orders:
-  - Create/update/cancel orders
-  - Active orders, history, current order, order count
-  - Order detail and status tracking
-- Reservations:
-  - Create/update/cancel reservations
-  - Upcoming and past reservations
-  - Available table checks
-- Reviews:
-  - Create, update, delete own reviews
-  - Check if user can review
-  - View own review per restaurant
-- Favorites:
-  - Add/remove/check favorites
-  - Favorites listing
-- Loyalty:
-  - View points and rewards per restaurant
-  - Redeem loyalty rewards
-- Personal insights:
-  - Statistics, recommendations
-  - Total spent, total orders, total reservations
+---
 
-## Restaurant Owner Features
+### 🛒 Customer Experience
+* 🔍 **Restaurant Discovery:** Search, category filters, nearby discovery (maps), and top-rated sorting.
+* 🍕 **Menu Browsing:** Interactive menus, available item filtering, and live search.
+* 🛍️ **Cart & Checkout:** Single-restaurant cart protection, item quantity updates, coupon and reward applications.
+* 📦 **Order Tracking:** Real-time status updates, order history, active tracking, and cancellation capabilities.
+* 🪑 **Table Reservations:** Available table checks, reservation booking, updates, and history tracking.
+* ⭐ **Reviews & Socials:** Review submission, rating management, and favorites listing.
+* 🎁 **Loyalty & Insights:** Point accumulation, reward redemptions, personal spending statistics, and recommendations.
 
-- Restaurant management:
-  - Create, update, delete own restaurants
-  - Restaurant list/detail
-- Owner dashboards & analytics:
-  - Dashboard metrics
-  - Statistics
-  - Revenue (total/today), revenue chart
-  - Sales report, orders by date range, category sales
-  - Top-selling items
-- Employee management:
-  - List/detail/create/update/delete employees
-  - Employee count
-- Job pipeline:
-  - Job posting management
-  - Job application list/detail/pending/accept/reject
-- Order operations:
-  - List/detail orders
-  - Filter by status
-  - Update order status
-  - Active/today counts
-- Reservation operations:
-  - List/detail reservations
-  - Filter by status
-  - Update reservation status
-  - Active/today counts
-- Menu operations:
-  - Menu CRUD
-  - Menu-item CRUD
-  - Item availability toggle
-  - Menu-item count
-- Table operations:
-  - Table CRUD
-  - Table status updates
-  - Available table counts
-- Review engagement:
-  - View reviews/pending reviews
-  - Respond to reviews
-  - Report reviews
-  - Average rating and pending count
-- Rewards:
-  - Create/update/delete restaurant rewards
-  - List/detail rewards
-- Restaurant applications:
-  - Submit and track restaurant applications
+---
 
-## Employee Features
+### 👨‍🍳 Restaurant Owner Dashboard
+* 🏪 **Restaurant Operations:** Manage restaurant details, menus, menu items, availability toggles, and tables.
+* 📊 **Analytics & Reports:** Real-time revenue metrics, daily sales reports, top-selling items, and category analytics.
+* 👥 **Staff Management:** Employee CRUD, role assignments, and active staff counts.
+* 💼 **Hiring Pipeline:** Job posting management and job application processing (pending/accept/reject).
+* 🛎️ **Order & Reservation Dispatch:** Live status updates for incoming orders and table reservations.
+* 💬 **Engagement & Loyalty:** Customer review responses, reporting, rating averages, and custom reward programs.
 
-- Reservation management for assigned restaurants
-- Menu and menu-item management
-- Table management and status updates
-- Order management and status updates
-- Daily/active operational counts (orders/reservations/tables/menu data)
+---
 
-## Delivery Features
+### 👩‍💼 Staff & Operations
 
-- View available delivery orders
-- Accept delivery orders
-- Update delivery order status
-- View own delivery orders and order details
+#### 🧑‍🍳 Employees
+* 📅 Manage assigned restaurant reservations, tables, menus, and incoming orders.
+* 📈 Access daily operational counts and status dashboards.
 
-## Admin Features
+#### 🛵 Delivery Personnel
+* 📍 View available delivery requests, accept orders, update delivery status, and view routes.
 
-- Dashboard overview
-- User management:
-  - User listing
-  - Activate/deactivate users
-  - Role view/add/remove
-- Restaurant governance:
-  - Restaurant listing/detail/update
-  - Activate/deactivate restaurants
-  - Category listing/assignment
-- Application management:
-  - Ownership/restaurant application list/detail
-  - Pending filters
-  - Approve/reject workflows
-- Review moderation:
-  - All/pending/reported review views
-  - Approve/reject/delete review actions
-- Loyalty administration:
-  - Create loyalty codes
-  - List/detail/deactivate loyalty codes
+---
 
-## Real-Time Chat
+### 🛡️ System Administration
+* 📈 **Platform Analytics:** Global system overview and performance dashboards.
+* 👥 **User Management:** Access listing, activation/deactivation, and role management.
+* 🏛️ **Governance:** Restaurant approvals, category assignments, and ownership application workflows.
+* 🚨 **Moderation:** Review moderation (flagged, reported, pending) and policy enforcement.
+* 🎟️ **Loyalty Controls:** System-wide loyalty code generation and management.
 
-- SignalR hub (`/chatHub`) for order-based chat
-- Join/leave order rooms
-- Send/receive live messages
-- Typing indicators
-- Mark message as read / mark all read
-- Unread message count per order
+---
 
-## Domain Coverage
+## 💬 Real-Time Chat System
 
-Core entities include:
+⚡ Built with **SignalR** (`/chatHub`) to support live order communications:
 
-- Restaurant, Menu, MenuItem
-- Order, Reservation, Table
-- Review
-- Reward, LoyaltyPoint, LoyaltyRedemption, LoyaltyCode
-- JobPosting, JobApplication
-- OwnershipApplication, RestaurantApplication
-- ChatMessage
+* 💬 **Dedicated Chat Rooms:** Order-based real-time communication.
+* ✍️ **Live Interactions:** Instant messaging and typing indicators.
+* 👀 **Read Receipts:** Track message status and unread counters.
 
-## API
+---
 
-- Base URL (default): `http://localhost:5000/api`
-- Swagger UI enabled in backend
-- Role-based controllers:
-  - `Account`, `Auth`
-  - `Customer`, `Owner`, `Employee`, `Delivery`, `Admin`
-  - `Loyalty`, `Chat`
+## 🚦 API Reference
 
-## Setup & Run
+* 🌐 **Base API URL:** `http://localhost:5000/api`
+* 📖 **Swagger Documentation:** `http://localhost:5000/swagger` (Available in development mode)
 
-## Prerequisites
+### 📑 Role-Based Controllers
 
-- .NET 9 SDK
-- Node.js 20+ and npm
-- SQL Server
+| Controller Area | Access Scope | Key Capabilities |
+| :--- | :--- | :--- |
+| 🔐 **Account / Auth** | Public / Auth | Authentication, Profiles, Identity, OAuth |
+| 🛒 **Customer** | Customer | Discovery, Orders, Cart, Reservations, Loyalty |
+| 👨‍🍳 **Owner** | Owner | Restaurant Ops, Staff, Analytics, Menu CRUD |
+| 👩‍💼 **Employee** | Staff | Orders, Table Statuses, Daily Tasks |
+| 🛵 **Delivery** | Delivery | Order Pickup, Delivery Tracking, Status Updates |
+| 🛡️ **Admin** | Admin | User Auditing, Approvals, Platform Settings |
+| 💬 **Chat** | Authenticated | Live Messaging, Order Rooms |
 
-## 1) Backend
+---
 
-```bash
-dotnet restore /home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/RestaurantManagment.sln
-dotnet run --project /home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/Src/Presentation/RestaurantManagment.WebAPI/RestaurantManagment.WebAPI.csproj
-```
+## ⚡ Quick Start Guide
 
-Optional EF migration apply:
+### 📋 Prerequisites
+* 🔹 [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
+* 🔹 [Node.js 20+](https://nodejs.org/) & `npm`
+* 🔹 [Microsoft SQL Server](https://www.microsoft.com/sql-server)
 
-```bash
+---
+
+### 1️⃣ Backend Setup
+
+1. 📦 **Restore dependencies:**
+   ```bash
+   dotnet restore Src/Presentation/RestaurantManagment.WebAPI/RestaurantManagment.WebAPI.csproj
+
+
+🗄️ Apply Database Migrations (Optional):
+Bash
 dotnet ef database update \
-  --project /home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/Src/Infrastructure/RestaurantManagment.Persistance \
-  --startup-project /home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/Src/Presentation/RestaurantManagment.WebAPI
-```
+  --project Src/Infrastructure/RestaurantManagment.Persistance \
+  --startup-project Src/Presentation/RestaurantManagment.WebAPI
 
-## 2) Frontend
+  
+🚀 Run the API Server:
+Bash
+dotnet run --project Src/Presentation/RestaurantManagment.WebAPI/RestaurantManagment.WebAPI.csproj
 
-```bash
-cd /home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/FrontEnd/Restoran
+
+Frontend Setup
+📂 Navigate to the frontend directory:
+Bash
+cd FrontEnd/Restoran
+
+📥 Install dependencies:
+Bash
 npm install
+
+⚙️ Configure Environment:
+Create a .env.local file in the frontend directory:
+Code snippet
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+
+🔥 Launch Development Server:
+Bash
 npm run dev
-```
 
-Other scripts:
-
-```bash
-npm run build
-npm run start
-npm run lint
-```
-
-## Configuration Notes
-
-- Frontend API base is controlled by `NEXT_PUBLIC_API_URL`.
-- Backend expects valid DB, JWT, email, and Google auth settings in configuration.
-- Keep secrets in environment-specific configs or secret stores; do not commit real credentials.
-
-## Frontend Route Areas
-
-- Public: `/`, `/restaurants`, `/restaurants/[id]`, `/jobs`, `/cart`, `/checkout`, `/login`, `/register`, etc.
-- Customer: `/customer/*`
-- Owner: `/owner/*`
-- Employee: `/employee/*`
-- Delivery: `/delivery/*`
-- Admin: `/admin/*`
-
-## Notes
-
-- API and UI are role-driven and protected by authentication/authorization rules.
-- The repository includes detailed customer frontend documentation at:
-  - `/home/runner/work/FinalProjectRestaurant/FinalProjectRestaurant/FrontEnd/Restoran/CUSTOMER_FRONTEND_README.md`
+Frontend Route Structure
+Plaintext
+FrontEnd/Restoran/src/app/
+├── (public)/             # 🌐 /, /restaurants, /restaurants/[id], /jobs, /cart, /checkout
+├── (auth)/               # 🔐 /login, /register, /forgot-password
+├── customer/             # 🛒 /customer/orders, /customer/reservations, /customer/profile
+├── owner/                # 👨‍🍳 /owner/dashboard, /owner/menu, /owner/analytics, /owner/staff
+├── employee/             # 👩‍💼 /employee/orders, /employee/tables
+├── delivery/             # 🛵 /delivery/active, /delivery/history
+└── admin/                # 🛡️ /admin/users, /admin/applications, /admin/moderation
